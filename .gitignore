@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# Django
+db.sqlite3
+staticfiles/
+media/avatars/*
+!media/avatars/.gitkeep
+
+# Environment
+.env
+
+# Node
+node_modules/
+
+# Tailwind output
+static/css/output.css
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

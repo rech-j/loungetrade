@@ -1,0 +1,64 @@
+name: Test & Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: loungecoin_test
+          POSTGRES_USER: loungecoin
+          POSTGRES_PASSWORD: loungecoin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DB_NAME: loungecoin_test
+      DB_USER: loungecoin
+      DB_PASSWORD: loungecoin
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DJANGO_SETTINGS_MODULE: config.settings.development
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: pip install -r requirements.txt
+      - run: npm ci
+      - run: npm run build:css
+      - run: python manage.py test
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.DO_SERVER_IP }}
+          username: ${{ secrets.DO_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /var/www/loungecoin
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            npm ci
+            npm run build:css
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+            python manage.py expire_challenges
+            sudo systemctl restart gunicorn
+            sudo systemctl restart daphne

@@ -1,0 +1,37 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="{% if request.user.is_authenticated and request.user.profile.dark_mode %}dark{% endif %}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Lounge Coin{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/output.css' %}">
+    <script src="{% static 'js/htmx.min.js' %}" defer></script>
+    <script src="{% static 'js/alpine.min.js' %}" defer></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-cream text-ink dark:bg-ink dark:text-cream font-venus transition-colors duration-200">
+    {% include "components/nav.html" %}
+
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        {% if messages %}
+        <div class="mb-6 space-y-2">
+            {% for message in messages %}
+            <div class="px-4 py-3 rounded-lg text-sm
+                {% if message.tags == 'success' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
+                {% elif message.tags == 'error' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
+                {% else %}bg-gold/20 text-ink dark:text-cream{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mt-16 border-t border-stone dark:border-slate py-6 text-center text-sm text-slate">
+        <p>Lounge Coin &middot; Trade. Flip. Rise.</p>
+    </footer>
+</body>
+</html>

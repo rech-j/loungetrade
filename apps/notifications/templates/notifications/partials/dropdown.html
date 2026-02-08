@@ -1,0 +1,14 @@
+{% if notifications %}
+<div class="max-h-64 overflow-y-auto">
+    {% for n in notifications %}
+    <a href="{% if n.link %}{{ n.link }}{% else %}#{% endif %}"
+       class="block px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0">
+        <p class="text-sm font-medium">{{ n.title }}</p>
+        <p class="text-xs text-slate mt-0.5">{{ n.message|truncatechars:80 }}</p>
+        <p class="text-xs text-slate mt-0.5">{{ n.created_at|timesince }} ago</p>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="p-4 text-sm text-slate text-center">No new notifications</div>
+{% endif %}

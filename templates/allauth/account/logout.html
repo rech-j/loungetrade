@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Log Out — Lounge Coin{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto text-center">
+    <h1 class="text-2xl font-bold mb-4">Log Out</h1>
+    <p class="text-slate text-sm mb-6">Are you sure you want to log out?</p>
+    <form method="post" action="{% url 'account_logout' %}">
+        {% csrf_token %}
+        <button type="submit" class="px-8 py-3 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
+            Log Out
+        </button>
+    </form>
+</div>
+{% endblock %}

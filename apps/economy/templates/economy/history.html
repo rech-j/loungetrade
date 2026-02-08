@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Transaction History — Lounge Coin{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Transaction History</h1>
+
+    <!-- Filters -->
+    <div class="flex gap-2 mb-6 flex-wrap">
+        <a href="?filter=all" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'all' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">All</a>
+        <a href="?filter=sent" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'sent' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Sent</a>
+        <a href="?filter=received" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'received' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Received</a>
+        <a href="?filter=games" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'games' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Games</a>
+    </div>
+
+    {% if transactions %}
+    <div class="space-y-2">
+        {% for tx in transactions %}
+        <div class="flex items-center justify-between p-3 rounded-lg border border-stone dark:border-slate">
+            <div>
+                <p class="text-sm font-medium">
+                    {% if tx.tx_type == 'mint' %}
+                        Minted by admin
+                    {% elif tx.tx_type == 'game_win' and tx.receiver == request.user %}
+                        Won from {{ tx.sender.username }}
+                    {% elif tx.tx_type == 'game_win' and tx.sender == request.user %}
+                        Lost to {{ tx.receiver.username }}
+                    {% elif tx.sender == request.user %}
+                        Sent to {{ tx.receiver.username }}
+                    {% else %}
+                        Received from {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
+                    {% endif %}
+                </p>
+                {% if tx.note %}
+                <p class="text-xs text-slate">{{ tx.note }}</p>
+                {% endif %}
+                <p class="text-xs text-slate">{{ tx.created_at|date:"M d, Y g:i A" }}</p>
+            </div>
+            <span class="text-sm font-bold {% if tx.receiver == request.user %}text-green-600 dark:text-green-400{% else %}text-red-500 dark:text-red-400{% endif %}">
+                {% if tx.receiver == request.user %}+{% else %}-{% endif %}{{ tx.amount }}
+            </span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate text-sm">No transactions found.</p>
+    {% endif %}
+</div>
+{% endblock %}

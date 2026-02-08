@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Leaderboard — Lounge Coin{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl font-bold mb-6">Leaderboard</h1>
+
+    {% if profiles %}
+    <div class="space-y-2">
+        {% for profile in profiles %}
+        <div class="flex items-center gap-4 p-4 rounded-lg border border-stone dark:border-slate {% if forloop.counter <= 3 %}border-gold/30 bg-gold/5{% endif %}">
+            <!-- Rank -->
+            <span class="w-8 text-center text-sm font-bold {% if forloop.counter == 1 %}text-gold{% elif forloop.counter == 2 %}text-stone{% elif forloop.counter == 3 %}text-amber-700 dark:text-amber-500{% else %}text-slate{% endif %}">
+                {{ forloop.counter }}
+            </span>
+
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full bg-gold/20 border-2 {% if forloop.counter <= 3 %}border-gold{% else %}border-stone dark:border-slate{% endif %} flex items-center justify-center overflow-hidden flex-shrink-0">
+                {% if profile.avatar %}
+                <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                {% else %}
+                <span class="text-gold text-sm font-bold">{{ profile.get_display_name|first|upper }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Name -->
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ profile.get_display_name }}</p>
+                <p class="text-xs text-slate">@{{ profile.user.username }}</p>
+            </div>
+
+            <!-- Balance -->
+            <span class="text-sm font-bold text-gold">{{ profile.balance }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-slate text-sm">No users yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

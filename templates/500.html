@@ -1,0 +1,26 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Error — Lounge Coin</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #e2e1df; color: #1b1a0f; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .container { text-align: center; max-width: 400px; padding: 2rem; }
+        .coin { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #efcb69, #d4a843); border: 3px solid rgba(239,203,105,0.6); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-weight: bold; font-size: 1.5rem; color: #1b1a0f; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        p { color: #7e7c71; font-size: 0.875rem; margin-bottom: 1.5rem; }
+        a { display: inline-block; padding: 0.625rem 1.5rem; background: #efcb69; color: #1b1a0f; border-radius: 0.5rem; text-decoration: none; font-weight: 500; }
+        a:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="coin">!</div>
+        <h1>Something Went Wrong</h1>
+        <p>We're working on it. Please try again later.</p>
+        <a href="/">Go Home</a>
+    </div>
+</body>
+</html>
