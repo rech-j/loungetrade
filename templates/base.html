@@ -10,7 +10,8 @@
     <script src="{% static 'js/alpine.min.js' %}" defer></script>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen bg-cream text-ink dark:bg-ink dark:text-cream font-venus transition-colors duration-200">
+<body class="min-h-screen bg-cream text-ink dark:bg-ink dark:text-cream font-venus transition-colors duration-200"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% include "components/nav.html" %}
 
     <main class="max-w-4xl mx-auto px-4 py-10">
