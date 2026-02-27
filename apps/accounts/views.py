@@ -7,6 +7,7 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from apps.economy.models import Transaction
 from apps.games.models import GameChallenge
 
+from .decorators import rate_limit
 from .forms import ProfileEditForm
 
 
@@ -71,6 +72,7 @@ def toggle_dark_mode(request):
 
 
 @login_required
+@rate_limit('user_search', max_requests=30, window=60)
 def user_search(request):
     q = request.GET.get('q', '').strip()
     if len(q) < 2:
@@ -85,6 +87,7 @@ def user_search(request):
 
 
 @login_required
+@rate_limit('user_search', max_requests=30, window=60)
 def user_search_json(request):
     q = request.GET.get('q', '').strip()
     if len(q) < 2:

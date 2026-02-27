@@ -1,4 +1,5 @@
 import logging
+import os
 
 from django import forms
 from django.conf import settings
@@ -30,12 +31,19 @@ class ProfileEditForm(forms.ModelForm):
             'accept': 'image/*',
         })
 
+    ALLOWED_AVATAR_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
+
     def clean_avatar(self):
         avatar = self.cleaned_data.get('avatar')
         max_size = getattr(settings, 'AVATAR_MAX_SIZE', 2 * 1024 * 1024)
         if avatar and hasattr(avatar, 'size'):
             if avatar.size > max_size:
                 raise forms.ValidationError('Image must be under 2MB.')
+            ext = os.path.splitext(avatar.name)[1].lower()
+            if ext not in self.ALLOWED_AVATAR_EXTENSIONS:
+                raise forms.ValidationError(
+                    'Unsupported file type. Please upload a JPG, PNG, GIF, or WebP.'
+                )
         return avatar
 
     def clean_display_name(self):

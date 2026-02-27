@@ -150,14 +150,28 @@ class ChessConsumer(AsyncWebsocketConsumer):
         })
 
     async def handle_timeout(self, data):
-        """A player's clock ran out (as reported by the frontend)."""
+        """A player's clock ran out (as reported by the frontend).
+
+        Only self-reported timeouts are accepted — the reporting player is
+        treated as the one who timed out, regardless of any 'side' field in
+        the message.  This prevents a player from falsely claiming their
+        opponent timed out to steal the stake.
+        """
         game = await self.get_game()
         if not game or game.status != 'active':
             return
 
-        timed_out_side = data.get('side')  # 'white' or 'black'
-        winner = game.black_player if timed_out_side == 'white' else game.white_player
-        loser = game.white_player if timed_out_side == 'white' else game.black_player
+        # Derive timed-out side from who is reporting, not from client data.
+        reporting_side = game.get_player_side(self.user)
+        if not reporting_side:
+            return
+
+        if reporting_side == 'white':
+            winner = game.black_player
+            loser = game.white_player
+        else:
+            winner = game.white_player
+            loser = game.black_player
 
         await self.finish_game(game.pk, winner.pk, 'timeout')
         try:
@@ -180,16 +194,31 @@ class ChessConsumer(AsyncWebsocketConsumer):
         })
 
     async def handle_game_over(self, data):
-        """Checkmate or stalemate reported by frontend chess.js."""
+        """Checkmate or stalemate reported by frontend chess.js.
+
+        Only accepted from the player who just moved.  The FEN's active-side
+        character shows whose turn it is NEXT, so the other side just moved.
+        Winner for checkmate is server-derived (the last mover) — the client's
+        'winner' field is intentionally ignored to prevent result forgery.
+        """
         game = await self.get_game()
         if not game or game.status != 'active':
             return
 
+        # Determine who just moved from the stored FEN (server-side truth).
+        parts = game.fen.split(' ')
+        next_turn = parts[1] if len(parts) > 1 else 'w'
+        just_moved_side = 'black' if next_turn == 'w' else 'white'
+
+        reporting_side = game.get_player_side(self.user)
+        if reporting_side != just_moved_side:
+            # Only the player who just moved may report game-over.
+            return
+
         reason = data.get('reason', 'checkmate')  # checkmate, stalemate, draw
-        winner_username = data.get('winner')  # None for stalemate/draw
 
         if reason in ('stalemate', 'draw'):
-            # Draw — refund stake (no transfer, just end game)
+            # Draw — no coin transfer, just end the game.
             await self.finish_game(game.pk, None, reason)
             await self.channel_layer.group_send(self.room_group_name, {
                 'type': 'chess_game_over',
@@ -199,8 +228,8 @@ class ChessConsumer(AsyncWebsocketConsumer):
             })
             return
 
-        # Checkmate — find winner
-        if winner_username == (game.white_player.username if game.white_player else None):
+        # Checkmate — winner is the player who just moved (server-derived).
+        if just_moved_side == 'white':
             winner = game.white_player
             loser = game.black_player
         else:
