@@ -3,6 +3,8 @@
 @source "../../templates/**/*.html";
 @source "../../apps/*/templates/**/*.html";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-gold: #c9a84c;
   --color-gold-light: #e8d5a3;
