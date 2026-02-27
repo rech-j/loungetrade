@@ -5,7 +5,7 @@ from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.economy.models import Transaction
-from apps.games.models import GameChallenge
+from apps.coinflip.models import CoinFlipChallenge
 
 from .decorators import rate_limit
 from .forms import ProfileEditForm
@@ -24,7 +24,7 @@ def profile_view(request):
         Q(sender=request.user) | Q(receiver=request.user)
     ).select_related('sender', 'receiver').order_by('-created_at')[:20]
 
-    completed_games = GameChallenge.objects.filter(
+    completed_games = CoinFlipChallenge.objects.filter(
         Q(challenger=request.user) | Q(opponent=request.user),
         status='completed',
     )

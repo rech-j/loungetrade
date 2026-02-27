@@ -2,44 +2,44 @@ from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
 
-from apps.games.models import GameChallenge
+from apps.coinflip.models import CoinFlipChallenge
 
 
 class UnauthenticatedAccessTest(TestCase):
-    """Ensure unauthenticated users cannot access game endpoints."""
+    """Ensure unauthenticated users cannot access coin flip endpoints."""
 
     def test_unauthenticated_cannot_access_lobby(self):
-        response = self.client.get('/games/')
+        response = self.client.get('/coinflip/')
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login', response.url)
 
     def test_unauthenticated_cannot_create_challenge(self):
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'someone',
             'stake': 10,
             'choice': 'heads',
         })
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login', response.url)
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_unauthenticated_cannot_access_play(self):
         alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
         bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
-        challenge = GameChallenge.objects.create(
+        challenge = CoinFlipChallenge.objects.create(
             challenger=alice, opponent=bob, stake=10, challenger_choice='heads',
         )
-        response = self.client.get(f'/games/play/{challenge.pk}/')
+        response = self.client.get(f'/coinflip/play/{challenge.pk}/')
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login', response.url)
 
     def test_unauthenticated_cannot_decline_challenge(self):
         alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
         bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
-        challenge = GameChallenge.objects.create(
+        challenge = CoinFlipChallenge.objects.create(
             challenger=alice, opponent=bob, stake=10, challenger_choice='heads',
         )
-        response = self.client.post(f'/games/decline/{challenge.pk}/')
+        response = self.client.post(f'/coinflip/decline/{challenge.pk}/')
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login', response.url)
         challenge.refresh_from_db()
@@ -57,13 +57,13 @@ class SelfChallengeTest(TestCase):
 
     def test_cannot_challenge_self(self):
         self.client.login(username='alice', password='pass1234')
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'alice',
             'stake': 50,
             'choice': 'heads',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
 
 class GameAccessControlTest(TestCase):
@@ -76,7 +76,7 @@ class GameAccessControlTest(TestCase):
         for user in [self.alice, self.bob, self.charlie]:
             user.profile.balance = 1000
             user.profile.save()
-        self.challenge = GameChallenge.objects.create(
+        self.challenge = CoinFlipChallenge.objects.create(
             challenger=self.alice,
             opponent=self.bob,
             stake=50,
@@ -85,18 +85,18 @@ class GameAccessControlTest(TestCase):
 
     def test_non_participant_cannot_access_game(self):
         self.client.login(username='charlie', password='pass1234')
-        response = self.client.get(f'/games/play/{self.challenge.pk}/')
+        response = self.client.get(f'/coinflip/play/{self.challenge.pk}/')
         # Should redirect to lobby with error message
         self.assertEqual(response.status_code, 302)
 
     def test_challenger_can_access_game(self):
         self.client.login(username='alice', password='pass1234')
-        response = self.client.get(f'/games/play/{self.challenge.pk}/')
+        response = self.client.get(f'/coinflip/play/{self.challenge.pk}/')
         self.assertEqual(response.status_code, 200)
 
     def test_opponent_can_access_game(self):
         self.client.login(username='bob', password='pass1234')
-        response = self.client.get(f'/games/play/{self.challenge.pk}/')
+        response = self.client.get(f'/coinflip/play/{self.challenge.pk}/')
         self.assertEqual(response.status_code, 200)
 
 
@@ -115,51 +115,51 @@ class MaxStakeValidationTest(TestCase):
     def test_stake_above_max_rejected(self):
         """Stake exceeding MAX_GAME_STAKE (default 10000) should be rejected."""
         self.client.login(username='alice', password='pass1234')
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10001,
             'choice': 'heads',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_stake_at_max_accepted(self):
         """Stake exactly at MAX_GAME_STAKE should be accepted."""
         self.client.login(username='alice', password='pass1234')
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10000,
             'choice': 'heads',
         })
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(GameChallenge.objects.count(), 1)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 1)
 
     def test_zero_stake_rejected(self):
         self.client.login(username='alice', password='pass1234')
-        self.client.post('/games/challenge/', {
+        self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 0,
             'choice': 'heads',
         })
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_negative_stake_rejected(self):
         self.client.login(username='alice', password='pass1234')
-        self.client.post('/games/challenge/', {
+        self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': -100,
             'choice': 'heads',
         })
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_non_numeric_stake_rejected(self):
         self.client.login(username='alice', password='pass1234')
-        self.client.post('/games/challenge/', {
+        self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 'abc',
             'choice': 'heads',
         })
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
 
 class DeclineChallengeSecurityTest(TestCase):
@@ -172,7 +172,7 @@ class DeclineChallengeSecurityTest(TestCase):
         for user in [self.alice, self.bob, self.charlie]:
             user.profile.balance = 1000
             user.profile.save()
-        self.challenge = GameChallenge.objects.create(
+        self.challenge = CoinFlipChallenge.objects.create(
             challenger=self.alice,
             opponent=self.bob,
             stake=50,
@@ -181,14 +181,14 @@ class DeclineChallengeSecurityTest(TestCase):
 
     def test_opponent_can_decline(self):
         self.client.login(username='bob', password='pass1234')
-        response = self.client.post(f'/games/decline/{self.challenge.pk}/')
+        response = self.client.post(f'/coinflip/decline/{self.challenge.pk}/')
         self.assertEqual(response.status_code, 302)
         self.challenge.refresh_from_db()
         self.assertEqual(self.challenge.status, 'declined')
 
     def test_challenger_cannot_decline(self):
         self.client.login(username='alice', password='pass1234')
-        response = self.client.post(f'/games/decline/{self.challenge.pk}/')
+        response = self.client.post(f'/coinflip/decline/{self.challenge.pk}/')
         # Should be 404 since get_object_or_404 filters by opponent=request.user
         self.assertEqual(response.status_code, 404)
         self.challenge.refresh_from_db()
@@ -196,7 +196,7 @@ class DeclineChallengeSecurityTest(TestCase):
 
     def test_non_participant_cannot_decline(self):
         self.client.login(username='charlie', password='pass1234')
-        response = self.client.post(f'/games/decline/{self.challenge.pk}/')
+        response = self.client.post(f'/coinflip/decline/{self.challenge.pk}/')
         self.assertEqual(response.status_code, 404)
         self.challenge.refresh_from_db()
         self.assertEqual(self.challenge.status, 'pending')
@@ -204,7 +204,7 @@ class DeclineChallengeSecurityTest(TestCase):
     def test_decline_get_request_redirects(self):
         """GET requests to decline should redirect, not perform the action."""
         self.client.login(username='bob', password='pass1234')
-        response = self.client.get(f'/games/decline/{self.challenge.pk}/')
+        response = self.client.get(f'/coinflip/decline/{self.challenge.pk}/')
         self.assertEqual(response.status_code, 302)
         self.challenge.refresh_from_db()
         self.assertEqual(self.challenge.status, 'pending')
@@ -214,7 +214,7 @@ class DeclineChallengeSecurityTest(TestCase):
         self.challenge.status = 'completed'
         self.challenge.save()
         self.client.login(username='bob', password='pass1234')
-        response = self.client.post(f'/games/decline/{self.challenge.pk}/')
+        response = self.client.post(f'/coinflip/decline/{self.challenge.pk}/')
         # get_object_or_404 filters by status='pending', so should 404
         self.assertEqual(response.status_code, 404)
 
@@ -236,23 +236,23 @@ class CSRFProtectionTest(TestCase):
         # enforce_csrf_checks=True makes the test client enforce CSRF
         csrf_client = self.client_class(enforce_csrf_checks=True)
         csrf_client.login(username='alice', password='pass1234')
-        response = csrf_client.post('/games/challenge/', {
+        response = csrf_client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 50,
             'choice': 'heads',
         })
         self.assertEqual(response.status_code, 403)
-        self.assertEqual(GameChallenge.objects.count(), 0)
+        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_decline_challenge_csrf_enforced(self):
         """POST to decline_challenge without CSRF token should be rejected."""
-        challenge = GameChallenge.objects.create(
+        challenge = CoinFlipChallenge.objects.create(
             challenger=self.alice, opponent=self.bob,
             stake=50, challenger_choice='heads',
         )
         csrf_client = self.client_class(enforce_csrf_checks=True)
         csrf_client.login(username='bob', password='pass1234')
-        response = csrf_client.post(f'/games/decline/{challenge.pk}/')
+        response = csrf_client.post(f'/coinflip/decline/{challenge.pk}/')
         self.assertEqual(response.status_code, 403)
         challenge.refresh_from_db()
         self.assertEqual(challenge.status, 'pending')

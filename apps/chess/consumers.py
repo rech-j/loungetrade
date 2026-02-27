@@ -1,12 +1,11 @@
 import json
 import logging
-import secrets
 
 from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils import timezone
 
-from apps.economy.services import InsufficientFunds, game_transfer
+from apps.economy.services import InsufficientFunds
+from apps.games.mixins import BaseGameConsumer
 from apps.notifications.models import Notification
 
 from .models import ChessGame
@@ -14,7 +13,9 @@ from .models import ChessGame
 logger = logging.getLogger(__name__)
 
 
-class ChessConsumer(AsyncWebsocketConsumer):
+class ChessConsumer(BaseGameConsumer):
+    game_type = 'chess'
+
     async def connect(self):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.room_group_name = f'chess_{self.game_id}'
@@ -134,10 +135,7 @@ class ChessConsumer(AsyncWebsocketConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.channel_layer.group_send(self.room_group_name, {
-                'type': 'chess_error',
-                'message': 'Game cancelled — insufficient balance.',
-            })
+            await self.broadcast_error('Game cancelled — insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, 'resign')
@@ -178,10 +176,7 @@ class ChessConsumer(AsyncWebsocketConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.channel_layer.group_send(self.room_group_name, {
-                'type': 'chess_error',
-                'message': 'Game cancelled — insufficient balance.',
-            })
+            await self.broadcast_error('Game cancelled — insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, 'timeout')
@@ -244,10 +239,7 @@ class ChessConsumer(AsyncWebsocketConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.channel_layer.group_send(self.room_group_name, {
-                'type': 'chess_error',
-                'message': 'Game cancelled — insufficient balance.',
-            })
+            await self.broadcast_error('Game cancelled — insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, reason)
@@ -328,7 +320,6 @@ class ChessConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def save_move(self, game_id, move_uci, fen_after, white_time, black_time):
-        from django.db.models import F
         game = ChessGame.objects.get(pk=game_id)
         moves = (game.moves_uci + ' ' + move_uci).strip()
         update = {
@@ -358,13 +349,6 @@ class ChessConsumer(AsyncWebsocketConsumer):
             end_reason='cancelled',
             ended_at=timezone.now(),
         )
-
-    @database_sync_to_async
-    def do_game_transfer(self, winner_id, loser_id, stake):
-        from django.contrib.auth.models import User
-        winner = User.objects.get(pk=winner_id)
-        loser = User.objects.get(pk=loser_id)
-        game_transfer(winner, loser, stake)
 
     @database_sync_to_async
     def create_chess_notifications(self, game, winner, loser, reason):

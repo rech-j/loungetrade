@@ -2,22 +2,23 @@ import json
 import logging
 import secrets
 
-from channels.db import database_sync_to_async
-from channels.generic.websocket import AsyncWebsocketConsumer
 from django.utils import timezone
 
-from apps.economy.services import InsufficientFunds, game_transfer
+from apps.economy.services import InsufficientFunds
+from apps.games.mixins import BaseGameConsumer
 from apps.notifications.models import Notification
 
-from .models import GameChallenge
+from .models import CoinFlipChallenge
 
 logger = logging.getLogger(__name__)
 
 
-class GameConsumer(AsyncWebsocketConsumer):
+class CoinFlipConsumer(BaseGameConsumer):
+    game_type = 'coinflip'
+
     async def connect(self):
         self.challenge_id = self.scope['url_route']['kwargs']['challenge_id']
-        self.room_group_name = f'game_{self.challenge_id}'
+        self.room_group_name = f'coinflip_{self.challenge_id}'
         self.user = self.scope['user']
 
         if self.user.is_anonymous:
@@ -37,7 +38,7 @@ class GameConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         logger.info(
-            'WebSocket connected: user=%s challenge=%s',
+            'Coin flip WS connected: user=%s challenge=%s',
             self.user.username, self.challenge_id,
         )
 
@@ -51,7 +52,7 @@ class GameConsumer(AsyncWebsocketConsumer):
 
     async def disconnect(self, close_code):
         logger.info(
-            'WebSocket disconnected: user=%s challenge=%s code=%s',
+            'Coin flip WS disconnected: user=%s challenge=%s code=%s',
             getattr(self, 'user', None), self.challenge_id, close_code,
         )
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
@@ -156,6 +157,8 @@ class GameConsumer(AsyncWebsocketConsumer):
             }
         )
 
+    # ── Channel layer event handlers ────────────────────────────────────────
+
     async def player_joined(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_joined',
@@ -184,46 +187,36 @@ class GameConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
         }))
 
-    @database_sync_to_async
+    # ── Database helpers ─────────────────────────────────────────────────────
+
+    @BaseGameConsumer.db_async
     def get_challenge(self):
         try:
-            return GameChallenge.objects.get(pk=self.challenge_id)
-        except GameChallenge.DoesNotExist:
+            return CoinFlipChallenge.objects.get(pk=self.challenge_id)
+        except CoinFlipChallenge.DoesNotExist:
             return None
 
-    @database_sync_to_async
+    @BaseGameConsumer.db_async
     def resolve_game(self, challenge_id, flip_result, winner_id):
-        GameChallenge.objects.filter(pk=challenge_id).update(
+        CoinFlipChallenge.objects.filter(pk=challenge_id).update(
             status='completed',
             flip_result=flip_result,
             winner_id=winner_id,
             resolved_at=timezone.now(),
         )
 
-    @database_sync_to_async
+    @BaseGameConsumer.db_async
     def decline_game(self, challenge_id):
-        GameChallenge.objects.filter(pk=challenge_id).update(status='declined')
+        CoinFlipChallenge.objects.filter(pk=challenge_id).update(status='declined')
 
-    @database_sync_to_async
+    @BaseGameConsumer.db_async
     def cancel_game(self, challenge_id):
-        GameChallenge.objects.filter(pk=challenge_id).update(
+        CoinFlipChallenge.objects.filter(pk=challenge_id).update(
             status='cancelled',
             resolved_at=timezone.now(),
         )
 
-    @database_sync_to_async
-    def do_game_transfer(self, winner_id, loser_id, stake):
-        from django.contrib.auth.models import User
-        winner = User.objects.get(pk=winner_id)
-        loser = User.objects.get(pk=loser_id)
-        game_transfer(winner, loser, stake)
-
-    @database_sync_to_async
-    def get_username(self, user_id):
-        from django.contrib.auth.models import User
-        return User.objects.get(pk=user_id).username
-
-    @database_sync_to_async
+    @BaseGameConsumer.db_async
     def create_game_notifications(self, challenge, winner_id, loser_id, flip_result):
         from django.contrib.auth.models import User
         winner = User.objects.get(pk=winner_id)
@@ -233,12 +226,12 @@ class GameConsumer(AsyncWebsocketConsumer):
             notif_type='game_result',
             title='You Won!',
             message=f'You won {challenge.stake} coins against {loser.profile.get_display_name()}! The coin landed on {flip_result}.',
-            link='/games/',
+            link='/coinflip/',
         )
         Notification.objects.create(
             user=loser,
             notif_type='game_result',
             title='You Lost',
             message=f'You lost {challenge.stake} coins to {winner.profile.get_display_name()}. The coin landed on {flip_result}.',
-            link='/games/',
+            link='/coinflip/',
         )

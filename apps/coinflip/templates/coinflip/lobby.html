@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Game Lobby — Lounge Coin{% endblock %}
+{% block title %}Coin Flip — Lounge Coin{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
@@ -10,14 +10,14 @@
 
     <!-- Game type tabs -->
     <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
-        <a href="{% url 'game_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-r border-stone dark:border-slate border-t-3 border-t-gold text-gold">Coin Flip</a>
+        <a href="{% url 'coinflip_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-r border-stone dark:border-slate border-t-3 border-t-gold text-gold">Coin Flip</a>
         <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Chess</a>
     </div>
 
     <!-- Create challenge -->
     <div class="vintage-card mb-10">
         <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Coin Flip Challenge</h2>
-        <form method="post" action="{% url 'create_challenge' %}" class="space-y-4"
+        <form method="post" action="{% url 'coinflip_create' %}" class="space-y-4"
               x-data="{ submitting: false }" @submit="submitting = true">
             {% csrf_token %}
 
@@ -75,7 +75,7 @@
                     </p>
                     <p class="text-xs text-slate">{{ c.stake }} LC &middot; {{ c.created_at|timesince }} ago</p>
                 </div>
-                <a href="{% url 'game_play' c.pk %}" class="vintage-btn text-xs py-1.5 px-4">
+                <a href="{% url 'coinflip_play' c.pk %}" class="vintage-btn text-xs py-1.5 px-4">
                     {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
                 </a>
             </div>

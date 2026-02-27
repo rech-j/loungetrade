@@ -1,4 +1,4 @@
-{% load games_tags %}
+{% load coinflip_tags %}
 {% if notifications %}
 <div class="max-h-64 overflow-y-auto" role="menu">
     {% for n in notifications %}
@@ -11,7 +11,7 @@
         {% if n.notif_type == 'game_invite' and n.link %}
         {% get_challenge_id n.link as challenge_id %}
         {% if challenge_id %}
-        <form method="post" action="{% url 'decline_challenge' challenge_id %}" class="mt-1">
+        <form method="post" action="{% url 'coinflip_decline' challenge_id %}" class="mt-1">
             {% csrf_token %}
             <button type="submit" class="text-xs text-burgundy hover:text-burgundy/80 uppercase tracking-wide">Decline</button>
         </form>

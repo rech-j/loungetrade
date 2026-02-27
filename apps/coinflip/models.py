@@ -2,7 +2,7 @@ from django.conf import settings
 from django.db import models
 
 
-class GameChallenge(models.Model):
+class CoinFlipChallenge(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('declined', 'Declined'),
@@ -18,12 +18,12 @@ class GameChallenge(models.Model):
     challenger = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='challenges_sent',
+        related_name='coinflip_challenges_sent',
     )
     opponent = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name='challenges_received',
+        related_name='coinflip_challenges_received',
     )
     stake = models.PositiveIntegerField()
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
@@ -32,7 +32,7 @@ class GameChallenge(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='games_won',
+        related_name='coinflip_wins',
     )
     flip_result = models.CharField(max_length=5, choices=COIN_CHOICES, null=True, blank=True)
     challenger_choice = models.CharField(max_length=5, choices=COIN_CHOICES)
@@ -40,6 +40,7 @@ class GameChallenge(models.Model):
     resolved_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        db_table = 'games_gamechallenge'
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['status', 'created_at']),

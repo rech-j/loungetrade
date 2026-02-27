@@ -10,7 +10,7 @@
             <div class="hidden md:flex items-center gap-1 text-sm" hx-boost="true">
                 <a href="{% url 'profile' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Profile</a>
                 <a href="{% url 'trade' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Trade</a>
-                <a href="{% url 'game_lobby' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Games</a>
+                <a href="{% url 'coinflip_lobby' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Games</a>
                 <a href="{% url 'leaderboard' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Board</a>
                 {% if request.user.profile.is_admin_user %}
                 <a href="{% url 'mint' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Mint</a>
@@ -92,7 +92,7 @@
             </div>
             <a href="{% url 'profile' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Profile</a>
             <a href="{% url 'trade' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Trade</a>
-            <a href="{% url 'game_lobby' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Games</a>
+            <a href="{% url 'coinflip_lobby' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Games</a>
             <a href="{% url 'leaderboard' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Leaderboard</a>
             <a href="{% url 'notification_list' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">
                 Notifications

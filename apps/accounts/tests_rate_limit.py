@@ -22,7 +22,7 @@ class RateLimitAuthenticatedTest(TestCase):
         """Requests under the rate limit should succeed normally."""
         self.client.login(username='alice', password='pass1234')
         for _ in range(10):
-            response = self.client.post('/games/challenge/', {
+            response = self.client.post('/coinflip/challenge/', {
                 'opponent_username': 'bob',
                 'stake': 10,
                 'choice': 'heads',
@@ -35,14 +35,14 @@ class RateLimitAuthenticatedTest(TestCase):
         self.client.login(username='alice', password='pass1234')
         # The create_challenge view has max_requests=10, window=60
         for _ in range(10):
-            self.client.post('/games/challenge/', {
+            self.client.post('/coinflip/challenge/', {
                 'opponent_username': 'bob',
                 'stake': 10,
                 'choice': 'heads',
             })
 
         # The 11th request should be rate limited
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10,
             'choice': 'heads',
@@ -54,13 +54,13 @@ class RateLimitAuthenticatedTest(TestCase):
         self.client.login(username='alice', password='pass1234')
         # Use up Alice's rate limit
         for _ in range(10):
-            self.client.post('/games/challenge/', {
+            self.client.post('/coinflip/challenge/', {
                 'opponent_username': 'bob',
                 'stake': 10,
                 'choice': 'heads',
             })
         # Alice should be rate limited
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10,
             'choice': 'heads',
@@ -70,7 +70,7 @@ class RateLimitAuthenticatedTest(TestCase):
         # Bob should NOT be rate limited (separate counter)
         self.client.logout()
         self.client.login(username='bob', password='pass1234')
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'alice',
             'stake': 10,
             'choice': 'heads',
@@ -82,13 +82,13 @@ class RateLimitAuthenticatedTest(TestCase):
         self.client.login(username='alice', password='pass1234')
         # Exhaust rate limit
         for _ in range(10):
-            self.client.post('/games/challenge/', {
+            self.client.post('/coinflip/challenge/', {
                 'opponent_username': 'bob',
                 'stake': 10,
                 'choice': 'heads',
             })
         # Confirm rate limited
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10,
             'choice': 'heads',
@@ -99,7 +99,7 @@ class RateLimitAuthenticatedTest(TestCase):
         cache.clear()
 
         # Should be allowed again
-        response = self.client.post('/games/challenge/', {
+        response = self.client.post('/coinflip/challenge/', {
             'opponent_username': 'bob',
             'stake': 10,
             'choice': 'heads',

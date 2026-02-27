@@ -3,11 +3,11 @@ from datetime import timedelta
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from apps.games.models import GameChallenge
+from apps.coinflip.models import CoinFlipChallenge
 
 
 class Command(BaseCommand):
-    help = 'Expire pending game challenges older than 24 hours'
+    help = 'Expire pending coin flip challenges older than 24 hours'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         cutoff = timezone.now() - timedelta(hours=options['hours'])
-        expired = GameChallenge.objects.filter(
+        expired = CoinFlipChallenge.objects.filter(
             status='pending',
             created_at__lt=cutoff,
         ).update(status='expired')

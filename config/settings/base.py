@@ -28,7 +28,7 @@ INSTALLED_APPS = [
     # Local apps
     'apps.accounts',
     'apps.economy',
-    'apps.games',
+    'apps.coinflip',
     'apps.chess',
     'apps.notifications',
     'apps.leaderboard',

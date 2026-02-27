@@ -31,7 +31,7 @@
          reconnectAttempts: 0, ws: null,
          connect() {
              const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-             this.ws = new WebSocket(protocol + '://' + window.location.host + '/ws/game/{{ challenge.pk }}/');
+             this.ws = new WebSocket(protocol + '://' + window.location.host + '/ws/coinflip/{{ challenge.pk }}/');
              this.ws.onopen = () => { this.connected = true; this.errorMessage = ''; this.reconnectAttempts = 0; };
              this.ws.onclose = (event) => {
                  this.connected = false;
@@ -83,7 +83,7 @@
     <template x-if="errorMessage && status === 'error'">
         <div class="mt-4">
             <p class="text-burgundy text-sm mb-4" x-text="errorMessage"></p>
-            <a href="{% url 'game_lobby' %}" class="vintage-btn-outline text-xs py-2 px-6">Back to Lobby</a>
+            <a href="{% url 'coinflip_lobby' %}" class="vintage-btn-outline text-xs py-2 px-6">Back to Lobby</a>
         </div>
     </template>
 
@@ -125,14 +125,14 @@
                 <span x-show="winner === '{{ request.user.username }}'">You won <span x-text="stake"></span> LC</span>
                 <span x-show="winner !== '{{ request.user.username }}'">You lost <span x-text="stake"></span> LC</span>
             </p>
-            <a href="{% url 'game_lobby' %}" class="vintage-btn mt-6 py-2.5 px-8">Back to Lobby</a>
+            <a href="{% url 'coinflip_lobby' %}" class="vintage-btn mt-6 py-2.5 px-8">Back to Lobby</a>
         </div>
     </template>
 
     <template x-if="status === 'declined'">
         <div class="mt-4">
             <p class="text-slate">Challenge declined.</p>
-            <a href="{% url 'game_lobby' %}" class="vintage-btn-outline mt-4 py-2.5 px-8">Back to Lobby</a>
+            <a href="{% url 'coinflip_lobby' %}" class="vintage-btn-outline mt-4 py-2.5 px-8">Back to Lobby</a>
         </div>
     </template>
 </div>

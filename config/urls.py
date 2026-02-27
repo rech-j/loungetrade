@@ -17,7 +17,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('profile/', include('apps.accounts.urls')),
     path('economy/', include('apps.economy.urls')),
-    path('games/', include('apps.games.urls')),
+    path('coinflip/', include('apps.coinflip.urls')),
     path('chess/', include('apps.chess.urls')),
     path('notifications/', include('apps.notifications.urls')),
     path('leaderboard/', include('apps.leaderboard.urls')),
