@@ -39,6 +39,7 @@ class ChessConsumer(BaseGameConsumer):
 
         logger.info('Chess WS connected: user=%s game=%s', self.user.username, self.game_id)
 
+        just_activated = False
         # If game is still pending, check if we should activate it
         if game.status == 'pending' and game.creator_id == self.user.pk:
             # Creator connected — just notify the room
@@ -47,25 +48,33 @@ class ChessConsumer(BaseGameConsumer):
             # Opponent connected — both players ready, start the game
             await self.activate_game(game)
             game = await self.get_game()
+            just_activated = True
 
-        # Send current game state to the newly connected player
-        await self.send(text_data=json.dumps({
-            'type': 'game_state',
-            'status': game.status,
-            'fen': game.fen,
-            'moves_uci': game.moves_uci,
-            'white_player': game.white_player.username if game.white_player else None,
-            'black_player': game.black_player.username if game.black_player else None,
-            'white_time': game.white_time,
-            'black_time': game.black_time,
-            'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
-        }))
-
-        if game.status == 'active':
+        if just_activated:
+            # Broadcast updated game_state to ALL players in the room so the
+            # creator (who was waiting in pending state) also receives active state.
             await self.channel_layer.group_send(self.room_group_name, {
-                'type': 'player_connected',
-                'username': self.user.username,
+                'type': 'game_activated',
             })
+        else:
+            # Send current game state only to the newly connected player
+            await self.send(text_data=json.dumps({
+                'type': 'game_state',
+                'status': game.status,
+                'fen': game.fen,
+                'moves_uci': game.moves_uci,
+                'white_player': game.white_player.username if game.white_player else None,
+                'black_player': game.black_player.username if game.black_player else None,
+                'white_time': game.white_time,
+                'black_time': game.black_time,
+                'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
+            }))
+
+            if game.status == 'active':
+                await self.channel_layer.group_send(self.room_group_name, {
+                    'type': 'player_connected',
+                    'username': self.user.username,
+                })
 
     async def disconnect(self, close_code):
         logger.info('Chess WS disconnected: user=%s game=%s', getattr(self, 'user', None), self.game_id)
@@ -253,6 +262,23 @@ class ChessConsumer(BaseGameConsumer):
 
     # ── Channel layer event handlers ────────────────────────────────────────
 
+    async def game_activated(self, event):
+        """Sent to the whole group when the game transitions pending → active."""
+        game = await self.get_game()
+        if not game:
+            return
+        await self.send(text_data=json.dumps({
+            'type': 'game_state',
+            'status': game.status,
+            'fen': game.fen,
+            'moves_uci': game.moves_uci,
+            'white_player': game.white_player.username if game.white_player else None,
+            'black_player': game.black_player.username if game.black_player else None,
+            'white_time': game.white_time,
+            'black_time': game.black_time,
+            'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
+        }))
+
     async def player_connected(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_connected',
@@ -277,7 +303,7 @@ class ChessConsumer(BaseGameConsumer):
             'stake': event['stake'],
         }))
 
-    async def chess_error(self, event):
+    async def game_error(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chess_error',
             'message': event['message'],
@@ -296,8 +322,8 @@ class ChessConsumer(BaseGameConsumer):
 
     @database_sync_to_async
     def activate_game(self, game):
-        import random as _random
         """Assign colors and mark game active when opponent connects."""
+        import random as _random
         if game.status != 'pending':
             return
         side = game.creator_side
