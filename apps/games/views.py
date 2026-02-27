@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -27,9 +28,11 @@ def lobby_view(request):
         'challenger__profile', 'opponent__profile',
     )[:10]
 
+    max_stake = getattr(settings, 'MAX_GAME_STAKE', 10000)
     return render(request, 'games/lobby.html', {
         'pending_challenges': pending_challenges,
         'recent_games': recent_games,
+        'max_stake': max_stake,
     })
 
 
@@ -51,6 +54,11 @@ def create_challenge(request):
 
     if stake <= 0:
         messages.error(request, 'Stake must be positive.')
+        return redirect('game_lobby')
+
+    max_stake = getattr(settings, 'MAX_GAME_STAKE', 10000)
+    if stake > max_stake:
+        messages.error(request, f'Maximum stake is {max_stake} coins.')
         return redirect('game_lobby')
 
     if choice not in VALID_CHOICES:
@@ -117,3 +125,17 @@ def play_view(request, challenge_id):
         'challenge': challenge,
         'is_challenger': is_challenger,
     })
+
+
+@login_required
+def decline_challenge(request, challenge_id):
+    """Decline a challenge without needing to open the WebSocket game page."""
+    if request.method != 'POST':
+        return redirect('game_lobby')
+    challenge = get_object_or_404(
+        GameChallenge, pk=challenge_id, opponent=request.user, status='pending',
+    )
+    challenge.status = 'declined'
+    challenge.save(update_fields=['status'])
+    messages.info(request, 'Challenge declined.')
+    return redirect('game_lobby')

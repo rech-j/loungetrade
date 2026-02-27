@@ -1,14 +1,25 @@
+{% load games_tags %}
 {% if notifications %}
-<div class="max-h-64 overflow-y-auto">
+<div class="max-h-64 overflow-y-auto" role="menu">
     {% for n in notifications %}
-    <a href="{% if n.link %}{{ n.link }}{% else %}#{% endif %}"
-       class="block px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0">
-        <p class="text-sm font-medium">{{ n.title }}</p>
-        <p class="text-xs text-slate mt-0.5">{{ n.message|truncatechars:80 }}</p>
-        <p class="text-xs text-slate mt-0.5">{{ n.created_at|timesince }} ago</p>
-    </a>
+    <div class="px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0 {% if not n.is_read %}border-l-3 border-l-gold{% endif %}" role="menuitem">
+        <a href="{% if n.link %}{{ n.link }}{% else %}#{% endif %}" class="block">
+            <p class="text-xs font-medium">{{ n.title }}</p>
+            <p class="text-xs text-slate mt-0.5">{{ n.message|truncatechars:70 }}</p>
+            <p class="text-xs text-slate mt-0.5">{{ n.created_at|timesince }} ago</p>
+        </a>
+        {% if n.notif_type == 'game_invite' and n.link %}
+        {% get_challenge_id n.link as challenge_id %}
+        {% if challenge_id %}
+        <form method="post" action="{% url 'decline_challenge' challenge_id %}" class="mt-1">
+            {% csrf_token %}
+            <button type="submit" class="text-xs text-burgundy hover:text-burgundy/80 uppercase tracking-wide">Decline</button>
+        </form>
+        {% endif %}
+        {% endif %}
+    </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="p-4 text-sm text-slate text-center">No new notifications</div>
+<div class="p-4 text-xs text-slate text-center uppercase tracking-wide">No new notifications</div>
 {% endif %}

@@ -1,0 +1,12 @@
+# Lounge Coin - Crontab entries
+# Install with: sudo crontab -u deploy -l < deployment/crontab
+# Or merge manually: crontab -e
+
+# Database backup - daily at 3:00 AM
+0 3 * * * /var/www/loungecoin/deployment/backup.sh >> /var/log/loungecoin/backup.log 2>&1
+
+# Expire stale game challenges - every 15 minutes
+*/15 * * * * cd /var/www/loungecoin && /var/www/loungecoin/venv/bin/python manage.py expire_challenges --hours 24 >> /var/log/loungecoin/expire.log 2>&1
+
+# Certbot renewal check - twice daily (standard)
+0 0,12 * * * certbot renew --quiet --post-hook "systemctl reload nginx"

@@ -6,4 +6,5 @@ urlpatterns = [
     path('trade/', views.trade_view, name='trade'),
     path('mint/', views.mint_view, name='mint'),
     path('history/', views.history_view, name='history'),
+    path('export/', views.export_transactions, name='export_transactions'),
 ]

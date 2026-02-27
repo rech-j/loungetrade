@@ -10,7 +10,7 @@ class UserProfile(models.Model):
     )
     display_name = models.CharField(max_length=30, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True)
-    balance = models.PositiveIntegerField(default=0)
+    balance = models.PositiveIntegerField(default=0, db_index=True)
     is_admin_user = models.BooleanField(default=False)
     name_changed_at = models.DateTimeField(null=True, blank=True)
     dark_mode = models.BooleanField(default=False)

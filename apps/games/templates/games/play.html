@@ -3,53 +3,19 @@
 
 {% block extra_head %}
 <style>
-    .coin {
-        width: 120px;
-        height: 120px;
-        perspective: 1000px;
-        margin: 0 auto;
-    }
-    .coin-inner {
-        width: 100%;
-        height: 100%;
-        transition: transform 0.1s;
-        transform-style: preserve-3d;
-    }
-    .coin-inner.flipping {
-        animation: coinFlip 2s ease-out forwards;
-    }
+    .coin { width: 100px; height: 100px; perspective: 1000px; margin: 0 auto; }
+    .coin-inner { width: 100%; height: 100%; transition: transform 0.1s; transform-style: preserve-3d; }
+    .coin-inner.flipping { animation: coinFlip 2s ease-out forwards; }
     .coin-face {
-        position: absolute;
-        width: 100%;
-        height: 100%;
-        backface-visibility: hidden;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 1.25rem;
-        border: 4px solid rgba(239, 203, 105, 0.6);
+        position: absolute; width: 100%; height: 100%; backface-visibility: hidden;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: bold; font-size: 1.5rem; border: 3px solid rgba(201,168,76,0.5);
     }
-    .coin-heads {
-        background: linear-gradient(135deg, #efcb69, #d4a843);
-        color: #1b1a0f;
-    }
-    .coin-tails {
-        background: linear-gradient(135deg, #c5c4bf, #a3a29b);
-        color: #1b1a0f;
-        transform: rotateY(180deg);
-    }
-    @keyframes coinFlip {
-        0% { transform: rotateY(0deg); }
-        100% { transform: rotateY(1800deg); }
-    }
-    .coin-inner.result-heads {
-        transform: rotateY(1800deg);
-    }
-    .coin-inner.result-tails {
-        transform: rotateY(1980deg);
-    }
+    .coin-heads { background: linear-gradient(135deg, #c9a84c, #8b7332); color: #1a1410; }
+    .coin-tails { background: linear-gradient(135deg, #b8af90, #8a8270); color: #1a1410; transform: rotateY(180deg); }
+    @keyframes coinFlip { 0% { transform: rotateY(0deg); } 100% { transform: rotateY(1800deg); } }
+    .coin-inner.result-heads { transform: rotateY(1800deg); }
+    .coin-inner.result-tails { transform: rotateY(1980deg); }
 </style>
 {% endblock %}
 
@@ -58,82 +24,89 @@
      x-data="{
          status: '{{ challenge.status }}',
          flipResult: '{{ challenge.flip_result|default_if_none:"" }}',
-         winner: '',
-         loser: '',
+         winner: '', loser: '',
          stake: {{ challenge.stake }},
          challengerChoice: '{{ challenge.challenger_choice }}',
-         connected: false,
-         ws: null,
-         init() {
-             if (this.status === 'completed') return;
+         connected: false, errorMessage: '', confirmAccept: false,
+         reconnectAttempts: 0, ws: null,
+         connect() {
              const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
              this.ws = new WebSocket(protocol + '://' + window.location.host + '/ws/game/{{ challenge.pk }}/');
-             this.ws.onopen = () => { this.connected = true; };
-             this.ws.onclose = () => { this.connected = false; };
+             this.ws.onopen = () => { this.connected = true; this.errorMessage = ''; this.reconnectAttempts = 0; };
+             this.ws.onclose = (event) => {
+                 this.connected = false;
+                 if (this.status === 'pending' && !event.wasClean && this.reconnectAttempts < 5) {
+                     this.reconnectAttempts++;
+                     setTimeout(() => this.connect(), 3000 * this.reconnectAttempts);
+                 }
+             };
+             this.ws.onerror = () => { this.connected = false; this.errorMessage = 'Connection lost. Reconnecting...'; };
              this.ws.onmessage = (e) => {
                  const data = JSON.parse(e.data);
-                 if (data.type === 'player_joined') {
-                     // Player joined
-                 } else if (data.type === 'game_result') {
-                     this.flipResult = data.flip_result;
-                     this.winner = data.winner;
-                     this.loser = data.loser;
+                 if (data.type === 'game_result') {
+                     this.flipResult = data.flip_result; this.winner = data.winner; this.loser = data.loser;
                      this.status = 'completed';
                      const coin = document.querySelector('.coin-inner');
                      coin.classList.add('flipping');
-                     setTimeout(() => {
-                         coin.classList.remove('flipping');
-                         coin.classList.add('result-' + data.flip_result);
-                     }, 2000);
+                     setTimeout(() => { coin.classList.remove('flipping'); coin.classList.add('result-' + data.flip_result); }, 2000);
                  } else if (data.type === 'game_declined') {
                      this.status = 'declined';
+                 } else if (data.type === 'game_error') {
+                     this.status = 'error'; this.errorMessage = data.message;
                  }
              };
          },
-         accept() {
-             if (this.ws) this.ws.send(JSON.stringify({action: 'accept'}));
-         },
-         decline() {
-             if (this.ws) this.ws.send(JSON.stringify({action: 'decline'}));
-         }
+         init() { if (this.status === 'completed' || this.status === 'declined') return; this.connect(); },
+         accept() { if (this.ws) this.ws.send(JSON.stringify({action: 'accept'})); this.confirmAccept = false; },
+         decline() { if (this.ws) this.ws.send(JSON.stringify({action: 'decline'})); }
      }">
 
-    <!-- Game info -->
     <div class="mb-8">
-        <h1 class="text-2xl font-bold mb-2">Coin Flip</h1>
-        <p class="text-slate text-sm">
+        <p class="text-xs tracking-widest uppercase text-slate mb-3">Coin Flip</p>
+        <h1 class="font-serif text-xl font-bold">
             {{ challenge.challenger.profile.get_display_name }} vs {{ challenge.opponent.profile.get_display_name }}
-            &middot; <span class="text-gold font-medium">{{ challenge.stake }} coins</span>
-        </p>
+        </h1>
+        <p class="text-gold font-medium mt-1">{{ challenge.stake }} LC at stake</p>
         <p class="text-xs text-slate mt-1">
-            {{ challenge.challenger.profile.get_display_name }} called <span class="font-medium uppercase">{{ challenge.challenger_choice }}</span>
+            {{ challenge.challenger.profile.get_display_name }} called
+            <span class="uppercase font-medium">{{ challenge.challenger_choice }}</span>
         </p>
     </div>
 
-    <!-- Coin -->
-    <div class="coin mb-8">
+    <div class="coin mb-8" aria-hidden="true">
         <div class="coin-inner {% if challenge.status == 'completed' %}result-{{ challenge.flip_result }}{% endif %}">
             <div class="coin-face coin-heads">H</div>
             <div class="coin-face coin-tails">T</div>
         </div>
     </div>
 
-    <!-- Status-dependent content -->
+    <template x-if="errorMessage && status === 'error'">
+        <div class="mt-4">
+            <p class="text-burgundy text-sm mb-4" x-text="errorMessage"></p>
+            <a href="{% url 'game_lobby' %}" class="vintage-btn-outline text-xs py-2 px-6">Back to Lobby</a>
+        </div>
+    </template>
+
+    <p class="text-burgundy text-xs mb-2" x-show="errorMessage && status !== 'error'" x-text="errorMessage"></p>
+
     <template x-if="status === 'pending'">
         <div>
             <p class="text-slate text-sm mb-4" x-show="connected">Waiting for players...</p>
-            <p class="text-slate text-sm mb-4" x-show="!connected">Connecting...</p>
+            <p class="text-slate text-sm mb-4" x-show="!connected && !errorMessage">Connecting...</p>
 
             {% if not is_challenger %}
-            <div class="flex gap-3 justify-center" x-show="connected">
-                <button @click="accept()"
-                        class="px-6 py-3 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-                    Accept & Flip
-                </button>
-                <button @click="decline()"
-                        class="px-6 py-3 border border-stone dark:border-slate rounded-lg text-slate hover:text-red-500 transition-colors">
-                    Decline
-                </button>
+            <div x-show="connected">
+                <div class="flex gap-3 justify-center" x-show="!confirmAccept">
+                    <button @click="confirmAccept = true" class="vintage-btn py-2.5 px-6">Accept &amp; Flip</button>
+                    <button @click="decline()" class="vintage-btn-outline py-2.5 px-6">Decline</button>
+                </div>
+                <div x-show="confirmAccept" class="space-y-3">
+                    <p class="text-sm text-slate">Risking <span class="text-gold font-bold" x-text="stake"></span> LC. Are you sure?</p>
+                    <div class="flex gap-3 justify-center">
+                        <button @click="accept()" class="vintage-btn py-2.5 px-6">Yes, flip it</button>
+                        <button @click="confirmAccept = false" class="vintage-btn-outline py-2.5 px-6">Cancel</button>
+                    </div>
+                </div>
             </div>
             {% else %}
             <p class="text-sm text-slate" x-show="connected">
@@ -145,25 +118,21 @@
 
     <template x-if="status === 'completed'">
         <div class="mt-4">
-            <p class="text-lg font-bold mb-1">
-                The coin landed on <span class="text-gold uppercase" x-text="flipResult"></span>!
+            <p class="font-serif text-lg font-bold mb-1">
+                Landed on <span class="text-gold uppercase" x-text="flipResult"></span>
             </p>
-            <p class="text-sm" :class="winner === '{{ request.user.username }}' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'">
-                <span x-show="winner === '{{ request.user.username }}'">You won <span x-text="stake"></span> coins!</span>
-                <span x-show="winner !== '{{ request.user.username }}'">You lost <span x-text="stake"></span> coins.</span>
+            <p class="text-sm mt-1" :class="winner === '{{ request.user.username }}' ? 'text-patina' : 'text-burgundy'">
+                <span x-show="winner === '{{ request.user.username }}'">You won <span x-text="stake"></span> LC</span>
+                <span x-show="winner !== '{{ request.user.username }}'">You lost <span x-text="stake"></span> LC</span>
             </p>
-            <a href="{% url 'game_lobby' %}" class="inline-block mt-6 px-6 py-2.5 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-                Back to Lobby
-            </a>
+            <a href="{% url 'game_lobby' %}" class="vintage-btn mt-6 py-2.5 px-8">Back to Lobby</a>
         </div>
     </template>
 
     <template x-if="status === 'declined'">
         <div class="mt-4">
-            <p class="text-slate">Challenge was declined.</p>
-            <a href="{% url 'game_lobby' %}" class="inline-block mt-4 px-6 py-2.5 border border-stone dark:border-slate rounded-lg text-slate hover:text-gold transition-colors">
-                Back to Lobby
-            </a>
+            <p class="text-slate">Challenge declined.</p>
+            <a href="{% url 'game_lobby' %}" class="vintage-btn-outline mt-4 py-2.5 px-8">Back to Lobby</a>
         </div>
     </template>
 </div>

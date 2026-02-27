@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     'apps.accounts',
     'apps.economy',
     'apps.games',
+    'apps.chess',
     'apps.notifications',
     'apps.leaderboard',
 ]
@@ -116,6 +117,39 @@ SOCIALACCOUNT_PROVIDERS = {
         'APP': {
             'client_id': os.environ.get('GOOGLE_CLIENT_ID', ''),
             'secret': os.environ.get('GOOGLE_CLIENT_SECRET', ''),
+        },
+    },
+}
+
+# Lounge Coin app settings
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2MB
+AVATAR_MAX_DIMENSION = 400
+NAME_CHANGE_COOLDOWN_SECONDS = 86400  # 24 hours
+MAX_GAME_STAKE = 10000
+NOTIFICATION_MAX_DISPLAY = 50
+LEADERBOARD_SIZE = 50
+
+# Logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'apps': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
         },
     },
 }

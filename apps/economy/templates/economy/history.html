@@ -1,24 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Transaction History — Lounge Coin{% endblock %}
+{% block title %}Ledger — Lounge Coin{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Transaction History</h1>
-
-    <!-- Filters -->
-    <div class="flex gap-2 mb-6 flex-wrap">
-        <a href="?filter=all" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'all' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">All</a>
-        <a href="?filter=sent" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'sent' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Sent</a>
-        <a href="?filter=received" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'received' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Received</a>
-        <a href="?filter=games" class="px-3 py-1.5 rounded-lg text-sm {% if current_filter == 'games' %}bg-gold text-ink{% else %}border border-stone dark:border-slate text-slate hover:text-gold{% endif %}">Games</a>
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="font-serif text-2xl font-bold">Transaction Ledger</h1>
+        <a href="{% url 'export_transactions' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Export CSV</a>
     </div>
 
-    {% if transactions %}
-    <div class="space-y-2">
-        {% for tx in transactions %}
-        <div class="flex items-center justify-between p-3 rounded-lg border border-stone dark:border-slate">
+    <div class="flex gap-2 mb-6 flex-wrap">
+        <a href="?filter=all" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'all' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">All</a>
+        <a href="?filter=sent" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'sent' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Sent</a>
+        <a href="?filter=received" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'received' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Received</a>
+        <a href="?filter=games" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'games' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Games</a>
+    </div>
+
+    {% if page %}
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        {% for tx in page %}
+        <div class="flex items-center justify-between px-4 py-3">
             <div>
-                <p class="text-sm font-medium">
+                <p class="text-sm">
                     {% if tx.tx_type == 'mint' %}
                         Minted by admin
                     {% elif tx.tx_type == 'game_win' and tx.receiver == request.user %}
@@ -28,22 +30,41 @@
                     {% elif tx.sender == request.user %}
                         Sent to {{ tx.receiver.username }}
                     {% else %}
-                        Received from {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
+                        From {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
                     {% endif %}
                 </p>
                 {% if tx.note %}
                 <p class="text-xs text-slate">{{ tx.note }}</p>
                 {% endif %}
-                <p class="text-xs text-slate">{{ tx.created_at|date:"M d, Y g:i A" }}</p>
+                <p class="text-xs text-slate">{{ tx.created_at|date:"d M Y, g:i A" }}</p>
             </div>
-            <span class="text-sm font-bold {% if tx.receiver == request.user %}text-green-600 dark:text-green-400{% else %}text-red-500 dark:text-red-400{% endif %}">
+            <span class="text-sm font-bold font-serif {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                 {% if tx.receiver == request.user %}+{% else %}-{% endif %}{{ tx.amount }}
             </span>
         </div>
         {% endfor %}
     </div>
+
+    {% if page.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-center gap-4 mt-8">
+        {% if page.has_previous %}
+        <a href="?filter={{ current_filter }}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
+        {% else %}
+        <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Previous</span>
+        {% endif %}
+
+        <span class="text-xs text-slate">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+
+        {% if page.has_next %}
+        <a href="?filter={{ current_filter }}&page={{ page.next_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Next</a>
+        {% else %}
+        <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Next</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {% else %}
-    <p class="text-slate text-sm">No transactions found.</p>
+    <p class="text-slate text-sm">No transactions on record.</p>
     {% endif %}
 </div>
 {% endblock %}

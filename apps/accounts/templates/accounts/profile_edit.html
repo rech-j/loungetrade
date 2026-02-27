@@ -3,28 +3,24 @@
 
 {% block content %}
 <div class="max-w-md mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Edit Profile</h1>
+    <h1 class="font-serif text-2xl font-bold mb-8">Edit Profile</h1>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-5">
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
         {% csrf_token %}
 
         {% for field in form %}
         <div>
-            <label for="{{ field.id_for_label }}" class="block text-sm font-medium mb-1.5">{{ field.label }}</label>
+            <label for="{{ field.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">{{ field.label }}</label>
             {{ field }}
             {% if field.errors %}
-            <p class="text-red-500 text-xs mt-1">{{ field.errors.0 }}</p>
+            <p class="text-burgundy text-xs mt-1">{{ field.errors.0 }}</p>
             {% endif %}
         </div>
         {% endfor %}
 
-        <div class="flex gap-3 pt-2">
-            <button type="submit" class="px-6 py-2.5 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-                Save Changes
-            </button>
-            <a href="{% url 'profile' %}" class="px-6 py-2.5 border border-stone dark:border-slate rounded-lg text-slate hover:text-gold transition-colors">
-                Cancel
-            </a>
+        <div class="flex gap-3 pt-3">
+            <button type="submit" class="vintage-btn py-2.5 px-8">Save Changes</button>
+            <a href="{% url 'profile' %}" class="vintage-btn-outline py-2.5 px-8">Cancel</a>
         </div>
     </form>
 </div>

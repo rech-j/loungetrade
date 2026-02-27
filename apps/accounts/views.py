@@ -1,9 +1,11 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
-from django.http import JsonResponse
+from django.db.models import Q, Sum
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 from apps.economy.models import Transaction
+from apps.games.models import GameChallenge
 
 from .forms import ProfileEditForm
 
@@ -20,9 +22,23 @@ def profile_view(request):
     transactions = Transaction.objects.filter(
         Q(sender=request.user) | Q(receiver=request.user)
     ).select_related('sender', 'receiver').order_by('-created_at')[:20]
+
+    completed_games = GameChallenge.objects.filter(
+        Q(challenger=request.user) | Q(opponent=request.user),
+        status='completed',
+    )
+    games_played = completed_games.count()
+    games_won = completed_games.filter(winner=request.user).count()
+    win_rate = round(games_won / games_played * 100, 1) if games_played > 0 else 0
+    total_wagered = completed_games.aggregate(total=Sum('stake'))['total'] or 0
+
     return render(request, 'accounts/profile.html', {
         'profile': profile,
         'transactions': transactions,
+        'games_played': games_played,
+        'games_won': games_won,
+        'win_rate': win_rate,
+        'total_wagered': total_wagered,
     })
 
 
@@ -45,7 +61,13 @@ def toggle_dark_mode(request):
         profile = request.user.profile
         profile.dark_mode = not profile.dark_mode
         profile.save(update_fields=['dark_mode'])
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+    # HTMX requests: return empty response (client toggles class directly)
+    if request.headers.get('HX-Request'):
+        return HttpResponse(status=204)
+    referer = request.META.get('HTTP_REFERER', '/')
+    if not url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
+        referer = '/'
+    return redirect(referer)
 
 
 @login_required
@@ -79,3 +101,10 @@ def user_search_json(request):
             for u in users
         ]
     })
+
+
+@login_required
+def balance_check(request):
+    """HTMX endpoint for real-time balance updates in the nav bar."""
+    balance = request.user.profile.balance
+    return HttpResponse(f'{balance} coins')

@@ -1,6 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseNotAllowed
 from django.shortcuts import redirect, render
+from django.utils.http import url_has_allowed_host_and_scheme
 
 
 @login_required
@@ -35,6 +36,8 @@ def mark_read(request, pk):
         return HttpResponseNotAllowed(['POST'])
     request.user.notifications.filter(pk=pk).update(is_read=True)
     next_url = request.POST.get('next', request.META.get('HTTP_REFERER', '/notifications/'))
+    if not url_has_allowed_host_and_scheme(next_url, allowed_hosts={request.get_host()}):
+        next_url = '/notifications/'
     return redirect(next_url)
 
 

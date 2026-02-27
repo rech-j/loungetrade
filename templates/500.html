@@ -6,21 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Error — Lounge Coin</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #e2e1df; color: #1b1a0f; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .container { text-align: center; max-width: 400px; padding: 2rem; }
-        .coin { width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #efcb69, #d4a843); border: 3px solid rgba(239,203,105,0.6); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-weight: bold; font-size: 1.5rem; color: #1b1a0f; }
-        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-        p { color: #7e7c71; font-size: 0.875rem; margin-bottom: 1.5rem; }
-        a { display: inline-block; padding: 0.625rem 1.5rem; background: #efcb69; color: #1b1a0f; border-radius: 0.5rem; text-decoration: none; font-weight: 500; }
-        a:hover { opacity: 0.8; }
+        body { font-family: Georgia, serif; background: #f4f0e8; color: #1a1410;
+               display: flex; align-items: center; justify-content: center;
+               min-height: 100vh; margin: 0; }
+        .box { text-align: center; max-width: 380px; padding: 2rem; }
+        .code { font-size: 5rem; font-weight: bold; color: rgba(201,168,76,0.3); line-height: 1; margin-bottom: 1rem; }
+        h1 { font-size: 1.5rem; margin-bottom: 0.5rem; font-weight: bold; }
+        p { color: #6b5e50; font-size: 0.875rem; margin-bottom: 1.5rem; }
+        a { display: inline-block; padding: 0.625rem 1.75rem;
+            background: #c9a84c; color: #1a1410; text-decoration: none;
+            font-size: 0.8125rem; letter-spacing: 0.04em; text-transform: uppercase; }
+        a:hover { background: #8b7332; color: #f4f0e8; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="coin">!</div>
+    <div class="box">
+        <div class="code">500</div>
         <h1>Something Went Wrong</h1>
-        <p>We're working on it. Please try again later.</p>
-        <a href="/">Go Home</a>
+        <p>We're looking into it. Please try again in a moment.</p>
+        <a href="/">Return Home</a>
     </div>
 </body>
 </html>

@@ -1,43 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Mint Coins — Lounge Coin{% endblock %}
+{% block title %}Mint — Lounge Coin{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto">
-    <div class="flex items-center gap-2 mb-6">
-        <div class="w-8 h-8 rounded-full bg-gold/20 flex items-center justify-center">
-            <svg class="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-        </div>
-        <h1 class="text-2xl font-bold">Mint Coins</h1>
+    <div class="mb-8">
+        <p class="text-xs tracking-[0.3em] uppercase text-gold mb-2">Administration</p>
+        <h1 class="font-serif text-2xl font-bold">Mint Coins</h1>
     </div>
 
     {% if not request.user.profile.is_admin_user %}
-    <div class="p-4 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded-lg text-sm">
-        You do not have permission to mint coins.
+    <div class="border-l-3 border-burgundy bg-burgundy/10 p-4 text-burgundy text-sm">
+        You do not have minting privileges.
     </div>
     {% else %}
-    <form method="post" class="space-y-5">
+    <form method="post" class="space-y-5"
+          x-data="{ submitting: false }" @submit="submitting = true">
         {% csrf_token %}
 
-        <div>
-            <label class="block text-sm font-medium mb-1.5">Recipient</label>
+        <div x-data @user-selected.window="document.getElementById('{{ form.recipient_username.id_for_label }}').value = $event.detail.username">
+            <label for="{{ form.recipient_username.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Recipient</label>
             {{ form.recipient_username }}
             <div id="user-results"></div>
+            {% if form.recipient_username.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ form.recipient_username.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <div>
-            <label class="block text-sm font-medium mb-1.5">Amount</label>
+            <label for="{{ form.amount.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Amount</label>
             {{ form.amount }}
+            {% if form.amount.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ form.amount.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <div>
-            <label class="block text-sm font-medium mb-1.5">Note</label>
+            <label for="{{ form.note.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Note</label>
             {{ form.note }}
+            {% if form.note.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ form.note.errors.0 }}</p>
+            {% endif %}
         </div>
 
-        <button type="submit" class="w-full px-6 py-3 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-            Mint Coins
+        <button type="submit"
+                :disabled="submitting"
+                class="vintage-btn w-full py-3">
+            <span x-show="!submitting">Mint Coins</span>
+            <span x-show="submitting" x-cloak>Minting...</span>
         </button>
     </form>
     {% endif %}

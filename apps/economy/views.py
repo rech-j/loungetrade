@@ -1,8 +1,11 @@
+import csv
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 
 from apps.accounts.decorators import rate_limit
@@ -94,7 +97,31 @@ def history_view(request):
     elif tx_filter == 'games':
         transactions = transactions.filter(tx_type__in=['game_win', 'game_loss'])
 
+    paginator = Paginator(transactions, 25)
+    page_number = request.GET.get('page')
+    page = paginator.get_page(page_number)
+
     return render(request, 'economy/history.html', {
-        'transactions': transactions[:50],
+        'page': page,
         'current_filter': tx_filter,
     })
+
+
+@login_required
+def export_transactions(request):
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Date', 'Type', 'From', 'To', 'Amount', 'Note'])
+    for tx in Transaction.objects.filter(
+        Q(sender=request.user) | Q(receiver=request.user)
+    ).select_related('sender', 'receiver').order_by('-created_at'):
+        writer.writerow([
+            tx.created_at.strftime('%Y-%m-%d %H:%M'),
+            tx.get_tx_type_display(),
+            tx.sender.username if tx.sender else 'System',
+            tx.receiver.username if tx.receiver else '',
+            tx.amount,
+            tx.note,
+        ])
+    return response

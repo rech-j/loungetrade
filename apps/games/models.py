@@ -5,9 +5,9 @@ from django.db import models
 class GameChallenge(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
-        ('accepted', 'Accepted'),
         ('declined', 'Declined'),
         ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
         ('expired', 'Expired'),
     ]
     COIN_CHOICES = [
@@ -41,6 +41,9 @@ class GameChallenge(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+        ]
 
     def __str__(self):
         return (

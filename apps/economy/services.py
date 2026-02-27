@@ -1,9 +1,19 @@
+from __future__ import annotations
+
+import logging
+from typing import TYPE_CHECKING
+
 from django.db import transaction
 
 from apps.accounts.models import UserProfile
 from apps.notifications.models import Notification
 
 from .models import Transaction
+
+if TYPE_CHECKING:
+    from django.contrib.auth.models import User
+
+logger = logging.getLogger(__name__)
 
 
 class InsufficientFunds(Exception):
@@ -14,7 +24,13 @@ class InvalidTrade(Exception):
     pass
 
 
-def transfer_coins(sender, receiver, amount, tx_type='trade', note=''):
+def transfer_coins(
+    sender: User,
+    receiver: User,
+    amount: int,
+    tx_type: str = 'trade',
+    note: str = '',
+) -> Transaction:
     """Atomically transfer coins between users."""
     if sender == receiver:
         raise InvalidTrade('Cannot send coins to yourself.')
@@ -51,10 +67,20 @@ def transfer_coins(sender, receiver, amount, tx_type='trade', note=''):
             link='/profile/',
         )
 
+        logger.info(
+            'Transfer: sender=%s receiver=%s amount=%d',
+            sender.username, receiver.username, amount,
+        )
+
         return tx
 
 
-def mint_coins(admin_user, target_user, amount, note=''):
+def mint_coins(
+    admin_user: User,
+    target_user: User,
+    amount: int,
+    note: str = '',
+) -> Transaction:
     """Admin mints coins to a target user."""
     if amount <= 0:
         raise InvalidTrade('Amount must be positive.')
@@ -80,10 +106,15 @@ def mint_coins(admin_user, target_user, amount, note=''):
             link='/profile/',
         )
 
+        logger.info(
+            'Mint: admin=%s target=%s amount=%d',
+            admin_user.username, target_user.username, amount,
+        )
+
         return tx
 
 
-def game_transfer(winner, loser, stake):
+def game_transfer(winner: User, loser: User, stake: int) -> None:
     """Transfer coins after a game result."""
     with transaction.atomic():
         loser_profile = UserProfile.objects.select_for_update().get(user=loser)
@@ -99,11 +130,25 @@ def game_transfer(winner, loser, stake):
         loser_profile.save(update_fields=['balance'])
         winner_profile.save(update_fields=['balance'])
 
-        # Single transaction record: coins flow from loser to winner
+        # Record from winner's perspective
         Transaction.objects.create(
             sender=loser,
             receiver=winner,
             amount=stake,
             tx_type='game_win',
             note='Coin flip',
+        )
+
+        # Record from loser's perspective
+        Transaction.objects.create(
+            sender=loser,
+            receiver=winner,
+            amount=stake,
+            tx_type='game_loss',
+            note='Coin flip',
+        )
+
+        logger.info(
+            'Game transfer: winner=%s loser=%s stake=%d',
+            winner.username, loser.username, stake,
         )

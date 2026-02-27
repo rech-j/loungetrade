@@ -3,18 +3,38 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Game Lobby</h1>
+    <div class="mb-8">
+        <h1 class="font-serif text-2xl font-bold">The Tables</h1>
+        <p class="text-slate text-sm mt-1">Challenge a fellow member to a wager.</p>
+    </div>
+
+    <!-- Game type tabs -->
+    <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
+        <a href="{% url 'game_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-r border-stone dark:border-slate border-t-3 border-t-gold text-gold">Coin Flip</a>
+        <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Chess</a>
+    </div>
 
     <!-- Create challenge -->
-    <div class="border border-stone dark:border-slate rounded-xl p-6 mb-8">
-        <h2 class="text-lg font-bold mb-4">Challenge Someone</h2>
-        <form method="post" action="{% url 'create_challenge' %}" class="space-y-4">
+    <div class="vintage-card mb-10">
+        <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Coin Flip Challenge</h2>
+        <form method="post" action="{% url 'create_challenge' %}" class="space-y-4"
+              x-data="{ submitting: false }" @submit="submitting = true">
             {% csrf_token %}
-            <div>
-                <label class="block text-sm font-medium mb-1.5">Opponent</label>
-                <input type="text" name="opponent_username" required
-                       class="w-full px-3 py-2 border border-stone rounded-lg bg-cream text-ink dark:bg-ink dark:text-cream dark:border-slate focus:outline-none focus:ring-2 focus:ring-gold"
-                       placeholder="Search for a user..."
+
+            {% if messages %}
+            <div class="space-y-1">
+                {% for message in messages %}{% if message.tags == 'error' %}
+                <p class="text-burgundy text-xs">{{ message }}</p>
+                {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
+            <div x-data @user-selected.window="$refs.opponentInput.value = $event.detail.username">
+                <label for="opponent" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Opponent</label>
+                <input id="opponent" type="text" name="opponent_username" required
+                       x-ref="opponentInput"
+                       class="vintage-input"
+                       placeholder="Search for a member..."
                        autocomplete="off"
                        hx-get="{% url 'user_search' %}"
                        hx-trigger="keyup changed delay:300ms"
@@ -23,43 +43,39 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium mb-1.5">Stake (coins)</label>
-                    <input type="number" name="stake" min="1" required
-                           class="w-full px-3 py-2 border border-stone rounded-lg bg-cream text-ink dark:bg-ink dark:text-cream dark:border-slate focus:outline-none focus:ring-2 focus:ring-gold"
-                           placeholder="Amount">
+                    <label for="stake" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
+                    <input id="stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
+                           class="vintage-input" placeholder="Amount">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium mb-1.5">Your call</label>
-                    <select name="choice" class="w-full px-3 py-2 border border-stone rounded-lg bg-cream text-ink dark:bg-ink dark:text-cream dark:border-slate focus:outline-none focus:ring-2 focus:ring-gold">
+                    <label for="choice" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Your Call</label>
+                    <select id="choice" name="choice" class="vintage-select">
                         <option value="heads">Heads</option>
                         <option value="tails">Tails</option>
                     </select>
                 </div>
             </div>
-            <button type="submit" class="w-full px-6 py-3 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-                Send Challenge
+            <button type="submit" :disabled="submitting" class="vintage-btn w-full py-3">
+                <span x-show="!submitting">Send Challenge</span>
+                <span x-show="submitting" x-cloak>Sending...</span>
             </button>
         </form>
     </div>
 
-    <!-- Pending challenges -->
     {% if pending_challenges %}
-    <div class="mb-8">
-        <h2 class="text-lg font-bold mb-4">Pending Challenges</h2>
-        <div class="space-y-2">
+    <div class="mb-10">
+        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Open Challenges</h2>
+        <div class="border border-gold/30 divide-y divide-gold/20">
             {% for c in pending_challenges %}
-            <div class="flex items-center justify-between p-4 rounded-lg border border-gold/30 bg-gold/5">
+            <div class="flex items-center justify-between px-4 py-3">
                 <div>
-                    <p class="text-sm font-medium">
-                        {% if c.challenger == request.user %}
-                            You challenged {{ c.opponent.profile.get_display_name }}
-                        {% else %}
-                            {{ c.challenger.profile.get_display_name }} challenged you
-                        {% endif %}
+                    <p class="text-sm">
+                        {% if c.challenger == request.user %}You challenged <span class="font-medium">{{ c.opponent.profile.get_display_name }}</span>
+                        {% else %}<span class="font-medium">{{ c.challenger.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
-                    <p class="text-xs text-slate">{{ c.stake }} coins &middot; {{ c.created_at|timesince }} ago</p>
+                    <p class="text-xs text-slate">{{ c.stake }} LC &middot; {{ c.created_at|timesince }} ago</p>
                 </div>
-                <a href="{% url 'game_play' c.pk %}" class="px-4 py-2 bg-gold text-ink rounded-lg text-sm font-medium hover:bg-gold/80 transition-colors">
+                <a href="{% url 'game_play' c.pk %}" class="vintage-btn text-xs py-1.5 px-4">
                     {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
                 </a>
             </div>
@@ -68,29 +84,30 @@
     </div>
     {% endif %}
 
-    <!-- Recent games -->
     {% if recent_games %}
     <div>
-        <h2 class="text-lg font-bold mb-4">Recent Games</h2>
-        <div class="space-y-2">
+        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Recent Coin Flip Results</h2>
+        <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
-            <div class="flex items-center justify-between p-3 rounded-lg border border-stone dark:border-slate">
+            <div class="flex items-center justify-between px-4 py-3">
                 <div>
-                    <p class="text-sm font-medium">
-                        {{ g.challenger.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}
-                    </p>
+                    <p class="text-sm">{{ g.challenger.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
                     <p class="text-xs text-slate">
-                        {{ g.stake }} coins &middot;
+                        {{ g.stake }} LC &middot;
                         {% if g.winner == request.user %}Won{% else %}Lost{% endif %}
                         &middot; {{ g.flip_result }} &middot; {{ g.resolved_at|timesince }} ago
                     </p>
                 </div>
-                <span class="text-sm font-bold {% if g.winner == request.user %}text-green-600 dark:text-green-400{% else %}text-red-500 dark:text-red-400{% endif %}">
+                <span class="text-sm font-bold font-serif {% if g.winner == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                     {% if g.winner == request.user %}+{{ g.stake }}{% else %}-{{ g.stake }}{% endif %}
                 </span>
             </div>
             {% endfor %}
         </div>
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+        <p class="text-slate text-sm">No coin flips on record. Issue a challenge above.</p>
     </div>
     {% endif %}
 </div>

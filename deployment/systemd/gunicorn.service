@@ -8,9 +8,11 @@ Group=www-data
 WorkingDirectory=/var/www/loungecoin
 EnvironmentFile=/var/www/loungecoin/.env
 ExecStart=/var/www/loungecoin/venv/bin/gunicorn \
-    --workers 2 \
+    --workers ${GUNICORN_WORKERS:-3} \
     --bind unix:/var/www/loungecoin/gunicorn.sock \
     --timeout 120 \
+    --access-logfile /var/log/loungecoin/gunicorn-access.log \
+    --error-logfile /var/log/loungecoin/gunicorn-error.log \
     config.wsgi:application
 Restart=always
 RestartSec=3

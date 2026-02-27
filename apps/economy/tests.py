@@ -104,13 +104,15 @@ class GameTransferTest(TestCase):
         self.assertEqual(self.alice.profile.balance, 150)
         self.assertEqual(self.bob.profile.balance, 50)
 
-    def test_game_transfer_creates_single_transaction(self):
+    def test_game_transfer_creates_transactions(self):
         game_transfer(self.alice, self.bob, 50)
-        self.assertEqual(Transaction.objects.count(), 1)
-        tx = Transaction.objects.first()
-        self.assertEqual(tx.sender, self.bob)  # loser
-        self.assertEqual(tx.receiver, self.alice)  # winner
-        self.assertEqual(tx.tx_type, 'game_win')
+        self.assertEqual(Transaction.objects.count(), 2)
+        win_tx = Transaction.objects.get(tx_type='game_win')
+        self.assertEqual(win_tx.sender, self.bob)  # loser
+        self.assertEqual(win_tx.receiver, self.alice)  # winner
+        loss_tx = Transaction.objects.get(tx_type='game_loss')
+        self.assertEqual(loss_tx.sender, self.bob)
+        self.assertEqual(loss_tx.receiver, self.alice)
 
     def test_game_transfer_insufficient_funds(self):
         with self.assertRaises(InsufficientFunds):

@@ -8,11 +8,14 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings.production')
 
 django_asgi_app = get_asgi_application()
 
-from apps.games.routing import websocket_urlpatterns  # noqa: E402
+from apps.games.routing import websocket_urlpatterns as game_ws_patterns  # noqa: E402
+from apps.chess.routing import websocket_urlpatterns as chess_ws_patterns  # noqa: E402
+
+all_websocket_patterns = game_ws_patterns + chess_ws_patterns
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
     'websocket': AuthMiddlewareStack(
-        URLRouter(websocket_urlpatterns)
+        URLRouter(all_websocket_patterns)
     ),
 })

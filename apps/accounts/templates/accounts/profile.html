@@ -3,61 +3,75 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
+
     <!-- Profile header -->
-    <div class="flex items-center gap-4 mb-8">
-        <div class="w-16 h-16 rounded-full bg-gold/20 border-2 border-gold flex items-center justify-center overflow-hidden">
+    <div class="flex items-start gap-5 mb-10">
+        <div class="w-16 h-16 flex-shrink-0 border-2 border-gold flex items-center justify-center overflow-hidden">
             {% if profile.avatar %}
             <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
             {% else %}
-            <span class="text-gold text-xl font-bold">{{ profile.get_display_name|first|upper }}</span>
+            <span class="font-serif text-gold text-xl font-bold italic">{{ profile.get_display_name|first|upper }}</span>
             {% endif %}
         </div>
-        <div>
-            <h1 class="text-2xl font-bold">{{ profile.get_display_name }}</h1>
+        <div class="flex-1">
+            <h1 class="font-serif text-2xl font-bold">{{ profile.get_display_name }}</h1>
             <p class="text-slate text-sm">@{{ request.user.username }}</p>
         </div>
-        <a href="{% url 'profile_edit' %}" class="ml-auto text-sm text-slate hover:text-gold transition-colors border border-stone dark:border-slate px-3 py-1.5 rounded-lg">
-            Edit Profile
-        </a>
+        <a href="{% url 'profile_edit' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Edit</a>
     </div>
 
-    <!-- Balance card -->
-    <div class="bg-gradient-to-r from-gold/10 to-gold/5 dark:from-gold/5 dark:to-transparent border border-gold/30 rounded-xl p-6 mb-8">
-        <p class="text-sm text-slate mb-1">Your Balance</p>
-        <p class="text-4xl font-bold text-gold">{{ profile.balance }} <span class="text-lg">coins</span></p>
-        <div class="flex gap-3 mt-4">
-            <a href="{% url 'trade' %}" class="px-4 py-2 bg-gold text-ink rounded-lg text-sm font-medium hover:bg-gold/80 transition-colors">Send Coins</a>
-            <a href="{% url 'game_lobby' %}" class="px-4 py-2 border border-gold/40 text-gold rounded-lg text-sm hover:bg-gold/10 transition-colors">Play a Game</a>
+    <!-- Balance -->
+    <div class="border-t-3 border-gold border border-stone dark:border-slate p-6 mb-8">
+        <p class="text-xs tracking-widest uppercase text-slate mb-1">Current Balance</p>
+        <p class="font-serif text-4xl font-bold text-gold">{{ profile.balance }} <span class="text-base font-normal text-slate">LC</span></p>
+        <div class="flex gap-3 mt-5">
+            <a href="{% url 'trade' %}" class="vintage-btn text-xs py-2 px-6">Send Coins</a>
+            <a href="{% url 'game_lobby' %}" class="vintage-btn-outline text-xs py-2 px-6">Play a Game</a>
+        </div>
+    </div>
+
+    <!-- Game stats -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-stone dark:border-slate mb-8">
+        <div class="p-4 text-center border-r border-stone dark:border-slate">
+            <p class="font-serif text-2xl font-bold">{{ games_played }}</p>
+            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Played</p>
+        </div>
+        <div class="p-4 text-center border-r border-stone dark:border-slate">
+            <p class="font-serif text-2xl font-bold text-patina">{{ games_won }}</p>
+            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Won</p>
+        </div>
+        <div class="p-4 text-center border-r border-stone dark:border-slate">
+            <p class="font-serif text-2xl font-bold">{{ win_rate }}%</p>
+            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Win Rate</p>
+        </div>
+        <div class="p-4 text-center">
+            <p class="font-serif text-2xl font-bold text-gold">{{ total_wagered }}</p>
+            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Wagered</p>
         </div>
     </div>
 
     <!-- Recent transactions -->
     <div>
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-bold">Recent Transactions</h2>
-            <a href="{% url 'history' %}" class="text-sm text-gold hover:text-gold/80">View all</a>
+            <h2 class="text-xs tracking-widest uppercase text-slate">Recent Transactions</h2>
+            <a href="{% url 'history' %}" class="text-xs text-gold hover:text-gold-dark">View ledger</a>
         </div>
 
         {% if transactions %}
-        <div class="space-y-2">
+        <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for tx in transactions %}
-            <div class="flex items-center justify-between p-3 rounded-lg border border-stone dark:border-slate">
+            <div class="flex items-center justify-between px-4 py-3">
                 <div>
-                    <p class="text-sm font-medium">
-                        {% if tx.tx_type == 'mint' %}
-                            Minted
-                        {% elif tx.sender == request.user %}
-                            Sent to {{ tx.receiver.username }}
-                        {% else %}
-                            Received from {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
+                    <p class="text-sm">
+                        {% if tx.tx_type == 'mint' %}Minted
+                        {% elif tx.sender == request.user %}Sent to {{ tx.receiver.username }}
+                        {% else %}From {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
                         {% endif %}
                     </p>
-                    {% if tx.note %}
-                    <p class="text-xs text-slate">{{ tx.note }}</p>
-                    {% endif %}
+                    {% if tx.note %}<p class="text-xs text-slate">{{ tx.note }}</p>{% endif %}
                     <p class="text-xs text-slate">{{ tx.created_at|timesince }} ago</p>
                 </div>
-                <span class="text-sm font-bold {% if tx.receiver == request.user %}text-green-600 dark:text-green-400{% else %}text-red-500 dark:text-red-400{% endif %}">
+                <span class="text-sm font-bold font-serif {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                     {% if tx.receiver == request.user %}+{% else %}-{% endif %}{{ tx.amount }}
                 </span>
             </div>

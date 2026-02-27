@@ -3,39 +3,44 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h1 class="text-2xl font-bold mb-6">Leaderboard</h1>
+    <div class="mb-8">
+        <h1 class="font-serif text-2xl font-bold">The Board</h1>
+        <p class="text-slate text-sm mt-1">Fortune laid bare for all to see.</p>
+    </div>
+
+    {% if user_rank is not None %}
+    <div class="ticker-line mb-6 text-center">
+        Your standing: <span class="font-medium text-gold">#{{ user_rank }}</span>
+    </div>
+    {% endif %}
 
     {% if profiles %}
-    <div class="space-y-2">
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for profile in profiles %}
-        <div class="flex items-center gap-4 p-4 rounded-lg border border-stone dark:border-slate {% if forloop.counter <= 3 %}border-gold/30 bg-gold/5{% endif %}">
-            <!-- Rank -->
-            <span class="w-8 text-center text-sm font-bold {% if forloop.counter == 1 %}text-gold{% elif forloop.counter == 2 %}text-stone{% elif forloop.counter == 3 %}text-amber-700 dark:text-amber-500{% else %}text-slate{% endif %}">
-                {{ forloop.counter }}
+        <div class="flex items-center gap-4 px-4 py-3 {% if request.user.is_authenticated and profile.user == request.user %}bg-gold/5{% endif %} {% if forloop.counter <= 3 %}border-l-3 border-l-gold{% endif %}">
+            <span class="w-8 text-center text-xs font-bold font-serif {% if forloop.counter == 1 %}text-gold{% elif forloop.counter == 2 %}text-stone{% elif forloop.counter == 3 %}text-amber{% else %}text-slate{% endif %}">
+                {% if forloop.counter == 1 %}1st{% elif forloop.counter == 2 %}2nd{% elif forloop.counter == 3 %}3rd{% else %}{{ forloop.counter }}{% endif %}
             </span>
 
-            <!-- Avatar -->
-            <div class="w-10 h-10 rounded-full bg-gold/20 border-2 {% if forloop.counter <= 3 %}border-gold{% else %}border-stone dark:border-slate{% endif %} flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div class="w-9 h-9 flex-shrink-0 border {% if forloop.counter <= 3 %}border-gold{% else %}border-stone dark:border-slate{% endif %} flex items-center justify-center overflow-hidden">
                 {% if profile.avatar %}
                 <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
                 {% else %}
-                <span class="text-gold text-sm font-bold">{{ profile.get_display_name|first|upper }}</span>
+                <span class="font-serif text-xs font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
                 {% endif %}
             </div>
 
-            <!-- Name -->
             <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium truncate">{{ profile.get_display_name }}</p>
                 <p class="text-xs text-slate">@{{ profile.user.username }}</p>
             </div>
 
-            <!-- Balance -->
-            <span class="text-sm font-bold text-gold">{{ profile.balance }}</span>
+            <span class="font-serif text-sm font-bold text-gold">{{ profile.balance }}</span>
         </div>
         {% endfor %}
     </div>
     {% else %}
-    <p class="text-slate text-sm">No users yet.</p>
+    <p class="text-slate text-sm">No members yet.</p>
     {% endif %}
 </div>
 {% endblock %}

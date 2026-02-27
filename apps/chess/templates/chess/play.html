@@ -1,0 +1,514 @@
+{% extends "base.html" %}
+{% block title %}Chess — Lounge Coin{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chess.js@1.0.0/dist/cjs/chess.min.js"></script>
+<style>
+/* ── Chess board ─────────────────────────────── */
+.chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; max-width: 480px; margin: 0 auto; border: 3px solid #c9a84c; box-shadow: 0 4px 20px rgba(26,20,16,0.2); user-select: none; }
+.chess-sq { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.chess-sq.light { background: #f4f0e8; }
+.chess-sq.dark-sq { background: #b8a878; }
+.chess-sq.dark-sq .dark .chess-sq { background: #8a7050; }
+.chess-sq.selected { outline: 3px solid #c9a84c; outline-offset: -3px; }
+.chess-sq.legal-move::after { content: ""; position: absolute; width: 35%; height: 35%; background: rgba(201,168,76,0.5); border-radius: 50%; }
+.chess-sq.legal-capture::after { content: ""; position: absolute; inset: 0; border: 4px solid rgba(201,168,76,0.6); }
+.chess-sq.last-move-sq { background: rgba(201,168,76,0.3) !important; }
+.chess-piece { font-size: clamp(1.2rem, 3.5vw, 1.8rem); line-height: 1; cursor: grab; }
+.coord-file { position: absolute; bottom: 1px; right: 3px; font-size: 0.55rem; font-weight: 600; opacity: 0.55; }
+.coord-rank { position: absolute; top: 1px; left: 3px; font-size: 0.55rem; font-weight: 600; opacity: 0.55; }
+
+/* ── Clock ─────────────────────────────────── */
+.clock { font-variant-numeric: tabular-nums; font-family: Georgia, serif; font-size: 1.5rem; font-weight: bold; }
+.clock.active { color: #c9a84c; }
+.clock.low { color: #722f37; animation: pulse 1s infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+/* ── Piece unicode map ─────────────────────── */
+/* White: ♔♕♖♗♘♙ — Black: ♚♛♜♝♞♟ */
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto"
+     x-data="chessApp()"
+     x-init="init()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <p class="text-xs tracking-widest uppercase text-slate">Chess Match</p>
+            <h1 class="font-serif text-xl font-bold">{{ game.creator.profile.get_display_name }} vs {{ game.opponent.profile.get_display_name }}</h1>
+        </div>
+        <div class="vintage-badge">{{ game.stake }} LC</div>
+    </div>
+
+    <!-- Status / messages -->
+    <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
+    <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-6">
+        <!-- Board column -->
+        <div>
+            <!-- Opponent info + clock -->
+            <div class="flex items-center justify-between mb-2 px-1">
+                <span class="text-sm font-medium" x-text="opponentName"></span>
+                <span class="clock"
+                      :class="{ active: !isMyTurn && gameActive, low: opponentTimeLow }"
+                      x-text="formatTime(opponentTime)">10:00</span>
+            </div>
+
+            <!-- Board -->
+            <div class="chess-board"
+                 @dragover.prevent
+                 @drop="handleDrop($event)">
+                <template x-for="(sq, idx) in boardSquares" :key="sq.name">
+                    <div :class="squareClass(sq, idx)"
+                         @click="handleSquareClick(sq)"
+                         @dragstart="handleDragStart($event, sq)"
+                         @dragover.prevent
+                         @drop.stop="handleDropOnSquare($event, sq)"
+                         :draggable="sq.piece && canDragPiece(sq)">
+                        <span x-text="sq.piece ? pieceChar(sq.piece) : ''" class="chess-piece"></span>
+                        <span x-show="sq.showRank" class="coord-rank" x-text="sq.rank"></span>
+                        <span x-show="sq.showFile" class="coord-file" x-text="sq.file"></span>
+                    </div>
+                </template>
+            </div>
+
+            <!-- My info + clock -->
+            <div class="flex items-center justify-between mt-2 px-1">
+                <span class="text-sm font-medium" x-text="myName"></span>
+                <span class="clock"
+                      :class="{ active: isMyTurn && gameActive, low: myTimeLow }"
+                      x-text="formatTime(myTime)">10:00</span>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-4">
+            <!-- Connection -->
+            <div class="vintage-card py-3">
+                <p class="text-xs text-slate uppercase tracking-wide mb-1">Status</p>
+                <p class="text-sm font-medium"
+                   :class="connected ? 'text-patina' : 'text-burgundy'"
+                   x-text="connected ? 'Connected' : 'Connecting...'"></p>
+            </div>
+
+            <!-- Controls -->
+            <div x-show="gameActive && mySide" class="space-y-2">
+                <button @click="confirmResign = true"
+                        x-show="!confirmResign"
+                        class="vintage-btn-outline w-full py-2 text-xs border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">
+                    Resign
+                </button>
+                <div x-show="confirmResign" class="space-y-2">
+                    <p class="text-xs text-slate">Resign and forfeit {{ game.stake }} LC?</p>
+                    <button @click="resign()" class="vintage-btn w-full py-2 text-xs bg-burgundy hover:bg-burgundy/80">Confirm Resign</button>
+                    <button @click="confirmResign = false" class="vintage-btn-outline w-full py-2 text-xs">Cancel</button>
+                </div>
+            </div>
+
+            <!-- Move list -->
+            <div class="vintage-card py-3">
+                <p class="text-xs text-slate uppercase tracking-wide mb-2">Moves</p>
+                <div class="max-h-48 overflow-y-auto space-y-0.5" id="move-list">
+                    <template x-for="(pair, i) in movePairs" :key="i">
+                        <div class="flex gap-2 text-xs">
+                            <span class="text-slate w-5 flex-shrink-0" x-text="(i+1) + '.'"></span>
+                            <span x-text="pair[0]" class="font-mono"></span>
+                            <span x-text="pair[1] || ''" class="font-mono"></span>
+                        </div>
+                    </template>
+                    <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
+                </div>
+            </div>
+
+            <!-- Game over panel -->
+            <div x-show="gameOver" class="vintage-card py-3">
+                <p class="font-serif text-lg font-bold" x-text="gameOverTitle"></p>
+                <p class="text-sm text-slate mt-1" x-text="gameOverMsg"></p>
+                <a href="{% url 'chess_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
+            </div>
+
+            <!-- Waiting panel (pending) -->
+            <div x-show="!gameActive && !gameOver" class="vintage-card py-3 text-center">
+                <p class="text-sm text-slate">Waiting for opponent to connect...</p>
+                <p class="text-xs text-slate mt-1">Share the link or wait for the notification.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function chessApp() {
+    return {
+        // ── State ─────────────────────────────────────────────
+        ws: null,
+        connected: false,
+        gameActive: false,
+        gameOver: false,
+        gameOverTitle: '',
+        gameOverMsg: '',
+        statusMsg: '',
+        errorMsg: '',
+
+        chess: null,           // chess.js instance
+        fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+        boardSquares: [],      // array of { name, piece, rank, file, showRank, showFile }
+        selectedSq: null,
+        legalMoves: [],        // squares the selected piece can move to
+        lastMove: null,        // { from, to }
+        dragFrom: null,
+
+        mySide: null,          // 'white' | 'black' | null (spectator/pending)
+        myName: 'You',
+        opponentName: 'Opponent',
+        myUsername: '{{ request.user.username }}',
+
+        myTime: 600,
+        opponentTime: 600,
+        timerInterval: null,
+        confirmResign: false,
+        movePairs: [],         // [['e4', 'e5'], ['Nf3', ...], ...]
+        sanMoves: [],          // all SAN moves in order
+
+        // ── Computed ──────────────────────────────────────────
+        get isMyTurn() {
+            if (!this.chess || !this.mySide) return false;
+            const turn = this.chess.turn(); // 'w' or 'b'
+            return (turn === 'w' && this.mySide === 'white') ||
+                   (turn === 'b' && this.mySide === 'black');
+        },
+        get myTimeLow() { return this.myTime <= 30; },
+        get opponentTimeLow() { return this.opponentTime <= 30; },
+
+        // ── Init ─────────────────────────────────────────────
+        init() {
+            this.chess = new Chess();
+            this.renderBoard();
+            this.connectWS();
+        },
+
+        connectWS() {
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            this.ws = new WebSocket(`${proto}://${location.host}/ws/chess/{{ game.pk }}/`);
+            this.ws.onopen = () => { this.connected = true; this.errorMsg = ''; };
+            this.ws.onclose = () => {
+                this.connected = false;
+                if (!this.gameOver) {
+                    this.errorMsg = 'Connection lost. Reconnecting...';
+                    setTimeout(() => this.connectWS(), 3000);
+                }
+            };
+            this.ws.onerror = () => { this.errorMsg = 'Connection error.'; };
+            this.ws.onmessage = (e) => this.handleMessage(JSON.parse(e.data));
+        },
+
+        handleMessage(data) {
+            if (data.type === 'game_state') {
+                this.applyGameState(data);
+            } else if (data.type === 'player_connected') {
+                this.statusMsg = data.username + ' connected.';
+                setTimeout(() => { this.statusMsg = ''; }, 3000);
+            } else if (data.type === 'chess_move') {
+                this.applyOpponentMove(data);
+            } else if (data.type === 'chess_game_over') {
+                this.handleGameOver(data);
+            } else if (data.type === 'chess_error') {
+                this.errorMsg = data.message;
+                this.stopTimer();
+            }
+        },
+
+        applyGameState(data) {
+            if (data.status === 'active') {
+                this.gameActive = true;
+                this.mySide = data.your_side;
+                this.chess.load(data.fen);
+                this.fen = data.fen;
+                this.myTime = this.mySide === 'white' ? data.white_time : data.black_time;
+                this.opponentTime = this.mySide === 'white' ? data.black_time : data.white_time;
+                this.myName = this.mySide === 'white' ? data.white_player : data.black_player;
+                this.opponentName = this.mySide === 'white' ? data.black_player : data.white_player;
+                // Rebuild move list from UCI
+                if (data.moves_uci) this.rebuildMoveList(data.moves_uci);
+                this.renderBoard();
+                this.startTimer();
+            } else if (data.status === 'completed' || data.status === 'cancelled') {
+                this.gameActive = false;
+                this.gameOver = true;
+                this.gameOverTitle = 'Game Over';
+                this.gameOverMsg = 'This game has already ended.';
+            }
+        },
+
+        rebuildMoveList(movesUci) {
+            // Replay moves on a fresh chess instance to get SAN notation
+            const temp = new Chess();
+            this.sanMoves = [];
+            for (const uci of movesUci.split(' ').filter(Boolean)) {
+                const from = uci.slice(0, 2);
+                const to = uci.slice(2, 4);
+                const promotion = uci.length === 5 ? uci[4] : undefined;
+                const result = temp.move({ from, to, promotion });
+                if (result) this.sanMoves.push(result.san);
+            }
+            this.buildMovePairs();
+        },
+
+        buildMovePairs() {
+            const pairs = [];
+            for (let i = 0; i < this.sanMoves.length; i += 2) {
+                pairs.push([this.sanMoves[i], this.sanMoves[i+1] || '']);
+            }
+            this.movePairs = pairs;
+            this.$nextTick(() => {
+                const list = document.getElementById('move-list');
+                if (list) list.scrollTop = list.scrollHeight;
+            });
+        },
+
+        applyOpponentMove(data) {
+            // Don't apply our own moves (we already did)
+            if (data.player === this.myUsername) return;
+            const from = data.move.slice(0, 2);
+            const to = data.move.slice(2, 4);
+            const promotion = data.move.length === 5 ? data.move[4] : undefined;
+            const result = this.chess.move({ from, to, promotion });
+            if (result) {
+                this.fen = this.chess.fen();
+                this.lastMove = { from, to };
+                this.sanMoves.push(result.san);
+                this.buildMovePairs();
+                this.renderBoard();
+                // Update times
+                if (data.white_time !== null) {
+                    if (this.mySide === 'white') this.myTime = data.white_time;
+                    else this.opponentTime = data.white_time;
+                }
+                if (data.black_time !== null) {
+                    if (this.mySide === 'black') this.myTime = data.black_time;
+                    else this.opponentTime = data.black_time;
+                }
+                this.checkGameEnd();
+            }
+        },
+
+        handleGameOver(data) {
+            this.gameActive = false;
+            this.gameOver = true;
+            this.stopTimer();
+            if (data.winner === null) {
+                this.gameOverTitle = 'Draw';
+                this.gameOverMsg = `${data.reason === 'stalemate' ? 'Stalemate' : 'Draw agreed'}. No coins transferred.`;
+            } else if (data.winner === this.myUsername) {
+                this.gameOverTitle = 'You Win!';
+                this.gameOverMsg = `${data.reason === 'resign' ? 'Opponent resigned' : data.reason === 'timeout' ? 'Opponent ran out of time' : 'Checkmate!'} You won ${data.stake} LC.`;
+            } else {
+                this.gameOverTitle = 'You Lose';
+                this.gameOverMsg = `${data.reason === 'resign' ? 'You resigned' : data.reason === 'timeout' ? 'You ran out of time' : 'Checkmate.'} You lost ${data.stake} LC.`;
+            }
+        },
+
+        // ── Timer ──────────────────────────────────────────────
+        startTimer() {
+            this.stopTimer();
+            this.timerInterval = setInterval(() => {
+                if (!this.gameActive || !this.mySide) return;
+                if (this.isMyTurn) {
+                    this.myTime = Math.max(0, this.myTime - 1);
+                    if (this.myTime === 0) {
+                        this.stopTimer();
+                        this.ws.send(JSON.stringify({ action: 'timeout', side: this.mySide }));
+                    }
+                } else {
+                    this.opponentTime = Math.max(0, this.opponentTime - 1);
+                    if (this.opponentTime === 0) {
+                        // Server will detect via our own timeout report if opponent doesn't report
+                    }
+                }
+            }, 1000);
+        },
+        stopTimer() {
+            if (this.timerInterval) { clearInterval(this.timerInterval); this.timerInterval = null; }
+        },
+        formatTime(secs) {
+            const m = Math.floor(secs / 60).toString().padStart(2, '0');
+            const s = (secs % 60).toString().padStart(2, '0');
+            return `${m}:${s}`;
+        },
+
+        // ── Board rendering ────────────────────────────────────
+        renderBoard() {
+            const board = this.chess.board(); // 8x8 array [rank8..rank1][fileA..fileH]
+            const files = ['a','b','c','d','e','f','g','h'];
+            const squares = [];
+            // From white's perspective: rank 8 at top, rank 1 at bottom
+            // From black's perspective: flip
+            const flipped = this.mySide === 'black';
+            const ranks = flipped ? [1,2,3,4,5,6,7,8] : [8,7,6,5,4,3,2,1];
+            const fileOrder = flipped ? ['h','g','f','e','d','c','b','a'] : files;
+
+            for (const rank of ranks) {
+                for (const file of fileOrder) {
+                    const rankIdx = 8 - rank; // index into board array
+                    const fileIdx = files.indexOf(file);
+                    const sq = board[rankIdx][fileIdx];
+                    const name = file + rank;
+                    squares.push({
+                        name,
+                        piece: sq ? sq.color + sq.type.toUpperCase() : null,
+                        rank: rank.toString(),
+                        file,
+                        showRank: fileOrder.indexOf(file) === 0,
+                        showFile: ranks.indexOf(rank) === ranks.length - 1,
+                        isLight: (files.indexOf(file) + rank) % 2 === 1,
+                    });
+                }
+            }
+            this.boardSquares = squares;
+        },
+
+        squareClass(sq, idx) {
+            const base = sq.isLight ? 'chess-sq light' : 'chess-sq dark-sq';
+            const selected = this.selectedSq === sq.name ? ' selected' : '';
+            const isLegal = this.legalMoves.some(m => m.to === sq.name && !this.chess.get(sq.name)) ? ' legal-move' : '';
+            const isCapture = this.legalMoves.some(m => m.to === sq.name && this.chess.get(sq.name)) ? ' legal-capture' : '';
+            const isLast = this.lastMove && (sq.name === this.lastMove.from || sq.name === this.lastMove.to) ? ' last-move-sq' : '';
+            return base + selected + isLegal + isCapture + isLast;
+        },
+
+        pieceChar(piece) {
+            const map = {
+                wK: '\u2654', wQ: '\u2655', wR: '\u2656', wB: '\u2657', wN: '\u2658', wP: '\u2659',
+                bK: '\u265a', bQ: '\u265b', bR: '\u265c', bB: '\u265d', bN: '\u265e', bP: '\u265f',
+            };
+            return map[piece] || '';
+        },
+
+        canDragPiece(sq) {
+            if (!this.gameActive || !this.isMyTurn || !this.mySide) return false;
+            if (!sq.piece) return false;
+            const color = sq.piece[0]; // 'w' or 'b'
+            return (color === 'w' && this.mySide === 'white') || (color === 'b' && this.mySide === 'black');
+        },
+
+        // ── Interaction ────────────────────────────────────────
+        handleSquareClick(sq) {
+            if (!this.gameActive || !this.isMyTurn || !this.mySide) return;
+
+            if (this.selectedSq === sq.name) {
+                // Deselect
+                this.selectedSq = null;
+                this.legalMoves = [];
+                return;
+            }
+
+            if (this.selectedSq) {
+                // Try to make a move
+                const moved = this.tryMove(this.selectedSq, sq.name);
+                if (!moved) {
+                    // Re-select if clicking own piece
+                    if (sq.piece && this.isMyPiece(sq.piece)) {
+                        this.selectSquare(sq.name);
+                    } else {
+                        this.selectedSq = null;
+                        this.legalMoves = [];
+                    }
+                }
+            } else {
+                if (sq.piece && this.isMyPiece(sq.piece)) {
+                    this.selectSquare(sq.name);
+                }
+            }
+        },
+
+        selectSquare(sqName) {
+            this.selectedSq = sqName;
+            this.legalMoves = this.chess.moves({ square: sqName, verbose: true });
+        },
+
+        isMyPiece(piece) {
+            const color = piece[0];
+            return (color === 'w' && this.mySide === 'white') || (color === 'b' && this.mySide === 'black');
+        },
+
+        tryMove(from, to) {
+            // Check for pawn promotion
+            const piece = this.chess.get(from);
+            let promotion = undefined;
+            if (piece && piece.type === 'p') {
+                const toRank = parseInt(to[1]);
+                if ((piece.color === 'w' && toRank === 8) || (piece.color === 'b' && toRank === 1)) {
+                    promotion = 'q'; // auto-promote to queen
+                }
+            }
+            const result = this.chess.move({ from, to, promotion });
+            if (!result) return false;
+
+            this.lastMove = { from, to };
+            this.fen = this.chess.fen();
+            this.selectedSq = null;
+            this.legalMoves = [];
+            this.sanMoves.push(result.san);
+            this.buildMovePairs();
+            this.renderBoard();
+
+            // Send move to server
+            const uci = from + to + (promotion || '');
+            this.ws.send(JSON.stringify({
+                action: 'move',
+                move: uci,
+                fen: this.fen,
+                white_time: this.mySide === 'white' ? this.myTime : this.opponentTime,
+                black_time: this.mySide === 'black' ? this.myTime : this.opponentTime,
+            }));
+
+            this.checkGameEnd();
+            return true;
+        },
+
+        checkGameEnd() {
+            if (this.chess.isGameOver()) {
+                let reason, winner;
+                if (this.chess.isCheckmate()) {
+                    reason = 'checkmate';
+                    // The side that just moved wins
+                    const loserTurn = this.chess.turn(); // whose turn it would be (they lost)
+                    if (loserTurn === 'w') {
+                        winner = this.mySide === 'black' ? this.myUsername : this.opponentName;
+                    } else {
+                        winner = this.mySide === 'white' ? this.myUsername : this.opponentName;
+                    }
+                } else {
+                    reason = this.chess.isStalemate() ? 'stalemate' : 'draw';
+                    winner = null;
+                }
+                this.ws.send(JSON.stringify({ action: 'game_over', reason, winner }));
+            }
+        },
+
+        // ── Drag and drop ──────────────────────────────────────
+        handleDragStart(event, sq) {
+            if (!this.canDragPiece(sq)) { event.preventDefault(); return; }
+            this.dragFrom = sq.name;
+            this.selectSquare(sq.name);
+        },
+        handleDrop(event) { event.preventDefault(); },
+        handleDropOnSquare(event, sq) {
+            event.preventDefault();
+            if (!this.dragFrom) return;
+            this.tryMove(this.dragFrom, sq.name);
+            this.dragFrom = null;
+        },
+
+        // ── Actions ────────────────────────────────────────────
+        resign() {
+            this.confirmResign = false;
+            this.ws.send(JSON.stringify({ action: 'resign' }));
+        },
+    };
+}
+</script>
+{% endblock %}

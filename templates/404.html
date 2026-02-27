@@ -1,15 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Page Not Found — Lounge Coin{% endblock %}
+{% block title %}Not Found — Lounge Coin{% endblock %}
 
 {% block content %}
 <div class="max-w-sm mx-auto text-center py-16">
-    <div class="mx-auto w-20 h-20 rounded-full bg-gold/20 border-2 border-gold flex items-center justify-center mb-6">
-        <span class="text-gold text-3xl font-bold">?</span>
-    </div>
-    <h1 class="text-2xl font-bold mb-2">Page Not Found</h1>
-    <p class="text-slate text-sm mb-6">The page you're looking for doesn't exist.</p>
-    <a href="/" class="px-6 py-2.5 bg-gold text-ink rounded-lg font-medium hover:bg-gold/80 transition-colors">
-        Go Home
-    </a>
+    <p class="font-serif text-8xl font-bold text-gold/30 mb-4">404</p>
+    <h1 class="font-serif text-2xl font-bold mb-2">Page Not Found</h1>
+    <p class="text-slate text-sm mb-8">This room doesn't appear to exist in the lounge.</p>
+    <a href="/" class="vintage-btn px-8 py-2.5">Go Home</a>
 </div>
 {% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Chess Lobby — Lounge Coin{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-8">
+        <h1 class="font-serif text-2xl font-bold">The Tables</h1>
+        <p class="text-slate text-sm mt-1">Chess for stakes, 10 minutes per player.</p>
+    </div>
+
+    <!-- Game type tabs -->
+    <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
+        <a href="{% url 'game_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Coin Flip</a>
+        <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-t-3 border-t-gold text-gold">Chess</a>
+    </div>
+
+    <!-- Create chess challenge -->
+    <div class="vintage-card mb-10">
+        <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Chess Match</h2>
+        <form method="post" action="{% url 'chess_create' %}" class="space-y-4"
+              x-data="{ submitting: false }" @submit="submitting = true">
+            {% csrf_token %}
+
+            {% if messages %}
+            <div class="space-y-1">
+                {% for message in messages %}{% if message.tags == 'error' %}
+                <p class="text-burgundy text-xs">{{ message }}</p>
+                {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
+            <div x-data @user-selected.window="$refs.oppInput.value = $event.detail.username">
+                <label for="opp" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Opponent</label>
+                <input id="opp" type="text" name="opponent_username" required
+                       x-ref="oppInput"
+                       class="vintage-input"
+                       placeholder="Search for a member..."
+                       autocomplete="off"
+                       hx-get="{% url 'user_search' %}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#chess-opponent-results">
+                <div id="chess-opponent-results"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="chess-stake" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
+                    <input id="chess-stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
+                           class="vintage-input" placeholder="Amount">
+                </div>
+                <div>
+                    <label for="chess-side" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Play as</label>
+                    <select id="chess-side" name="side" class="vintage-select">
+                        <option value="random">Random</option>
+                        <option value="white">White</option>
+                        <option value="black">Black</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" :disabled="submitting" class="vintage-btn w-full py-3">
+                <span x-show="!submitting">Challenge to Chess</span>
+                <span x-show="submitting" x-cloak>Sending...</span>
+            </button>
+        </form>
+    </div>
+
+    {% if pending_games %}
+    <div class="mb-10">
+        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Open Games</h2>
+        <div class="border border-gold/30 divide-y divide-gold/20">
+            {% for g in pending_games %}
+            <div class="flex items-center justify-between px-4 py-3">
+                <div>
+                    <p class="text-sm">
+                        {% if g.creator == request.user %}You challenged <span class="font-medium">{{ g.opponent.profile.get_display_name }}</span>
+                        {% else %}<span class="font-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
+                    </p>
+                    <p class="text-xs text-slate">{{ g.stake }} LC &middot; {{ g.status }} &middot; {{ g.created_at|timesince }} ago</p>
+                </div>
+                <div class="flex gap-2">
+                    <a href="{% url 'chess_play' g.pk %}" class="vintage-btn text-xs py-1.5 px-4">Play</a>
+                    {% if g.creator != request.user and g.status == 'pending' %}
+                    <form method="post" action="{% url 'chess_decline' g.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-xs py-1.5 px-3 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Decline</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recent_games %}
+    <div>
+        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Recent Chess Results</h2>
+        <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+            {% for g in recent_games %}
+            <div class="flex items-center justify-between px-4 py-3">
+                <div>
+                    <p class="text-sm">{{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
+                    <p class="text-xs text-slate">
+                        {{ g.stake }} LC &middot;
+                        {% if g.winner == request.user %}Won{% elif g.winner %}Lost{% else %}Draw{% endif %}
+                        {% if g.end_reason %}&middot; {{ g.end_reason }}{% endif %}
+                        &middot; {{ g.ended_at|timesince }} ago
+                    </p>
+                </div>
+                <span class="text-sm font-bold font-serif {% if g.winner == request.user %}text-patina{% elif g.winner %}text-burgundy{% else %}text-slate{% endif %}">
+                    {% if g.winner == request.user %}+{{ g.stake }}{% elif g.winner %}-{{ g.stake }}{% else %}Draw{% endif %}
+                </span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-8">
+        <p class="text-slate text-sm">No chess games on record. Issue a challenge above.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,19 +1,16 @@
 {% if users %}
-<ul class="border border-stone dark:border-slate rounded-lg divide-y divide-stone dark:divide-slate mt-1 bg-white dark:bg-zinc-800 shadow-sm">
+<ul role="listbox" aria-label="Search results" class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate mt-1 bg-cream dark:bg-walnut shadow-sm">
     {% for user in users %}
-    <li class="px-3 py-2 hover:bg-gold/10 cursor-pointer text-sm flex items-center justify-between user-result"
-        data-username="{{ user.username }}"
-        onclick="(function(el){
-            var container = el.closest('div').parentElement;
-            var input = container.querySelector('input[type=text]');
-            if(input) input.value = '{{ user.username }}';
-            el.closest('ul').remove();
-        })(this);">
+    <li role="option"
+        tabindex="0"
+        @click="$dispatch('user-selected', { username: '{{ user.username }}' }); $el.closest('ul').remove()"
+        @keydown.enter="$dispatch('user-selected', { username: '{{ user.username }}' }); $el.closest('ul').remove()"
+        class="px-3 py-2 hover:bg-gold/10 cursor-pointer text-sm flex items-center justify-between">
         <span>
             <span class="font-medium">{{ user.profile.get_display_name }}</span>
-            <span class="text-slate">@{{ user.username }}</span>
+            <span class="text-slate text-xs">@{{ user.username }}</span>
         </span>
-        <span class="text-xs text-gold">{{ user.profile.balance }} coins</span>
+        <span class="vintage-badge text-[9px]">{{ user.profile.balance }} LC</span>
     </li>
     {% endfor %}
 </ul>

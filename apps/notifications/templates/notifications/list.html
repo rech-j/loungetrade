@@ -3,22 +3,22 @@
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-2xl font-bold">Notifications</h1>
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="font-serif text-2xl font-bold">Notifications</h1>
         {% if notifications %}
         <form method="post" action="{% url 'notifications_mark_all_read' %}">
             {% csrf_token %}
-            <button type="submit" class="text-sm text-gold hover:text-gold/80">Mark all as read</button>
+            <button type="submit" class="text-xs text-gold hover:text-gold-dark uppercase tracking-wide">Mark all read</button>
         </form>
         {% endif %}
     </div>
 
     {% if notifications %}
-    <div class="space-y-2">
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for n in notifications %}
-        <div class="block p-4 rounded-lg border {% if n.is_read %}border-stone dark:border-slate opacity-60{% else %}border-gold/30 bg-gold/5{% endif %}">
-            <div class="flex items-start justify-between">
-                <div>
+        <div class="px-4 py-3 {% if not n.is_read %}border-l-3 border-l-gold{% else %}opacity-60{% endif %}">
+            <div class="flex items-start justify-between gap-4">
+                <div class="flex-1">
                     {% if n.link %}
                     <a href="{{ n.link }}" class="text-sm font-medium hover:text-gold">{{ n.title }}</a>
                     {% else %}
@@ -30,7 +30,7 @@
                 {% if not n.is_read %}
                 <form method="post" action="{% url 'notification_mark_read' n.pk %}">
                     {% csrf_token %}
-                    <button type="submit" class="w-2 h-2 rounded-full bg-gold mt-1.5 flex-shrink-0" title="Mark as read"></button>
+                    <button type="submit" class="w-2 h-2 rounded-full bg-gold mt-1 flex-shrink-0" title="Mark read"></button>
                 </form>
                 {% endif %}
             </div>
@@ -38,7 +38,7 @@
         {% endfor %}
     </div>
     {% else %}
-    <p class="text-slate text-sm">No notifications yet.</p>
+    <p class="text-slate text-sm">No notifications.</p>
     {% endif %}
 </div>
 {% endblock %}

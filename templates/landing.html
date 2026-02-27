@@ -1,59 +1,47 @@
 {% extends "base.html" %}
-{% block title %}Lounge Coin — Trade. Flip. Rise.{% endblock %}
+{% block title %}Lounge Coin — The Gentleman's Wager{% endblock %}
 
 {% block content %}
-<div class="text-center py-16">
-    <!-- Hero coin -->
-    <div class="mx-auto w-28 h-28 rounded-full bg-gradient-to-br from-gold via-yellow-300 to-gold border-4 border-gold/60 shadow-lg shadow-gold/20 flex items-center justify-center mb-8">
-        <span class="text-ink text-3xl font-bold tracking-tight">LC</span>
+<div class="py-12 sm:py-20">
+    <div class="text-center mb-16">
+        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-6">Since 2024</p>
+        <h1 class="font-serif text-5xl sm:text-6xl font-bold tracking-tight mb-2">
+            Lounge <span class="italic text-gold">Coin</span>
+        </h1>
+        <div class="ornament max-w-sm mx-auto my-6"><span class="text-gold text-xs">&#9830;</span></div>
+        <p class="text-base text-slate max-w-md mx-auto leading-relaxed">
+            A private exchange for those who trade with nerve and play with conviction.
+        </p>
     </div>
 
-    <h1 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">
-        Lounge <span class="text-gold">Coin</span>
-    </h1>
-    <p class="text-lg text-slate max-w-md mx-auto mb-10">
-        Trade virtual coins, flip for stakes, climb the leaderboard.
-    </p>
-
-    <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <a href="{% url 'account_signup' %}"
-           class="px-8 py-3 bg-gold text-ink rounded-lg font-medium text-lg hover:bg-gold/80 transition-colors shadow-md shadow-gold/20">
-            Get Started
+    <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-20">
+        <a href="{% url 'account_signup' %}" class="vintage-btn px-10 py-3 text-sm">
+            Open an Account
         </a>
-        <a href="{% url 'account_login' %}"
-           class="px-8 py-3 border border-stone dark:border-slate rounded-lg text-slate hover:text-gold hover:border-gold transition-colors">
-            Log In
+        <a href="{% url 'account_login' %}" class="vintage-btn-outline px-10 py-3 text-sm">
+            Members Log In
         </a>
     </div>
 
-    <!-- Features -->
-    <div class="grid sm:grid-cols-3 gap-8 mt-20 text-left">
-        <div class="p-6 rounded-xl border border-stone dark:border-slate">
-            <div class="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center mb-3">
-                <svg class="w-5 h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                </svg>
-            </div>
-            <h3 class="font-bold mb-1">Trade</h3>
-            <p class="text-sm text-slate">Send coins to anyone instantly. Build your wealth through trades.</p>
+    <div class="ticker-line text-center mb-16">
+        Trade &middot; Wager &middot; Compete &middot; Prevail
+    </div>
+
+    <div class="grid sm:grid-cols-3 gap-0 border border-stone dark:border-slate">
+        <div class="p-8 border-b sm:border-b-0 sm:border-r border-stone dark:border-slate">
+            <p class="text-xs tracking-widest uppercase text-gold mb-3">I.</p>
+            <h3 class="font-serif text-lg font-bold mb-2">The Exchange</h3>
+            <p class="text-sm text-slate leading-relaxed">Send coins to any member of the lounge. Peer-to-peer, no middleman, instant settlement.</p>
         </div>
-        <div class="p-6 rounded-xl border border-stone dark:border-slate">
-            <div class="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center mb-3">
-                <svg class="w-5 h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-            </div>
-            <h3 class="font-bold mb-1">Flip</h3>
-            <p class="text-sm text-slate">Challenge others to a coin flip. Wager your coins for double or nothing.</p>
+        <div class="p-8 border-b sm:border-b-0 sm:border-r border-stone dark:border-slate">
+            <p class="text-xs tracking-widest uppercase text-gold mb-3">II.</p>
+            <h3 class="font-serif text-lg font-bold mb-2">The Tables</h3>
+            <p class="text-sm text-slate leading-relaxed">Coin flips and chess matches, settled in real time. Put up your stake, test your nerve and skill.</p>
         </div>
-        <div class="p-6 rounded-xl border border-stone dark:border-slate">
-            <div class="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center mb-3">
-                <svg class="w-5 h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                </svg>
-            </div>
-            <h3 class="font-bold mb-1">Rise</h3>
-            <p class="text-sm text-slate">Climb the leaderboard. See who rules the lounge.</p>
+        <div class="p-8">
+            <p class="text-xs tracking-widest uppercase text-gold mb-3">III.</p>
+            <h3 class="font-serif text-lg font-bold mb-2">The Board</h3>
+            <p class="text-sm text-slate leading-relaxed">A live reckoning of fortunes. The leaderboard spares no one and flatters no pretender.</p>
         </div>
     </div>
 </div>

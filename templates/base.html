@@ -13,14 +13,20 @@
 <body class="min-h-screen bg-cream text-ink dark:bg-ink dark:text-cream font-venus transition-colors duration-200">
     {% include "components/nav.html" %}
 
-    <main class="max-w-4xl mx-auto px-4 py-8">
+    <main class="max-w-4xl mx-auto px-4 py-10">
         {% if messages %}
-        <div class="mb-6 space-y-2">
+        <div class="mb-8 space-y-2">
             {% for message in messages %}
-            <div class="px-4 py-3 rounded-lg text-sm
-                {% if message.tags == 'success' %}bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300
-                {% elif message.tags == 'error' %}bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300
-                {% else %}bg-gold/20 text-ink dark:text-cream{% endif %}">
+            <div x-data="{ show: true }"
+                 x-show="show"
+                 x-init="setTimeout(() => show = false, 5000)"
+                 x-transition:leave="transition ease-in duration-300"
+                 x-transition:leave-start="opacity-100"
+                 x-transition:leave-end="opacity-0"
+                 class="px-4 py-3 text-sm border-l-3
+                {% if message.tags == 'success' %}border-patina bg-patina/10 text-patina dark:bg-patina/15
+                {% elif message.tags == 'error' %}border-burgundy bg-burgundy/10 text-burgundy dark:bg-burgundy/15
+                {% else %}border-gold bg-gold/10 text-ink dark:text-cream{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
@@ -30,8 +36,9 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="mt-16 border-t border-stone dark:border-slate py-6 text-center text-sm text-slate">
-        <p>Lounge Coin &middot; Trade. Flip. Rise.</p>
+    <footer class="mt-16 py-6 text-center text-xs tracking-widest uppercase text-slate">
+        <div class="ornament max-w-xs mx-auto mb-4"><span class="text-gold text-[10px]">&#9830;</span></div>
+        <p>Lounge Coin &middot; Est. 2024</p>
     </footer>
 </body>
 </html>
