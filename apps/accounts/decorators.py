@@ -31,7 +31,7 @@ def rate_limit(key_prefix, max_requests=10, window=60):
             try:
                 requests_made = cache.incr(cache_key)
             except ValueError:
-                # Key doesn't exist yet — initialize it
+                # Key doesn't exist yet - initialize it
                 cache.set(cache_key, 1, window)
                 requests_made = 1
 

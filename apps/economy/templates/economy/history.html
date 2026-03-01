@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-2xl mx-auto">
     <div class="flex items-center justify-between mb-8">
-        <h1 class="font-serif text-2xl font-bold">Transaction Ledger</h1>
+        <h1 class="font-serif text-2xl font-bold">The Ledger</h1>
         <a href="{% url 'export_transactions' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Export CSV</a>
     </div>
 
@@ -47,6 +47,9 @@
 
     {% if page.paginator.num_pages > 1 %}
     <div class="flex items-center justify-center gap-4 mt-8">
+        <div class="text-right text-xs text-slate mt-2 pr-1">
+            Showing {{ page.paginator.count }} entries
+        </div>
         {% if page.has_previous %}
         <a href="?filter={{ current_filter }}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
         {% else %}

@@ -33,7 +33,7 @@ static/css/output.css
 .DS_Store
 Thumbs.db
 
-# Claude Code (local tool permissions — machine-specific)
+# Claude Code (local tool permissions - machine-specific)
 .claude/
 .agents/
 CLAUDE.md

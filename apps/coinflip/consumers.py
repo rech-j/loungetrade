@@ -94,7 +94,7 @@ class CoinFlipConsumer(BaseGameConsumer):
             await self.do_game_transfer(winner_id, loser_id, challenge.stake)
         except InsufficientFunds:
             logger.warning(
-                'Game cancelled — insufficient funds: challenge=%s',
+                'Game cancelled - insufficient funds: challenge=%s',
                 challenge.pk,
             )
             await self.cancel_game(challenge.pk)
@@ -102,7 +102,7 @@ class CoinFlipConsumer(BaseGameConsumer):
                 self.room_group_name,
                 {
                     'type': 'game_error',
-                    'message': 'Game cancelled — a player no longer has sufficient balance.',
+                    'message': 'Game cancelled - a player no longer has sufficient balance.',
                 }
             )
             return

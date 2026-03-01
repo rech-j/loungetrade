@@ -26,7 +26,7 @@ class ChessGame(models.Model):
         ('random', 'Random'),
     ]
 
-    # Players — white/black assigned when game becomes active
+    # Players - white/black assigned when game becomes active
     white_player = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,

@@ -42,10 +42,10 @@ class ChessConsumer(BaseGameConsumer):
         just_activated = False
         # If game is still pending, check if we should activate it
         if game.status == 'pending' and game.creator_id == self.user.pk:
-            # Creator connected — just notify the room
+            # Creator connected - just notify the room
             pass
         elif game.status == 'pending' and game.opponent_id == self.user.pk:
-            # Opponent connected — both players ready, start the game
+            # Opponent connected - both players ready, start the game
             await self.activate_game(game)
             game = await self.get_game()
             just_activated = True
@@ -144,7 +144,7 @@ class ChessConsumer(BaseGameConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.broadcast_error('Game cancelled — insufficient balance.')
+            await self.broadcast_error('Game cancelled - insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, 'resign')
@@ -159,7 +159,7 @@ class ChessConsumer(BaseGameConsumer):
     async def handle_timeout(self, data):
         """A player's clock ran out (as reported by the frontend).
 
-        Only self-reported timeouts are accepted — the reporting player is
+        Only self-reported timeouts are accepted - the reporting player is
         treated as the one who timed out, regardless of any 'side' field in
         the message.  This prevents a player from falsely claiming their
         opponent timed out to steal the stake.
@@ -185,7 +185,7 @@ class ChessConsumer(BaseGameConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.broadcast_error('Game cancelled — insufficient balance.')
+            await self.broadcast_error('Game cancelled - insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, 'timeout')
@@ -202,7 +202,7 @@ class ChessConsumer(BaseGameConsumer):
 
         Only accepted from the player who just moved.  The FEN's active-side
         character shows whose turn it is NEXT, so the other side just moved.
-        Winner for checkmate is server-derived (the last mover) — the client's
+        Winner for checkmate is server-derived (the last mover) - the client's
         'winner' field is intentionally ignored to prevent result forgery.
         """
         game = await self.get_game()
@@ -222,7 +222,7 @@ class ChessConsumer(BaseGameConsumer):
         reason = data.get('reason', 'checkmate')  # checkmate, stalemate, draw
 
         if reason in ('stalemate', 'draw'):
-            # Draw — no coin transfer, just end the game.
+            # Draw - no coin transfer, just end the game.
             await self.finish_game(game.pk, None, reason)
             await self.channel_layer.group_send(self.room_group_name, {
                 'type': 'chess_game_over',
@@ -232,7 +232,7 @@ class ChessConsumer(BaseGameConsumer):
             })
             return
 
-        # Checkmate — winner is the player who just moved (server-derived).
+        # Checkmate - winner is the player who just moved (server-derived).
         if just_moved_side == 'white':
             winner = game.white_player
             loser = game.black_player
@@ -248,7 +248,7 @@ class ChessConsumer(BaseGameConsumer):
             await self.do_game_transfer(winner.pk, loser.pk, game.stake)
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
-            await self.broadcast_error('Game cancelled — insufficient balance.')
+            await self.broadcast_error('Game cancelled - insufficient balance.')
             return
 
         await self.create_chess_notifications(game, winner, loser, reason)

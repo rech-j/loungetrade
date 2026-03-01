@@ -28,9 +28,9 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
     and implement ``connect``, ``disconnect``, and ``receive``.
 
     Provides shared helpers:
-    * ``do_game_transfer`` — atomic coin transfer between winner/loser
-    * ``get_username`` — look up a username by PK
-    * ``broadcast_error`` — send an error to the room group
+    * ``do_game_transfer`` - atomic coin transfer between winner/loser
+    * ``get_username`` - look up a username by PK
+    * ``broadcast_error`` - send an error to the room group
     """
 
     game_type: str = ''

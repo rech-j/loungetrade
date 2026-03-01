@@ -6,7 +6,7 @@ from .base import *  # noqa: F401, F403
 
 DEBUG = False
 
-# Override SECRET_KEY — must be set in production
+# Override SECRET_KEY - must be set in production
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 if not SECRET_KEY:
     raise ImproperlyConfigured('DJANGO_SECRET_KEY environment variable is required in production.')
