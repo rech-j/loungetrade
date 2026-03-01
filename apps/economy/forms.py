@@ -21,7 +21,7 @@ class TradeForm(forms.Form):
             'hx-get': '/profile/search/',
             'hx-trigger': 'keyup changed delay:300ms',
             'hx-target': '#user-results',
-            'hx-vals': 'js:{q: event.target.value}',
+            'hx-vals': 'js:{q: document.getElementById("id_recipient_username").value}',
         }),
     )
     amount = forms.IntegerField(
@@ -70,7 +70,7 @@ class MintForm(forms.Form):
             'hx-get': '/profile/search/',
             'hx-trigger': 'keyup changed delay:300ms',
             'hx-target': '#user-results',
-            'hx-vals': 'js:{q: event.target.value}',
+            'hx-vals': 'js:{q: document.getElementById("id_mint_recipient").value}',
         }),
     )
     amount = forms.IntegerField(

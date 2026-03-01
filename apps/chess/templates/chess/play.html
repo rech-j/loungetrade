@@ -2,7 +2,7 @@
 {% block title %}Chess - LC{% endblock %}
 
 {% block extra_head %}
-<script src="https://cdn.jsdelivr.net/npm/chess.js@1.0.0/dist/cjs/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
 <style>
 /* ── Chess board ─────────────────────────────── */
 .chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: 100%; max-width: 480px; margin: 0 auto; border: 3px solid #c9a84c; box-shadow: 0 4px 20px rgba(26,20,16,0.2); user-select: none; }
@@ -470,9 +470,9 @@ function chessApp() {
         },
 
         checkGameEnd() {
-            if (this.chess.isGameOver()) {
+            if (this.chess.game_over()) {
                 let reason, winner;
-                if (this.chess.isCheckmate()) {
+                if (this.chess.in_checkmate()) {
                     reason = 'checkmate';
                     // The side that just moved wins
                     const loserTurn = this.chess.turn(); // whose turn it would be (they lost)
@@ -482,7 +482,7 @@ function chessApp() {
                         winner = this.mySide === 'white' ? this.myUsername : this.opponentName;
                     }
                 } else {
-                    reason = this.chess.isStalemate() ? 'stalemate' : 'draw';
+                    reason = this.chess.in_stalemate() ? 'stalemate' : 'draw';
                     winner = null;
                 }
                 this.ws.send(JSON.stringify({ action: 'game_over', reason, winner }));

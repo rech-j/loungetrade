@@ -38,7 +38,8 @@
                        autocomplete="off"
                        hx-get="{% url 'user_search' %}"
                        hx-trigger="keyup changed delay:300ms"
-                       hx-target="#chess-opponent-results">
+                       hx-target="#chess-opponent-results"
+                       hx-vals='js:{q: document.getElementById("opp").value}'>
                 <div id="chess-opponent-results"></div>
             </div>
             <div class="grid grid-cols-2 gap-4">
