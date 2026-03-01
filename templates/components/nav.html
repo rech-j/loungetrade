@@ -2,15 +2,14 @@
     <div class="max-w-4xl mx-auto px-4">
         <div class="flex items-center justify-between h-14">
             <a href="{% url 'landing' %}" class="flex items-center gap-2.5 text-gold tracking-wider">
-                <span class="font-serif text-lg font-bold italic">LC</span>
                 <span class="hidden sm:inline text-sm uppercase tracking-[0.2em] font-medium">Lounge Coin</span>
             </a>
 
             {% if request.user.is_authenticated %}
             <div class="hidden md:flex items-center gap-1 text-sm" hx-boost="true">
                 <a href="{% url 'profile' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Profile</a>
-                <a href="{% url 'trade' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Trade</a>
-                <a href="{% url 'coinflip_lobby' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Games</a>
+                <a href="{% url 'trade' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Exchange</a>
+                <a href="{% url 'coinflip_lobby' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Gamba</a>
                 <a href="{% url 'leaderboard' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Board</a>
                 {% if request.user.profile.is_admin_user %}
                 <a href="{% url 'mint' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Mint</a>
