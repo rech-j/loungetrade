@@ -14,9 +14,14 @@ class TradeForm(forms.Form):
             'class': INPUT_CLASSES,
             'placeholder': 'Search for a user...',
             'autocomplete': 'off',
+            'spellcheck': 'false',
+            'autocapitalize': 'none',
+            'inputmode': 'search',
+            'aria-controls': 'user-results',
             'hx-get': '/profile/search/',
             'hx-trigger': 'keyup changed delay:300ms',
             'hx-target': '#user-results',
+            'hx-vals': 'js:{q: event.target.value}',
         }),
     )
     amount = forms.IntegerField(
@@ -26,6 +31,7 @@ class TradeForm(forms.Form):
             'id': 'id_amount',
             'class': INPUT_CLASSES,
             'placeholder': 'Amount',
+            'min': '1',
         }),
     )
     note = forms.CharField(
@@ -35,6 +41,7 @@ class TradeForm(forms.Form):
             'id': 'id_note',
             'class': INPUT_CLASSES,
             'placeholder': 'Note (optional)',
+            'maxlength': '200',
         }),
     )
 
@@ -44,6 +51,8 @@ class TradeForm(forms.Form):
             raise forms.ValidationError('User not found.')
         return username
 
+    def clean_note(self):
+        return self.cleaned_data['note'].strip()
 
 class MintForm(forms.Form):
     recipient_username = forms.CharField(
@@ -54,9 +63,14 @@ class MintForm(forms.Form):
             'class': INPUT_CLASSES,
             'placeholder': 'Username to mint to...',
             'autocomplete': 'off',
+            'spellcheck': 'false',
+            'autocapitalize': 'none',
+            'inputmode': 'search',
+            'aria-controls': 'user-results',
             'hx-get': '/profile/search/',
             'hx-trigger': 'keyup changed delay:300ms',
             'hx-target': '#user-results',
+            'hx-vals': 'js:{q: event.target.value}',
         }),
     )
     amount = forms.IntegerField(
@@ -66,6 +80,7 @@ class MintForm(forms.Form):
             'id': 'id_mint_amount',
             'class': INPUT_CLASSES,
             'placeholder': 'Amount to mint',
+            'min': '1',
         }),
     )
     note = forms.CharField(
@@ -75,6 +90,7 @@ class MintForm(forms.Form):
             'id': 'id_mint_note',
             'class': INPUT_CLASSES,
             'placeholder': 'Note (optional)',
+            'maxlength': '200',
         }),
     )
 
@@ -83,3 +99,7 @@ class MintForm(forms.Form):
         if not User.objects.filter(username=username).exists():
             raise forms.ValidationError('User not found.')
         return username
+    
+
+    def clean_note(self):
+        return self.cleaned_data['note'].strip()

@@ -153,4 +153,32 @@
     color: var(--color-slate);
   }
   .dark .ticker-line { border-color: var(--color-slate); }
+
+  .chip-btn {
+    border: 1px solid var(--color-stone);
+    padding: 0.2rem 0.5rem;
+    font-size: 0.625rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-slate);
+    background: transparent;
+  }
+  .chip-btn:hover { border-color: var(--color-gold); color: var(--color-gold); }
+  .dark .chip-btn { border-color: var(--color-slate); color: var(--color-stone); }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-gold) 45%, transparent);
+    color: var(--color-ink);
+  }
+
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

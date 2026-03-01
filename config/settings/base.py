@@ -130,6 +130,11 @@ MAX_GAME_STAKE = 10000
 NOTIFICATION_MAX_DISPLAY = 50
 LEADERBOARD_SIZE = 50
 
+# Baseline browser hardening (safe defaults for all environments)
+SECURE_REFERRER_POLICY = 'same-origin'
+SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin'
+X_FRAME_OPTIONS = 'DENY'
+
 # Logging
 LOGGING = {
     'version': 1,

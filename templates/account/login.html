@@ -23,16 +23,16 @@
         <div>
             <label for="id_login" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Username</label>
             <input type="text" name="login" id="id_login" required autofocus
-                   class="vintage-input" placeholder="Your username">
+                   class="vintage-input" placeholder="Your username"  autocomplete="username" autocapitalize="none" spellcheck="false">
         </div>
         <div>
             <label for="id_password" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Password</label>
             <input type="password" name="password" id="id_password" required
-                   class="vintage-input" placeholder="Your password">
+                   class="vintage-input" placeholder="Your password" autocomplete="current-password">
         </div>
 
         {% if form.errors %}
-        <div class="text-burgundy text-sm border-l-3 border-burgundy pl-3">Invalid username or password.</div>
+        <div role="alert" class="text-burgundy text-sm border-l-3 border-burgundy pl-3">Invalid username or password.</div>
         {% endif %}
 
         <button type="submit" class="vintage-btn w-full py-3">Log In</button>

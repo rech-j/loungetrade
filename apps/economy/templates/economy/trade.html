@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Trade - LC{% endblock %}
 
+{% block extra_head %}
+<script>
+document.addEventListener('keydown', (event) => {
+  if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
+    event.preventDefault();
+    document.getElementById('id_recipient_username')?.focus();
+  }
+});
+</script>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-md mx-auto">
     <div class="mb-8">
@@ -9,11 +20,14 @@
     </div>
 
     <form method="post" class="space-y-5"
-          x-data="{ submitting: false }" @submit="submitting = true">
+          x-data="{ submitting: false, noteLen: 0 }" @submit="submitting = true">
         {% csrf_token %}
 
         <div x-data @user-selected.window="document.getElementById('{{ form.recipient_username.id_for_label }}').value = $event.detail.username">
-            <label for="{{ form.recipient_username.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Recipient</label>
+            <div class="flex items-center justify-between">
+                <label for="{{ form.recipient_username.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Recipient</label>
+                <span class="text-[10px] uppercase tracking-widest text-slate">Press / to focus</span>
+            </div>
             {{ form.recipient_username }}
             <div id="user-results"></div>
             {% if form.recipient_username.errors %}
@@ -29,13 +43,21 @@
             {% endif %}
         </div>
 
-        <div>
-            <label for="{{ form.note.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Note</label>
+        <div x-on:input="if($event.target.id === 'id_note') noteLen = $event.target.value.length">
+            <div class="flex items-center justify-between">
+                <label for="{{ form.note.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Note</label>
+                <span class="text-[10px] text-slate" x-text="`${noteLen}/200`"></span>
+            </div>
             {{ form.note }}
             {% if form.note.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.note.errors.0 }}</p>
             {% endif %}
         </div>
+
+        <details class="border border-stone dark:border-slate px-3 py-2 text-xs text-slate">
+            <summary class="cursor-pointer uppercase tracking-wider text-[10px]">Lounge etiquette tip</summary>
+            <p class="mt-2">Add a short note when sending larger transfers - it makes your ledger easier to read later.</p>
+        </details>
 
         <button type="submit"
                 :disabled="submitting"

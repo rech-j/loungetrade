@@ -23,7 +23,7 @@
         <div>
             <label for="id_username" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Username</label>
             <input type="text" name="username" id="id_username" required autofocus
-                   class="vintage-input" placeholder="Choose a handle"
+                   class="vintage-input" placeholder="Choose a handle" autocomplete="username" autocapitalize="none" spellcheck="false"
                    value="{{ form.username.value|default_if_none:'' }}">
             {% if form.username.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.username.errors.0 }}</p>
@@ -32,7 +32,7 @@
         <div>
             <label for="id_email" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Email</label>
             <input type="email" name="email" id="id_email" required
-                   class="vintage-input" placeholder="your@email.com"
+                   class="vintage-input" placeholder="your@email.com" autocomplete="email"
                    value="{{ form.email.value|default_if_none:'' }}">
             {% if form.email.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.email.errors.0 }}</p>
@@ -41,7 +41,7 @@
         <div>
             <label for="id_password1" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Password</label>
             <input type="password" name="password1" id="id_password1" required
-                   class="vintage-input" placeholder="Create a password">
+                   class="vintage-input" placeholder="Create a password" autocomplete="new-password">
             {% if form.password1.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.password1.errors.0 }}</p>
             {% endif %}
@@ -49,7 +49,7 @@
         <div>
             <label for="id_password2" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Confirm</label>
             <input type="password" name="password2" id="id_password2" required
-                   class="vintage-input" placeholder="Confirm your password">
+                   class="vintage-input" placeholder="Confirm your password" autocomplete="new-password">
             {% if form.password2.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.password2.errors.0 }}</p>
             {% endif %}
