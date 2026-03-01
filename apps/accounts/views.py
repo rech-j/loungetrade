@@ -110,4 +110,4 @@ def user_search_json(request):
 def balance_check(request):
     """HTMX endpoint for real-time balance updates in the nav bar."""
     balance = request.user.profile.balance
-    return HttpResponse(f'{balance} coins')
+    return HttpResponse(f'{balance} LC')

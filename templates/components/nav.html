@@ -19,7 +19,7 @@
             <div class="hidden md:flex items-center gap-3">
                 <span class="vintage-badge"
                       hx-get="{% url 'balance_check' %}"
-                      hx-trigger="load, every 15s"
+                      hx-trigger="every 15s"
                       hx-swap="innerHTML">
                     {{ request.user.profile.balance }} LC
                 </span>
