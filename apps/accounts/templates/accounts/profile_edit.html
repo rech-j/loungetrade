@@ -74,29 +74,29 @@
         }
         var reader = new FileReader();
         reader.onload = function (ev) {
-            // Reveal container BEFORE setting src so Cropper.js gets real layout dimensions.
-            // (Data URLs can fire onload synchronously; initialising Cropper on a hidden
-            // element gives it 0×0 dimensions and produces a broken / invisible crop UI.)
+            if (cropper) { cropper.destroy(); cropper = null; }
+            // Show the container first so the wrapper has real dimensions.
             cropArea.classList.remove('hidden');
+            // Set src so the image is ready. Cropper.js checks img.complete
+            // internally and waits for load itself — do not set cropImg.onload
+            // manually as it races with Cropper's own internal handler.
             cropImg.src = ev.target.result;
-            cropImg.onload = function () {
-                // rAF guarantees a layout pass has run after the display change.
-                requestAnimationFrame(function () {
-                    if (cropper) { cropper.destroy(); }
-                    cropper = new Cropper(cropImg, {
-                        aspectRatio: 1,
-                        viewMode: 1,
-                        autoCropArea: 0.9,
-                        zoomable: false,
-                        scalable: false,
-                        movable: true,
-                        guides: true,
-                        background: false,
-                        cropBoxMovable: true,
-                        cropBoxResizable: true,
-                    });
+            // rAF defers init until after the browser has laid out the now-visible
+            // container, giving Cropper.js accurate width/height to work with.
+            requestAnimationFrame(function () {
+                cropper = new Cropper(cropImg, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                    autoCropArea: 0.9,
+                    zoomable: false,
+                    scalable: false,
+                    movable: true,
+                    guides: true,
+                    background: false,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
                 });
-            };
+            });
         };
         reader.readAsDataURL(file);
     });

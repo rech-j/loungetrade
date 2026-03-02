@@ -90,8 +90,11 @@ class CoinFlipConsumer(BaseGameConsumer):
         )
 
         try:
-            await self.resolve_game(challenge.pk, flip_result, winner_id)
-            await self.do_game_transfer(winner_id, loser_id, challenge.stake)
+            resolved = await self.resolve_game(challenge.pk, flip_result, winner_id)
+            if not resolved:
+                # Already resolved by a concurrent accept — nothing to do.
+                return
+            await self.do_game_transfer(winner_id, loser_id, challenge.stake, note='Coin flip')
         except InsufficientFunds:
             logger.warning(
                 'Game cancelled - insufficient funds: challenge=%s',
@@ -198,16 +201,27 @@ class CoinFlipConsumer(BaseGameConsumer):
 
     @BaseGameConsumer.db_async
     def resolve_game(self, challenge_id, flip_result, winner_id):
-        CoinFlipChallenge.objects.filter(pk=challenge_id).update(
+        """Atomically transition pending → completed.
+
+        Returns True if this call performed the update, False if the game
+        was already resolved by a concurrent request (TOCTOU guard).
+        """
+        updated = CoinFlipChallenge.objects.filter(
+            pk=challenge_id, status='pending',
+        ).update(
             status='completed',
             flip_result=flip_result,
             winner_id=winner_id,
             resolved_at=timezone.now(),
         )
+        return updated > 0
 
     @BaseGameConsumer.db_async
     def decline_game(self, challenge_id):
-        CoinFlipChallenge.objects.filter(pk=challenge_id).update(status='declined')
+        """Atomically transition pending → declined."""
+        CoinFlipChallenge.objects.filter(
+            pk=challenge_id, status='pending',
+        ).update(status='declined')
 
     @BaseGameConsumer.db_async
     def cancel_game(self, challenge_id):
@@ -219,8 +233,8 @@ class CoinFlipConsumer(BaseGameConsumer):
     @BaseGameConsumer.db_async
     def create_game_notifications(self, challenge, winner_id, loser_id, flip_result):
         from django.contrib.auth.models import User
-        winner = User.objects.get(pk=winner_id)
-        loser = User.objects.get(pk=loser_id)
+        winner = User.objects.select_related('profile').get(pk=winner_id)
+        loser = User.objects.select_related('profile').get(pk=loser_id)
         Notification.objects.create(
             user=winner,
             notif_type='game_result',

@@ -87,6 +87,13 @@ class MintCoinsTest(TestCase):
         notif = self.user.notifications.first()
         self.assertEqual(notif.notif_type, 'coin_received')
 
+    def test_non_admin_cannot_mint(self):
+        """Service layer rejects minting by non-admin users."""
+        with self.assertRaises(InvalidTrade):
+            mint_coins(self.user, self.admin, 100)
+        self.admin.profile.refresh_from_db()
+        self.assertEqual(self.admin.profile.balance, 0)
+
 
 class GameTransferTest(TestCase):
     def setUp(self):
@@ -104,15 +111,14 @@ class GameTransferTest(TestCase):
         self.assertEqual(self.alice.profile.balance, 150)
         self.assertEqual(self.bob.profile.balance, 50)
 
-    def test_game_transfer_creates_transactions(self):
-        game_transfer(self.alice, self.bob, 50)
-        self.assertEqual(Transaction.objects.count(), 2)
-        win_tx = Transaction.objects.get(tx_type='game_win')
-        self.assertEqual(win_tx.sender, self.bob)  # loser
-        self.assertEqual(win_tx.receiver, self.alice)  # winner
-        loss_tx = Transaction.objects.get(tx_type='game_loss')
-        self.assertEqual(loss_tx.sender, self.bob)
-        self.assertEqual(loss_tx.receiver, self.alice)
+    def test_game_transfer_creates_single_transaction(self):
+        game_transfer(self.alice, self.bob, 50, note='Coin flip')
+        self.assertEqual(Transaction.objects.count(), 1)
+        tx = Transaction.objects.first()
+        self.assertEqual(tx.sender, self.bob)  # loser
+        self.assertEqual(tx.receiver, self.alice)  # winner
+        self.assertEqual(tx.tx_type, 'game')
+        self.assertEqual(tx.note, 'Coin flip')
 
     def test_game_transfer_insufficient_funds(self):
         with self.assertRaises(InsufficientFunds):

@@ -16,10 +16,6 @@ from apps.economy.services import game_transfer
 
 logger = logging.getLogger(__name__)
 
-# Alias so subclasses can use ``@BaseGameConsumer.db_async`` instead of
-# importing ``database_sync_to_async`` directly.
-db_async = database_sync_to_async
-
 
 class BaseGameConsumer(AsyncWebsocketConsumer):
     """Abstract base for all game WebSocket consumers.
@@ -39,11 +35,11 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
     # ── Shared database helpers ──────────────────────────────────────────
 
     @database_sync_to_async
-    def do_game_transfer(self, winner_id, loser_id, stake):
+    def do_game_transfer(self, winner_id, loser_id, stake, note='Game'):
         from django.contrib.auth.models import User
         winner = User.objects.get(pk=winner_id)
         loser = User.objects.get(pk=loser_id)
-        game_transfer(winner, loser, stake)
+        game_transfer(winner, loser, stake, note=note)
 
     @database_sync_to_async
     def get_username(self, user_id):

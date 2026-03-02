@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 
@@ -25,7 +26,7 @@ class CoinFlipChallenge(models.Model):
         on_delete=models.CASCADE,
         related_name='coinflip_challenges_received',
     )
-    stake = models.PositiveIntegerField()
+    stake = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -44,6 +45,12 @@ class CoinFlipChallenge(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['status', 'created_at']),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(stake__gte=1),
+                name='coinflip_stake_positive',
+            ),
         ]
 
     def __str__(self):

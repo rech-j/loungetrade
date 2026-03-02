@@ -81,9 +81,16 @@ def mint_coins(
     amount: int,
     note: str = '',
 ) -> Transaction:
-    """Admin mints coins to a target user."""
+    """Admin mints coins to a target user.
+
+    Validates that admin_user actually has minting privileges before proceeding.
+    """
     if amount <= 0:
         raise InvalidTrade('Amount must be positive.')
+
+    admin_profile = UserProfile.objects.get(user=admin_user)
+    if not admin_profile.is_admin_user:
+        raise InvalidTrade('Only admin users can mint coins.')
 
     with transaction.atomic():
         target_profile = UserProfile.objects.select_for_update().get(user=target_user)
@@ -114,8 +121,18 @@ def mint_coins(
         return tx
 
 
-def game_transfer(winner: User, loser: User, stake: int) -> None:
-    """Transfer coins after a game result."""
+def game_transfer(
+    winner: User,
+    loser: User,
+    stake: int,
+    note: str = 'Game',
+) -> Transaction:
+    """Transfer coins after a game result.
+
+    Creates a single Transaction record (sender=loser, receiver=winner)
+    with tx_type='game'. Callers should pass a descriptive ``note``
+    (e.g. 'Coin flip', 'Chess - checkmate').
+    """
     with transaction.atomic():
         loser_profile = UserProfile.objects.select_for_update().get(user=loser)
         winner_profile = UserProfile.objects.select_for_update().get(user=winner)
@@ -130,25 +147,17 @@ def game_transfer(winner: User, loser: User, stake: int) -> None:
         loser_profile.save(update_fields=['balance'])
         winner_profile.save(update_fields=['balance'])
 
-        # Record from winner's perspective
-        Transaction.objects.create(
+        tx = Transaction.objects.create(
             sender=loser,
             receiver=winner,
             amount=stake,
-            tx_type='game_win',
-            note='Coin flip',
-        )
-
-        # Record from loser's perspective
-        Transaction.objects.create(
-            sender=loser,
-            receiver=winner,
-            amount=stake,
-            tx_type='game_loss',
-            note='Coin flip',
+            tx_type='game',
+            note=note,
         )
 
         logger.info(
             'Game transfer: winner=%s loser=%s stake=%d',
             winner.username, loser.username, stake,
         )
+
+        return tx

@@ -10,11 +10,17 @@ class UserProfile(models.Model):
     )
     display_name = models.CharField(max_length=30, blank=True)
     avatar = models.ImageField(upload_to='avatars/', blank=True)
-    balance = models.PositiveIntegerField(default=0, db_index=True)
+    balance = models.PositiveIntegerField(default=0)
     is_admin_user = models.BooleanField(default=False)
     name_changed_at = models.DateTimeField(null=True, blank=True)
     dark_mode = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            # Descending index for leaderboard ORDER BY balance DESC queries.
+            models.Index(fields=['-balance'], name='userprofile_balance_desc'),
+        ]
 
     def __str__(self):
         return self.get_display_name()

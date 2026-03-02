@@ -6,6 +6,8 @@ class Transaction(models.Model):
     TX_TYPES = [
         ('trade', 'Trade'),
         ('mint', 'Mint'),
+        ('game', 'Game'),
+        # Legacy types kept for backward compatibility with existing rows.
         ('game_win', 'Game Win'),
         ('game_loss', 'Game Loss'),
     ]
@@ -23,12 +25,16 @@ class Transaction(models.Model):
         related_name='received_transactions',
     )
     amount = models.PositiveIntegerField()
-    tx_type = models.CharField(max_length=10, choices=TX_TYPES)
+    tx_type = models.CharField(max_length=20, choices=TX_TYPES)
     note = models.CharField(max_length=200, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['sender', 'tx_type', '-created_at']),
+            models.Index(fields=['receiver', 'tx_type', '-created_at']),
+        ]
 
     def __str__(self):
         sender_name = self.sender.username if self.sender else 'System'

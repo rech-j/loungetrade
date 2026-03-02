@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MinValueValidator
 from django.db import models
 
 STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -54,7 +55,7 @@ class ChessGame(models.Model):
     # Which side the creator wants
     creator_side = models.CharField(max_length=6, choices=SIDE_CHOICES, default='random')
 
-    stake = models.PositiveIntegerField()
+    stake = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -62,7 +63,7 @@ class ChessGame(models.Model):
         null=True, blank=True,
         related_name='chess_wins',
     )
-    end_reason = models.CharField(max_length=10, choices=END_REASON_CHOICES, null=True, blank=True)
+    end_reason = models.CharField(max_length=20, choices=END_REASON_CHOICES, null=True, blank=True)
 
     # Game state
     fen = models.CharField(max_length=200, default=STARTING_FEN)
@@ -81,6 +82,12 @@ class ChessGame(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [models.Index(fields=['status', 'created_at'])]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(stake__gte=1),
+                name='chess_stake_positive',
+            ),
+        ]
 
     def __str__(self):
         return (

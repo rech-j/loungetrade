@@ -1,5 +1,5 @@
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q, Sum
+from django.db.models import Count, Q, Sum
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
@@ -24,14 +24,19 @@ def profile_view(request):
         Q(sender=request.user) | Q(receiver=request.user)
     ).select_related('sender', 'receiver').order_by('-created_at')[:20]
 
-    completed_games = CoinFlipChallenge.objects.filter(
+    # Single aggregate query instead of 3 separate queries (count, filter+count, aggregate)
+    game_stats = CoinFlipChallenge.objects.filter(
         Q(challenger=request.user) | Q(opponent=request.user),
         status='completed',
+    ).aggregate(
+        games_played=Count('id'),
+        games_won=Count('id', filter=Q(winner=request.user)),
+        total_wagered=Sum('stake'),
     )
-    games_played = completed_games.count()
-    games_won = completed_games.filter(winner=request.user).count()
+    games_played = game_stats['games_played']
+    games_won = game_stats['games_won']
     win_rate = round(games_won / games_played * 100, 1) if games_played > 0 else 0
-    total_wagered = completed_games.aggregate(total=Sum('stake'))['total'] or 0
+    total_wagered = game_stats['total_wagered'] or 0
 
     return render(request, 'accounts/profile.html', {
         'profile': profile,

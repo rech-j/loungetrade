@@ -27,11 +27,16 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
+        # Persistent connections — avoids reconnecting on every request.
+        'CONN_MAX_AGE': 60,
+        # Guard against runaway queries; abort after 5 seconds.
+        'OPTIONS': {
+            'options': '-c statement_timeout=5000',
+        },
     }
 }
 
 # Security settings
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True

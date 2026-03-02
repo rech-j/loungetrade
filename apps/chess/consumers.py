@@ -1,6 +1,7 @@
 import json
 import logging
 
+import chess
 from channels.db import database_sync_to_async
 from django.utils import timezone
 
@@ -46,9 +47,9 @@ class ChessConsumer(BaseGameConsumer):
             pass
         elif game.status == 'pending' and game.opponent_id == self.user.pk:
             # Opponent connected - both players ready, start the game
-            await self.activate_game(game)
-            game = await self.get_game()
-            just_activated = True
+            just_activated = await self.activate_game(game)
+            if just_activated:
+                game = await self.get_game()
 
         if just_activated:
             # Broadcast updated game_state to ALL players in the room so the
@@ -98,26 +99,52 @@ class ChessConsumer(BaseGameConsumer):
             await self.handle_game_over(data)
 
     async def handle_move(self, data):
-        """Relay a move to the other player and save it."""
+        """Validate and relay a move to the other player.
+
+        Uses python-chess for server-side move validation.  The FEN after the
+        move is computed on the server — the client-supplied 'fen' field is
+        intentionally ignored to prevent game-state forgery.
+        """
         game = await self.get_game()
         if not game or game.status != 'active':
             return
 
         side = game.get_player_side(self.user)
         move_uci = data.get('move', '').strip()
-        fen_after = data.get('fen', '').strip()
         white_time = data.get('white_time')
         black_time = data.get('black_time')
 
-        if not move_uci or not fen_after:
+        if not move_uci:
+            return
+
+        # Server-side validation via python-chess
+        try:
+            board = chess.Board(game.fen)
+        except ValueError:
+            logger.warning('Corrupt FEN in game %s: %s', game.pk, game.fen)
             return
 
         # Validate it's this player's turn
-        # FEN turn is the character after the first space: 'w' or 'b'
-        parts = game.fen.split(' ')
-        current_turn = parts[1] if len(parts) > 1 else 'w'
-        if (current_turn == 'w' and side != 'white') or (current_turn == 'b' and side != 'black'):
+        if (board.turn == chess.WHITE and side != 'white') or \
+           (board.turn == chess.BLACK and side != 'black'):
             return
+
+        # Parse and validate the move
+        try:
+            move = chess.Move.from_uci(move_uci)
+        except ValueError:
+            return
+
+        if move not in board.legal_moves:
+            logger.warning(
+                'Illegal move rejected: game=%s user=%s move=%s fen=%s',
+                game.pk, self.user.username, move_uci, game.fen,
+            )
+            return
+
+        # Apply the move and derive the authoritative FEN server-side
+        board.push(move)
+        fen_after = board.fen()
 
         await self.save_move(game.pk, move_uci, fen_after, white_time, black_time)
 
@@ -139,9 +166,11 @@ class ChessConsumer(BaseGameConsumer):
         winner = game.black_player if side == 'white' else game.white_player
         loser = self.user
 
-        await self.finish_game(game.pk, winner.pk, 'resign')
+        finished = await self.finish_game(game.pk, winner.pk, 'resign')
+        if not finished:
+            return
         try:
-            await self.do_game_transfer(winner.pk, loser.pk, game.stake)
+            await self.do_game_transfer(winner.pk, loser.pk, game.stake, note='Chess - resignation')
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
             await self.broadcast_error('Game cancelled - insufficient balance.')
@@ -180,9 +209,11 @@ class ChessConsumer(BaseGameConsumer):
             winner = game.white_player
             loser = game.black_player
 
-        await self.finish_game(game.pk, winner.pk, 'timeout')
+        finished = await self.finish_game(game.pk, winner.pk, 'timeout')
+        if not finished:
+            return
         try:
-            await self.do_game_transfer(winner.pk, loser.pk, game.stake)
+            await self.do_game_transfer(winner.pk, loser.pk, game.stake, note='Chess - timeout')
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
             await self.broadcast_error('Game cancelled - insufficient balance.')
@@ -223,7 +254,9 @@ class ChessConsumer(BaseGameConsumer):
 
         if reason in ('stalemate', 'draw'):
             # Draw - no coin transfer, just end the game.
-            await self.finish_game(game.pk, None, reason)
+            finished = await self.finish_game(game.pk, None, reason)
+            if not finished:
+                return
             await self.channel_layer.group_send(self.room_group_name, {
                 'type': 'chess_game_over',
                 'winner': None,
@@ -243,9 +276,14 @@ class ChessConsumer(BaseGameConsumer):
         if not winner or not loser:
             return
 
-        await self.finish_game(game.pk, winner.pk, reason)
+        finished = await self.finish_game(game.pk, winner.pk, reason)
+        if not finished:
+            return
         try:
-            await self.do_game_transfer(winner.pk, loser.pk, game.stake)
+            await self.do_game_transfer(
+                winner.pk, loser.pk, game.stake,
+                note=f'Chess - {reason}',
+            )
         except InsufficientFunds:
             await self.cancel_game_db(game.pk)
             await self.broadcast_error('Game cancelled - insufficient balance.')
@@ -315,17 +353,21 @@ class ChessConsumer(BaseGameConsumer):
     def get_game(self):
         try:
             return ChessGame.objects.select_related(
-                'white_player', 'black_player', 'creator', 'opponent'
+                'white_player__profile', 'black_player__profile',
+                'creator', 'opponent',
             ).get(pk=self.game_id)
         except ChessGame.DoesNotExist:
             return None
 
     @database_sync_to_async
     def activate_game(self, game):
-        """Assign colors and mark game active when opponent connects."""
+        """Assign colors and mark game active when opponent connects.
+
+        Uses a conditional update (status='pending') to prevent double
+        activation from concurrent WebSocket connections (TOCTOU guard).
+        Returns True if this call activated the game, False otherwise.
+        """
         import random as _random
-        if game.status != 'pending':
-            return
         side = game.creator_side
         if side == 'random':
             side = _random.choice(['white', 'black'])
@@ -337,12 +379,13 @@ class ChessConsumer(BaseGameConsumer):
             white_id = game.opponent_id
             black_id = game.creator_id
 
-        ChessGame.objects.filter(pk=game.pk).update(
+        updated = ChessGame.objects.filter(pk=game.pk, status='pending').update(
             status='active',
             white_player_id=white_id,
             black_player_id=black_id,
             started_at=timezone.now(),
         )
+        return updated > 0
 
     @database_sync_to_async
     def save_move(self, game_id, move_uci, fen_after, white_time, black_time):
@@ -361,12 +404,17 @@ class ChessConsumer(BaseGameConsumer):
 
     @database_sync_to_async
     def finish_game(self, game_id, winner_id, reason):
-        ChessGame.objects.filter(pk=game_id).update(
+        """Atomically transition active → completed (TOCTOU guard).
+
+        Returns True if this call performed the update.
+        """
+        updated = ChessGame.objects.filter(pk=game_id, status='active').update(
             status='completed',
             winner_id=winner_id,
             end_reason=reason,
             ended_at=timezone.now(),
         )
+        return updated > 0
 
     @database_sync_to_async
     def cancel_game_db(self, game_id):

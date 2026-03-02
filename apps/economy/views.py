@@ -95,7 +95,7 @@ def history_view(request):
     elif tx_filter == 'received':
         transactions = transactions.filter(receiver=request.user)
     elif tx_filter == 'games':
-        transactions = transactions.filter(tx_type__in=['game_win', 'game_loss'])
+        transactions = transactions.filter(tx_type__in=['game', 'game_win', 'game_loss'])
 
     paginator = Paginator(transactions, 25)
     page_number = request.GET.get('page')
