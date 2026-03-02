@@ -53,7 +53,7 @@ def profile_edit_view(request):
             return redirect('profile')
     else:
         form = ProfileEditForm(instance=profile)
-    return render(request, 'accounts/profile_edit.html', {'form': form})
+    return render(request, 'accounts/profile_edit.html', {'form': form, 'profile': profile})
 
 
 @login_required

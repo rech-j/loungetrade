@@ -1,22 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Edit Profile - LC{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+{% endblock %}
+
 {% block content %}
 <div class="max-w-md mx-auto">
     <h1 class="font-serif text-2xl font-bold mb-8">Edit Profile</h1>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
+    <form method="post" enctype="multipart/form-data" class="space-y-6" id="profile-form">
         {% csrf_token %}
 
-        {% for field in form %}
         <div>
-            <label for="{{ field.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">{{ field.label }}</label>
-            {{ field }}
-            {% if field.errors %}
-            <p class="text-burgundy text-xs mt-1">{{ field.errors.0 }}</p>
+            <label for="{{ form.display_name.id_for_label }}"
+                   class="block text-xs font-medium mb-1.5 tracking-wide uppercase">{{ form.display_name.label }}</label>
+            {{ form.display_name }}
+            {% if form.display_name.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ form.display_name.errors.0 }}</p>
             {% endif %}
         </div>
-        {% endfor %}
+
+        <div>
+            <label class="block text-xs font-medium mb-3 tracking-wide uppercase">Profile Picture</label>
+
+            {% if profile.avatar %}
+            <div class="mb-4">
+                <p class="text-xs text-slate mb-1.5 uppercase tracking-wide">Current</p>
+                <div class="w-16 h-16 border-2 border-gold overflow-hidden">
+                    <img src="{{ profile.avatar.url }}" alt="Current avatar" class="w-full h-full object-cover">
+                </div>
+            </div>
+            {% endif %}
+
+            {{ form.avatar }}
+            {% if form.avatar.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ form.avatar.errors.0 }}</p>
+            {% endif %}
+
+            <div id="crop-area" class="mt-4 hidden">
+                <p class="text-xs text-slate uppercase tracking-wide mb-2">Drag to choose which part of the image to use as your avatar</p>
+                <div class="border border-stone dark:border-slate overflow-hidden">
+                    <img id="crop-preview-img" src="" alt="Crop preview" style="display: block; max-width: 100%;">
+                </div>
+            </div>
+        </div>
+
+        {{ form.crop_x }}
+        {{ form.crop_y }}
+        {{ form.crop_width }}
 
         <div class="flex gap-3 pt-3">
             <button type="submit" class="vintage-btn py-2.5 px-8">Save Changes</button>
@@ -24,4 +56,59 @@
         </div>
     </form>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script>
+(function () {
+    var cropper = null;
+    var fileInput = document.getElementById('id_avatar');
+    var cropArea = document.getElementById('crop-area');
+    var cropImg = document.getElementById('crop-preview-img');
+
+    fileInput.addEventListener('change', function () {
+        var file = fileInput.files[0];
+        if (!file) {
+            cropArea.classList.add('hidden');
+            if (cropper) { cropper.destroy(); cropper = null; }
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function (ev) {
+            // Reveal container BEFORE setting src so Cropper.js gets real layout dimensions.
+            // (Data URLs can fire onload synchronously; initialising Cropper on a hidden
+            // element gives it 0×0 dimensions and produces a broken / invisible crop UI.)
+            cropArea.classList.remove('hidden');
+            cropImg.src = ev.target.result;
+            cropImg.onload = function () {
+                // rAF guarantees a layout pass has run after the display change.
+                requestAnimationFrame(function () {
+                    if (cropper) { cropper.destroy(); }
+                    cropper = new Cropper(cropImg, {
+                        aspectRatio: 1,
+                        viewMode: 1,
+                        autoCropArea: 0.9,
+                        zoomable: false,
+                        scalable: false,
+                        movable: true,
+                        guides: true,
+                        background: false,
+                        cropBoxMovable: true,
+                        cropBoxResizable: true,
+                    });
+                });
+            };
+        };
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('profile-form').addEventListener('submit', function () {
+        if (cropper) {
+            var d = cropper.getData(true);
+            document.getElementById('id_crop_x').value = d.x;
+            document.getElementById('id_crop_y').value = d.y;
+            document.getElementById('id_crop_width').value = d.width;
+        }
+    });
+}());
+</script>
 {% endblock %}

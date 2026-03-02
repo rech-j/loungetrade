@@ -4,7 +4,7 @@ import os
 from django import forms
 from django.conf import settings
 from django.utils import timezone
-from PIL import Image
+from PIL import Image, ImageOps
 
 from .models import UserProfile
 
@@ -22,9 +22,13 @@ class ProfileEditForm(forms.ModelForm):
             }),
         }
 
+    crop_x = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    crop_y = forms.FloatField(widget=forms.HiddenInput(), required=False)
+    crop_width = forms.FloatField(widget=forms.HiddenInput(), required=False)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['avatar'].widget.attrs.update({
+        self.fields['avatar'].widget = forms.FileInput(attrs={
             'class': 'block w-full text-sm text-slate file:mr-4 file:py-2 file:px-4 '
                      'file:border-0 file:bg-gold file:text-ink '
                      'file:cursor-pointer hover:file:bg-gold-dark hover:file:text-cream',
@@ -65,17 +69,27 @@ class ProfileEditForm(forms.ModelForm):
             profile.name_changed_at = timezone.now()
         if commit:
             profile.save()
-        # Resize avatar after save
         if 'avatar' in self.changed_data and profile.avatar:
-            self._resize_avatar(profile)
+            x = self.cleaned_data.get('crop_x')
+            y = self.cleaned_data.get('crop_y')
+            w = self.cleaned_data.get('crop_width')
+            crop_data = {'x': x, 'y': y, 'width': w} if all(v is not None for v in (x, y, w)) else None
+            self._resize_avatar(profile, crop_data)
         return profile
 
-    def _resize_avatar(self, profile):
+    def _resize_avatar(self, profile, crop_data=None):
         max_dim = getattr(settings, 'AVATAR_MAX_DIMENSION', 400)
         try:
             img = Image.open(profile.avatar.path)
+            img = ImageOps.exif_transpose(img)
+            if crop_data:
+                x = max(0, int(crop_data['x']))
+                y = max(0, int(crop_data['y']))
+                w = int(crop_data['width'])
+                if w > 0:
+                    img = img.crop((x, y, x + w, y + w))
             if img.width > max_dim or img.height > max_dim:
                 img.thumbnail((max_dim, max_dim), Image.LANCZOS)
-                img.save(profile.avatar.path, quality=85)
+            img.save(profile.avatar.path, quality=85)
         except (OSError, IOError) as e:
             logger.warning('Avatar resize failed for user %s: %s', profile.user.username, e)
