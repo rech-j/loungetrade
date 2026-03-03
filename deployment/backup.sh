@@ -7,6 +7,13 @@
 
 set -euo pipefail
 
+# Load environment variables (DB_NAME, DB_USER, etc.)
+if [ -f /var/www/loungecoin/.env ]; then
+    set -a
+    source /var/www/loungecoin/.env
+    set +a
+fi
+
 BACKUP_DIR="/var/backups/loungecoin"
 DB_NAME="${DB_NAME:-loungecoin}"
 DB_USER="${DB_USER:-loungecoin}"
