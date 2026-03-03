@@ -5,7 +5,7 @@
     <div class="px-1 py-1.5 flex items-center justify-between gap-3">
         <div class="min-w-0 flex-1">
             <span class="text-sm text-slate truncate block">
-                &#9822; Chess &mdash; {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
+                &#9822; Chess - {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
                 <span class="text-xs text-slate/70">({{ g.stake }} LC)</span>
             </span>
         </div>
@@ -31,7 +31,7 @@
     <div class="px-1 py-1.5 flex items-center justify-between gap-3">
         <div class="min-w-0 flex-1">
             <span class="text-sm text-slate truncate block">
-                &#9854; Coin Flip &mdash; {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
+                &#9854; Coin Flip - {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
                 <span class="text-xs text-slate/70">({{ c.stake }} LC)</span>
             </span>
         </div>

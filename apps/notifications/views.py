@@ -102,7 +102,7 @@ def game_activity_badge(request):
     ).count()
     pending_challenges = chess_challenges + coinflip_challenges
 
-    # Active games you're in (chess only — coinflip resolves instantly)
+    # Active games you're in (chess only - coinflip resolves instantly)
     active_games = ChessGame.objects.filter(
         Q(creator=user) | Q(opponent=user),
         status='active',

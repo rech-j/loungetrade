@@ -108,7 +108,7 @@ class ChessConsumer(BaseGameConsumer):
         """Validate and relay a move to the other player.
 
         Uses python-chess for server-side move validation.  The FEN after the
-        move is computed on the server — the client-supplied 'fen' field is
+        move is computed on the server - the client-supplied 'fen' field is
         intentionally ignored to prevent game-state forgery.
         """
         game = await self.get_game()

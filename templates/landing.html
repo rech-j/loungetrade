@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Lounge Coin{% endblock %}
+{% load static %}
 
 {% block content %}
 <div class="py-12 sm:py-20">
@@ -42,6 +43,43 @@
             <p class="text-xs tracking-widest uppercase text-gold mb-3">III.</p>
             <h3 class="font-serif text-lg font-bold mb-2">The Board</h3>
             <p class="text-sm text-slate leading-relaxed">You will win more, just gamble. Gamble with me. Please respond to my chess match please.</p>
+        </div>
+    </div>
+
+    <div class="grid sm:grid-cols-2 gap-8 mt-16">
+        <div class="border-2 border-stone dark:border-slate overflow-hidden flex flex-col p-3 ring-1 ring-inset ring-stone/30 dark:ring-slate/30">
+            <div class="bg-stone/20 dark:bg-slate/20 aspect-[4/3] overflow-hidden">
+                <img src="{% static 'img/linhchess.png' %}" alt="Member photo" class="w-full h-full object-fill">
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2">
+                <div class="flex-1 h-px bg-stone/40 dark:bg-slate/40"></div>
+                <span class="text-gold text-xs">&#9830;</span>
+                <div class="flex-1 h-px bg-stone/40 dark:bg-slate/40"></div>
+            </div>
+            <div class="px-3 pb-3 flex flex-col gap-3">
+                <p class="font-serif text-base italic leading-relaxed">"I thought this was a CS gambling site, now I am addicted. Lounge Coin has cost me everything and I wouldn't change a thing."</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm"><span class="text-gold">&#9733;&#9733;&#9733;</span><span class="text-stone dark:text-slate">&#9733;&#9733;</span></span>
+                    <span class="text-xs text-slate ml-1">— Gomen Amanai, Member since 2023</span>
+                </div>
+            </div>
+        </div>
+        <div class="border-2 border-stone dark:border-slate overflow-hidden flex flex-col p-3 ring-1 ring-inset ring-stone/30 dark:ring-slate/30">
+            <div class="bg-stone/20 dark:bg-slate/20 aspect-[4/3] overflow-hidden">
+                <img src="{% static 'img/luke4.png' %}" alt="Member photo" class="w-full h-full object-fill">
+            </div>
+            <div class="flex items-center gap-2 px-3 py-2">
+                <div class="flex-1 h-px bg-stone/40 dark:bg-slate/40"></div>
+                <span class="text-gold text-xs">&#9830;</span>
+                <div class="flex-1 h-px bg-stone/40 dark:bg-slate/40"></div>
+            </div>
+            <div class="px-3 pb-3 flex flex-col gap-3">
+                <p class="font-serif text-base italic leading-relaxed">"This place sucks almost as much as Dark Knight trilogy. I need to go grind melee and make fake facebook marketplace posts inside of people's houses."</p>
+                <div class="flex items-center gap-2">
+                    <span class="text-sm"><span class="text-gold">&#9733;&#9733;</span><span class="text-stone dark:text-slate">&#9733;&#9733;&#9733;</span></span>
+                    <span class="text-xs text-slate ml-1">— Bike L. Rack, Member since 2019</span>
+                </div>
+            </div>
         </div>
     </div>
 </div>

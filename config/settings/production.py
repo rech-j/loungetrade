@@ -27,7 +27,7 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST', 'localhost'),
         'PORT': os.environ.get('DB_PORT', '5432'),
-        # Persistent connections — avoids reconnecting on every request.
+        # Persistent connections - avoids reconnecting on every request.
         'CONN_MAX_AGE': 60,
         # Guard against runaway queries; abort after 5 seconds.
         'OPTIONS': {
@@ -54,7 +54,7 @@ CSRF_TRUSTED_ORIGINS = ['https://loungecoin.trade']
 # allauth: use HTTPS in email links (password reset, etc.)
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
-# Email — uses Django's built-in SMTP backend with env-configured credentials.
+# Email - uses Django's built-in SMTP backend with env-configured credentials.
 # Works with any transactional email provider (Brevo, Mailgun, Resend, SES, etc.)
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')

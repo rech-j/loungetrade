@@ -7,7 +7,7 @@
         <div class="flex items-center justify-between gap-2">
             <div class="min-w-0 flex-1">
                 <p class="text-xs font-medium truncate">
-                    &#9822; Chess &mdash; {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
+                    &#9822; Chess - {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
                 </p>
                 <p class="text-[10px] text-slate mt-0.5">
                     {{ g.stake }} LC &middot; {% if g.status == 'active' %}In progress{% else %}Waiting for opponent{% endif %}
@@ -37,7 +37,7 @@
         <div class="flex items-center justify-between gap-2">
             <div class="min-w-0 flex-1">
                 <p class="text-xs font-medium truncate">
-                    &#9854; Coin Flip &mdash; {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
+                    &#9854; Coin Flip - {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
                 </p>
                 <p class="text-[10px] text-slate mt-0.5">
                     {{ c.stake }} LC &middot; {% if c.challenger == request.user %}Awaiting opponent{% else %}You were challenged{% endif %}

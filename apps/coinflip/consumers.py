@@ -92,7 +92,7 @@ class CoinFlipConsumer(BaseGameConsumer):
         try:
             resolved = await self.resolve_game(challenge.pk, flip_result, winner_id)
             if not resolved:
-                # Already resolved by a concurrent accept — nothing to do.
+                # Already resolved by a concurrent accept - nothing to do.
                 return
             await self.do_game_transfer(winner_id, loser_id, challenge.stake, note='Coin flip')
         except InsufficientFunds:
