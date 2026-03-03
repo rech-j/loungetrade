@@ -1,0 +1,8 @@
+{% if total_activity > 0 %}
+<a href="{% url 'chess_lobby' %}" class="relative text-gold hover:text-gold-dark transition-colors p-1 animate-pulse" aria-label="{{ total_activity }} game alert{{ total_activity|pluralize }}" title="{% if pending_challenges %}{{ pending_challenges }} challenge{{ pending_challenges|pluralize }} waiting{% endif %}{% if pending_challenges and active_games %}, {% endif %}{% if active_games %}{{ active_games }} active game{{ active_games|pluralize }}{% endif %}">
+    <svg aria-hidden="true" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z"/>
+    </svg>
+    <span class="absolute -top-1 -right-1 w-4 h-4 bg-burgundy text-cream text-[9px] font-bold flex items-center justify-center">{{ total_activity }}</span>
+</a>
+{% endif %}

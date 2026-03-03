@@ -24,6 +24,11 @@
                     {{ request.user.profile.balance }} LC
                 </span>
 
+                <span hx-get="{% url 'game_activity_badge' %}"
+                      hx-trigger="load, every 10s"
+                      hx-swap="innerHTML">
+                </span>
+
                 <div x-data="{ notifOpen: false }" class="relative">
                     <button @click="notifOpen = !notifOpen" :aria-expanded="notifOpen" aria-label="Notifications" class="relative text-slate hover:text-gold transition-colors p-1">
                         <svg aria-hidden="true" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,6 +109,11 @@
                     {% endif %}
                 </span>
             </a>
+            <span hx-get="{% url 'game_activity_badge' %}"
+                  hx-trigger="load, every 10s"
+                  hx-swap="innerHTML"
+                  class="inline-block px-1">
+            </span>
             {% if request.user.profile.is_admin_user %}
             <a href="{% url 'mint' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Mint</a>
             {% endif %}

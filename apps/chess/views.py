@@ -131,3 +131,17 @@ def decline_game(request, game_id):
     game.save(update_fields=['status', 'end_reason'])
     messages.info(request, 'Chess challenge declined.')
     return redirect('chess_lobby')
+
+
+@login_required
+def cancel_game(request, game_id):
+    if request.method != 'POST':
+        return redirect('chess_lobby')
+    game = get_object_or_404(
+        ChessGame, pk=game_id, creator=request.user, status='pending'
+    )
+    game.status = 'cancelled'
+    game.end_reason = 'cancelled'
+    game.save(update_fields=['status', 'end_reason'])
+    messages.info(request, 'Chess challenge cancelled.')
+    return redirect('chess_lobby')

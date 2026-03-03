@@ -17,11 +17,18 @@ function chessApp() {
         legalMoves: [],        // squares the selected piece can move to
         lastMove: null,        // { from, to }
         dragFrom: null,
+        pendingPromotion: null, // { from, to } awaiting piece choice
 
         mySide: null,          // 'white' | 'black' | null (spectator/pending)
         myName: 'You',
         opponentName: 'Opponent',
         myUsername: '',
+        myAvatar: '',
+        myInitial: '',
+        opponentAvatar: '',
+        opponentInitial: '',
+        opponentOnline: false,
+        playerAvatars: {},     // { username: { avatar, initial } }
 
         reconnectAttempts: 0,
         myTime: 600,
@@ -41,8 +48,69 @@ function chessApp() {
         get myTimeLow() { return this.myTime <= 30; },
         get opponentTimeLow() { return this.opponentTime <= 30; },
 
+        // ── Captured pieces ─────────────────────────────────────
+        get capturedPieces() {
+            if (!this.chess) return { white: [], black: [], whiteValue: 0, blackValue: 0 };
+            var startingPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+            var pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
+            var onBoard = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
+            var board = this.chess.board();
+            for (var r = 0; r < 8; r++) {
+                for (var f = 0; f < 8; f++) {
+                    var sq = board[r][f];
+                    if (sq && sq.type !== 'k') onBoard[sq.color][sq.type]++;
+                }
+            }
+            // Captured by white = black's missing pieces; captured by black = white's missing pieces
+            var capturedByWhite = [];
+            var capturedByBlack = [];
+            var whiteValue = 0;
+            var blackValue = 0;
+            var pieceOrder = ['q', 'r', 'b', 'n', 'p'];
+            for (var i = 0; i < pieceOrder.length; i++) {
+                var t = pieceOrder[i];
+                var missingBlack = startingPieces[t] - onBoard.b[t];
+                var missingWhite = startingPieces[t] - onBoard.w[t];
+                for (var j = 0; j < missingBlack; j++) {
+                    capturedByWhite.push('b' + t.toUpperCase());
+                    whiteValue += pieceValues[t];
+                }
+                for (var j = 0; j < missingWhite; j++) {
+                    capturedByBlack.push('w' + t.toUpperCase());
+                    blackValue += pieceValues[t];
+                }
+            }
+            return { white: capturedByWhite, black: capturedByBlack, whiteValue: whiteValue, blackValue: blackValue };
+        },
+        get myCaptured() {
+            if (!this.mySide) return [];
+            return this.mySide === 'white' ? this.capturedPieces.white : this.capturedPieces.black;
+        },
+        get opponentCaptured() {
+            if (!this.mySide) return [];
+            return this.mySide === 'white' ? this.capturedPieces.black : this.capturedPieces.white;
+        },
+        get myAdvantage() {
+            if (!this.mySide) return 0;
+            var myVal = this.mySide === 'white' ? this.capturedPieces.whiteValue : this.capturedPieces.blackValue;
+            var oppVal = this.mySide === 'white' ? this.capturedPieces.blackValue : this.capturedPieces.whiteValue;
+            return myVal - oppVal;
+        },
+        get opponentAdvantage() {
+            return -this.myAdvantage;
+        },
+
         // ── Init ─────────────────────────────────────────────
         init() {
+            var el = this.$el;
+            this.playerAvatars[el.dataset.creatorUsername] = {
+                avatar: el.dataset.creatorAvatar || '',
+                initial: el.dataset.creatorInitial || '?',
+            };
+            this.playerAvatars[el.dataset.opponentUsername] = {
+                avatar: el.dataset.opponentAvatar || '',
+                initial: el.dataset.opponentInitial || '?',
+            };
             this.chess = new Chess();
             this.renderBoard();
             this.connectWS();
@@ -70,8 +138,11 @@ function chessApp() {
             if (data.type === 'game_state') {
                 this.applyGameState(data);
             } else if (data.type === 'player_connected') {
+                if (data.username !== this.myUsername) this.opponentOnline = true;
                 this.statusMsg = data.username + ' connected.';
                 setTimeout(() => { this.statusMsg = ''; }, 3000);
+            } else if (data.type === 'player_disconnected') {
+                if (data.username !== this.myUsername) this.opponentOnline = false;
             } else if (data.type === 'chess_move') {
                 this.applyOpponentMove(data);
             } else if (data.type === 'chess_game_over') {
@@ -90,8 +161,17 @@ function chessApp() {
                 this.fen = data.fen;
                 this.myTime = this.mySide === 'white' ? data.white_time : data.black_time;
                 this.opponentTime = this.mySide === 'white' ? data.black_time : data.white_time;
-                this.myName = this.mySide === 'white' ? data.white_player : data.black_player;
-                this.opponentName = this.mySide === 'white' ? data.black_player : data.white_player;
+                var myUser = this.mySide === 'white' ? data.white_player : data.black_player;
+                var oppUser = this.mySide === 'white' ? data.black_player : data.white_player;
+                this.myName = myUser;
+                this.opponentName = oppUser;
+                var myInfo = this.playerAvatars[myUser] || {};
+                var oppInfo = this.playerAvatars[oppUser] || {};
+                this.myAvatar = myInfo.avatar || '';
+                this.myInitial = myInfo.initial || myUser.charAt(0).toUpperCase();
+                this.opponentAvatar = oppInfo.avatar || '';
+                this.opponentInitial = oppInfo.initial || oppUser.charAt(0).toUpperCase();
+                this.opponentOnline = true;
                 // Rebuild move list from UCI
                 if (data.moves_uci) this.rebuildMoveList(data.moves_uci);
                 this.renderBoard();
@@ -236,7 +316,8 @@ function chessApp() {
             var isLegal = this.legalMoves.some(function(m) { return m.to === sq.name; }) && !this.chess.get(sq.name) ? ' legal-move' : '';
             var isCapture = this.legalMoves.some(function(m) { return m.to === sq.name; }) && this.chess.get(sq.name) ? ' legal-capture' : '';
             var isLast = this.lastMove && (sq.name === this.lastMove.from || sq.name === this.lastMove.to) ? ' last-move-sq' : '';
-            return base + selected + isLegal + isCapture + isLast;
+            var inCheck = this.chess.in_check() && sq.piece && sq.piece[1] === 'K' && sq.piece[0] === this.chess.turn() ? ' in-check' : '';
+            return base + selected + isLegal + isCapture + isLast + inCheck;
         },
 
         pieceChar(piece) {
@@ -302,13 +383,22 @@ function chessApp() {
 
         tryMove(from, to) {
             var piece = this.chess.get(from);
-            var promotion = undefined;
             if (piece && piece.type === 'p') {
                 var toRank = parseInt(to[1]);
                 if ((piece.color === 'w' && toRank === 8) || (piece.color === 'b' && toRank === 1)) {
-                    promotion = 'q';
+                    // Verify this is actually a legal move before showing picker
+                    var legal = this.chess.moves({ square: from, verbose: true });
+                    if (!legal.some(function(m) { return m.to === to; })) return false;
+                    this.pendingPromotion = { from: from, to: to };
+                    this.selectedSq = null;
+                    this.legalMoves = [];
+                    return true;
                 }
             }
+            return this.executeMove(from, to, undefined);
+        },
+
+        executeMove(from, to, promotion) {
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (!result) return false;
 
@@ -330,6 +420,24 @@ function chessApp() {
 
             this.checkGameEnd();
             return true;
+        },
+
+        promoteTo(pieceType) {
+            if (!this.pendingPromotion) return;
+            var from = this.pendingPromotion.from;
+            var to = this.pendingPromotion.to;
+            this.pendingPromotion = null;
+            this.executeMove(from, to, pieceType);
+        },
+
+        cancelPromotion() {
+            this.pendingPromotion = null;
+        },
+
+        get promotionColor() {
+            if (!this.pendingPromotion) return 'w';
+            var piece = this.chess.get(this.pendingPromotion.from);
+            return piece ? piece.color : 'w';
         },
 
         checkGameEnd() {

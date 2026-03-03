@@ -80,6 +80,11 @@ class ChessConsumer(BaseGameConsumer):
 
     async def disconnect(self, close_code):
         logger.info('Chess WS disconnected: user=%s game=%s', getattr(self, 'user', None), self.game_id)
+        if hasattr(self, 'user') and not self.user.is_anonymous:
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'player_disconnected',
+                'username': self.user.username,
+            })
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
@@ -322,6 +327,12 @@ class ChessConsumer(BaseGameConsumer):
     async def player_connected(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_connected',
+            'username': event['username'],
+        }))
+
+    async def player_disconnected(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_disconnected',
             'username': event['username'],
         }))
 

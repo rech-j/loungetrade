@@ -79,7 +79,12 @@
                 </div>
                 <div class="flex gap-2">
                     <a href="{% url 'chess_play' g.pk %}" class="vintage-btn text-xs py-1.5 px-4">Play</a>
-                    {% if g.creator != request.user and g.status == 'pending' %}
+                    {% if g.creator == request.user and g.status == 'pending' %}
+                    <form method="post" action="{% url 'chess_cancel' g.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-xs py-1.5 px-3 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Cancel</button>
+                    </form>
+                    {% elif g.creator != request.user and g.status == 'pending' %}
                     <form method="post" action="{% url 'chess_decline' g.pk %}">
                         {% csrf_token %}
                         <button type="submit" class="vintage-btn-outline text-xs py-1.5 px-3 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Decline</button>
