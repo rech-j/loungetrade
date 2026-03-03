@@ -15,7 +15,7 @@ def health_check(request):
 urlpatterns = [
     path('favicon.ico', RedirectView.as_view(url='/static/favicon/favicon.ico', permanent=True)),
     path('health/', health_check, name='health_check'),
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL, admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('profile/', include('apps.accounts.urls')),
     path('economy/', include('apps.economy.urls')),

@@ -18,6 +18,7 @@ if _missing:
     raise ImproperlyConfigured(f'Missing required environment variables: {", ".join(_missing)}')
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'loungecoin.trade').split(',')
+ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin/')
 
 DATABASES = {
     'default': {
@@ -43,6 +44,8 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Strict'
 CSRF_COOKIE_SAMESITE = 'Lax'  # 'Strict' breaks cross-site OAuth callbacks
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 86400  # 24 hours
 SECURE_SSL_REDIRECT = True
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -50,6 +53,9 @@ SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_TRUSTED_ORIGINS = ['https://loungecoin.trade']
+
+# Lock WebSocket CSP to this domain only (avoids the broad wss:/ws: wildcard).
+CSP_WS_ORIGIN = 'wss://loungecoin.trade'
 
 # allauth: use HTTPS in email links (password reset, etc.)
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
@@ -77,5 +83,49 @@ CHANNEL_LAYERS = {
 STORAGES = {
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {name} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.environ.get('DJANGO_LOG_FILE', '/var/log/loungecoin/django.log'),
+            'maxBytes': 10 * 1024 * 1024,  # 10 MB per file
+            'backupCount': 5,
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'apps': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+        # Captures Django's internal security events (SuspiciousOperation, etc.)
+        'django.security': {
+            'handlers': ['file'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+        # Captures 4xx/5xx request errors
+        'django.request': {
+            'handlers': ['file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
     },
 }

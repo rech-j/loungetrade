@@ -48,6 +48,17 @@ class ProfileEditForm(forms.ModelForm):
                 raise forms.ValidationError(
                     'Unsupported file type. Please upload a JPG, PNG, GIF, or WebP.'
                 )
+            # Verify the file is a real, uncorrupted image before accepting it.
+            # This catches polyglot files (valid header + malicious payload) before
+            # anything is written to disk.
+            try:
+                img = Image.open(avatar)
+                img.verify()
+            except Exception:
+                raise forms.ValidationError('Invalid or corrupt image file.')
+            finally:
+                # verify() consumes the file pointer; reset so Django can save it.
+                avatar.seek(0)
         return avatar
 
     def clean_display_name(self):
@@ -93,3 +104,8 @@ class ProfileEditForm(forms.ModelForm):
             img.save(profile.avatar.path, quality=85)
         except (OSError, IOError) as e:
             logger.warning('Avatar resize failed for user %s: %s', profile.user.username, e)
+            # Delete the file rather than leaving an unprocessed upload on disk.
+            try:
+                profile.avatar.delete(save=True)
+            except Exception:
+                logger.warning('Failed to delete avatar after resize error for user %s', profile.user.username)

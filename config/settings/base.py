@@ -83,6 +83,13 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    # Fallback for existing PBKDF2 hashes - auto-upgraded to Argon2 on next login.
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+]
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -106,7 +113,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 ACCOUNT_LOGIN_METHODS = {'username'}
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
 ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 LOGIN_REDIRECT_URL = '/profile/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
@@ -121,6 +128,8 @@ SOCIALACCOUNT_PROVIDERS = {
         },
     },
 }
+
+ADMIN_URL = 'admin/'
 
 # Lounge Coin app settings
 AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2MB
