@@ -25,3 +25,6 @@ if os.environ.get('USE_SQLITE', 'false').lower() == 'true':
             'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
+
+# Print emails to the console instead of sending them
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
