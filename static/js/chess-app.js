@@ -1,6 +1,6 @@
 function chessApp() {
     return {
-        // ── State ─────────────────────────────────────────────
+        // State (i have endless sadness in my heart)
         ws: null,
         connected: false,
         gameActive: false,
@@ -38,7 +38,7 @@ function chessApp() {
         movePairs: [],         // [['e4', 'e5'], ['Nf3', ...], ...]
         sanMoves: [],          // all SAN moves in order
 
-        // ── Computed ──────────────────────────────────────────
+        // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
             var turn = this.chess.turn(); // 'w' or 'b'
@@ -48,7 +48,7 @@ function chessApp() {
         get myTimeLow() { return this.myTime <= 30; },
         get opponentTimeLow() { return this.opponentTime <= 30; },
 
-        // ── Captured pieces ─────────────────────────────────────
+        // Captured pieces
         get capturedPieces() {
             if (!this.chess) return { white: [], black: [], whiteValue: 0, blackValue: 0 };
             var startingPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
@@ -100,7 +100,7 @@ function chessApp() {
             return -this.myAdvantage;
         },
 
-        // ── Init ─────────────────────────────────────────────
+        // Init
         init() {
             var el = this.$el;
             this.playerAvatars[el.dataset.creatorUsername] = {
@@ -254,7 +254,7 @@ function chessApp() {
             }
         },
 
-        // ── Timer ──────────────────────────────────────────────
+        // Timer
         startTimer() {
             this.stopTimer();
             this.timerInterval = setInterval(() => {
@@ -279,7 +279,7 @@ function chessApp() {
             return m + ':' + s;
         },
 
-        // ── Board rendering ────────────────────────────────────
+        // Board rendering
         renderBoard() {
             var board = this.chess.board(); // 8x8 array [rank8..rank1][fileA..fileH]
             var files = ['a','b','c','d','e','f','g','h'];
@@ -344,7 +344,7 @@ function chessApp() {
             return (color === 'w' && this.mySide === 'white') || (color === 'b' && this.mySide === 'black');
         },
 
-        // ── Interaction ────────────────────────────────────────
+        // Interaction
         handleSquareClick(sq) {
             if (!this.gameActive || !this.isMyTurn || !this.mySide) return;
 
@@ -459,7 +459,7 @@ function chessApp() {
             }
         },
 
-        // ── Drag and drop ──────────────────────────────────────
+        // Drag and drop
         handleDragStart(event, sq) {
             if (!this.canDragPiece(sq)) { event.preventDefault(); return; }
             this.dragFrom = sq.name;
@@ -473,7 +473,7 @@ function chessApp() {
             this.dragFrom = null;
         },
 
-        // ── Actions ────────────────────────────────────────────
+        // Actions
         resign() {
             this.confirmResign = false;
             this.ws.send(JSON.stringify({ action: 'resign' }));

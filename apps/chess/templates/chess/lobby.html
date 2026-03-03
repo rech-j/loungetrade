@@ -8,13 +8,11 @@
         <p class="text-slate text-sm mt-1">Chess for stakes, 10 minutes per player.</p>
     </div>
 
-    <!-- Game type tabs -->
     <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
         <a href="{% url 'coinflip_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Coin Flip</a>
         <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-t-3 border-t-gold text-gold">Chess</a>
     </div>
 
-    <!-- Create chess challenge -->
     <div class="vintage-card mb-10">
         <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Chess Match</h2>
         <form method="post" action="{% url 'chess_create' %}" class="space-y-4"

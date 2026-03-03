@@ -55,7 +55,6 @@
      data-opponent-initial="{{ game.opponent.profile.get_display_name|first|upper }}"
      x-init="myUsername = $el.dataset.username; init()">
 
-    <!-- Header -->
     <div class="flex items-center justify-between mb-4">
         <div>
             <p class="text-xs tracking-widest uppercase text-slate">Chess Match</p>
@@ -64,14 +63,11 @@
         <div class="vintage-badge">{{ game.stake }} LC</div>
     </div>
 
-    <!-- Status / messages -->
     <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
     <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
 
     <div class="grid grid-cols-1 md:grid-cols-[1fr_200px] lg:grid-cols-[1fr_260px] gap-6">
-        <!-- Board column -->
         <div>
-            <!-- Opponent info + clock -->
             <div class="flex items-center justify-between mb-2 px-1">
                 <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-full border border-stone dark:border-slate overflow-hidden flex items-center justify-center bg-parchment dark:bg-walnut flex-shrink-0">
@@ -91,7 +87,6 @@
                       x-text="formatTime(opponentTime)">10:00</span>
             </div>
 
-            <!-- Board -->
             <div class="relative">
             <div class="chess-board" role="grid" aria-label="Chess board"
                  @dragover.prevent
@@ -112,7 +107,6 @@
                 </template>
             </div>
 
-            <!-- Promotion picker overlay -->
             <div x-show="pendingPromotion" class="promo-overlay" @click.self="cancelPromotion()">
                 <div class="promo-picker">
                     <button @click="promoteTo('q')" :title="'Queen'">
@@ -131,7 +125,6 @@
             </div>
             </div>
 
-            <!-- My info + clock -->
             <div class="flex items-center justify-between mt-2 px-1">
                 <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-full border border-stone dark:border-slate overflow-hidden flex items-center justify-center bg-parchment dark:bg-walnut flex-shrink-0">
@@ -152,9 +145,7 @@
             </div>
         </div>
 
-        <!-- Sidebar -->
         <div class="space-y-4">
-            <!-- Connection -->
             <div class="vintage-card py-3">
                 <p class="text-xs text-slate uppercase tracking-wide mb-1">Status</p>
                 <p class="text-sm font-medium"
@@ -169,7 +160,6 @@
                 </div>
             </div>
 
-            <!-- Controls -->
             <div x-show="gameActive && mySide" class="space-y-2">
                 <button @click="confirmResign = true"
                         x-show="!confirmResign"
@@ -183,7 +173,6 @@
                 </div>
             </div>
 
-            <!-- Move list -->
             <div class="vintage-card py-3">
                 <p class="text-xs text-slate uppercase tracking-wide mb-2">Moves</p>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="move-list">
@@ -198,14 +187,12 @@
                 </div>
             </div>
 
-            <!-- Game over panel -->
             <div x-show="gameOver" class="vintage-card py-3">
                 <p class="font-serif text-lg font-bold" x-text="gameOverTitle"></p>
                 <p class="text-sm text-slate mt-1" x-text="gameOverMsg"></p>
                 <a href="{% url 'chess_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
             </div>
 
-            <!-- Waiting panel (pending) -->
             <div x-show="!gameActive && !gameOver" class="vintage-card py-3 text-center">
                 <p class="text-sm text-slate">Waiting for opponent to connect...</p>
                 <p class="text-xs text-slate mt-1">Share the link or wait for the notification.</p>

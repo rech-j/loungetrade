@@ -4,7 +4,6 @@
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
 
-    <!-- Profile header -->
     <div class="flex items-start gap-5 mb-10">
         <div class="w-16 h-16 flex-shrink-0 border-2 border-gold flex items-center justify-center overflow-hidden">
             {% if profile.avatar %}
@@ -20,7 +19,6 @@
         <a href="{% url 'profile_edit' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Edit</a>
     </div>
 
-    <!-- Balance -->
     <div class="border-t-3 border-gold border border-stone dark:border-slate p-6 mb-8">
         <p class="text-xs tracking-widest uppercase text-slate mb-1">Current Balance</p>
         <p class="font-serif text-4xl font-bold text-gold">{{ profile.balance }} <span class="text-base font-normal text-slate">LC</span></p>
@@ -30,7 +28,6 @@
         </div>
     </div>
 
-    <!-- Game stats -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-stone dark:border-slate mb-8">
         <div class="p-4 text-center border-r border-stone dark:border-slate">
             <p class="font-serif text-2xl font-bold">{{ games_played }}</p>
@@ -50,7 +47,6 @@
         </div>
     </div>
 
-    <!-- Recent transactions -->
     <div>
         <div class="flex items-center justify-between mb-4">
             <h2 class="text-xs tracking-widest uppercase text-slate">Recent Transactions</h2>

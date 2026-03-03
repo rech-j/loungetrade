@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-sm mx-auto text-center py-8">
     <h1 class="font-serif text-2xl font-bold mb-3">Leaving So Soon?</h1>
-    <p class="text-slate text-sm mb-8">Your coins will be here when you return.</p>
+    <p class="text-slate text-sm mb-8">Your coins may be here when you return.</p>
     <form method="post" action="{% url 'account_logout' %}">
         {% csrf_token %}
         <button type="submit" class="vintage-btn px-10 py-3">Log Out</button>
