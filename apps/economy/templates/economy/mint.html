@@ -1,15 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Mint - LC{% endblock %}
 
 {% block extra_head %}
-<script>
-document.addEventListener('keydown', (event) => {
-  if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-    event.preventDefault();
-    document.getElementById('id_mint_recipient')?.focus();
-  }
-});
-</script>
+<script src="{% static 'js/slash-focus.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -25,7 +19,7 @@ document.addEventListener('keydown', (event) => {
     </div>
     {% else %}
     <form method="post" class="space-y-5"
-        x-data="{ submitting: false, noteLen: 0 }" @submit="submitting = true">>
+        x-data="{ submitting: false, noteLen: 0 }" @submit="submitting = true">
         {% csrf_token %}
 
         <div x-data @user-selected.window="document.getElementById('{{ form.recipient_username.id_for_label }}').value = $event.detail.username">

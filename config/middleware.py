@@ -3,10 +3,9 @@ class ContentSecurityPolicyMiddleware:
     Adds a Content-Security-Policy header to every response.
 
     Sources:
-    - Scripts: self + cdn.jsdelivr.net (chess.js only). Alpine.js and HTMX
-      are served from local static files.  'unsafe-eval' is required because
-      Alpine.js v3 uses new Function() internally to evaluate x-data / x-init
-      expressions.
+    - Scripts: 'self' only (all JS is self-hosted). 'unsafe-eval' is required
+      because Alpine.js v3 uses new Function() internally to evaluate
+      x-data / x-init expressions.
     - Styles: 'unsafe-inline' required for Tailwind's scoped inline styles and
       the chess board's <style> block.
     - WebSockets: wss: and ws: for Django Channels (chess + coin flip games).
@@ -16,7 +15,7 @@ class ContentSecurityPolicyMiddleware:
 
     CSP = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-eval' cdn.jsdelivr.net; "
+        "script-src 'self' 'unsafe-eval'; "
         "style-src 'self' 'unsafe-inline'; "
         "img-src 'self' data:; "
         "connect-src 'self' wss: ws:; "

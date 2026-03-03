@@ -1,15 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Trade - LC{% endblock %}
 
 {% block extra_head %}
-<script>
-document.addEventListener('keydown', (event) => {
-  if (event.key === '/' && !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) {
-    event.preventDefault();
-    document.getElementById('id_recipient_username')?.focus();
-  }
-});
-</script>
+<script src="{% static 'js/slash-focus.js' %}"></script>
 {% endblock %}
 
 {% block content %}

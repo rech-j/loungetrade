@@ -59,6 +59,7 @@ class ChessConsumer(BaseGameConsumer):
             })
         else:
             # Send current game state only to the newly connected player
+            white_time, black_time = self.get_adjusted_times(game)
             await self.send(text_data=json.dumps({
                 'type': 'game_state',
                 'status': game.status,
@@ -66,8 +67,8 @@ class ChessConsumer(BaseGameConsumer):
                 'moves_uci': game.moves_uci,
                 'white_player': game.white_player.username if game.white_player else None,
                 'black_player': game.black_player.username if game.black_player else None,
-                'white_time': game.white_time,
-                'black_time': game.black_time,
+                'white_time': white_time,
+                'black_time': black_time,
                 'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
             }))
 
@@ -305,6 +306,7 @@ class ChessConsumer(BaseGameConsumer):
         game = await self.get_game()
         if not game:
             return
+        white_time, black_time = self.get_adjusted_times(game)
         await self.send(text_data=json.dumps({
             'type': 'game_state',
             'status': game.status,
@@ -312,8 +314,8 @@ class ChessConsumer(BaseGameConsumer):
             'moves_uci': game.moves_uci,
             'white_player': game.white_player.username if game.white_player else None,
             'black_player': game.black_player.username if game.black_player else None,
-            'white_time': game.white_time,
-            'black_time': game.black_time,
+            'white_time': white_time,
+            'black_time': black_time,
             'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
         }))
 
@@ -346,6 +348,28 @@ class ChessConsumer(BaseGameConsumer):
             'type': 'chess_error',
             'message': event['message'],
         }))
+
+    # ── Time helpers ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def get_adjusted_times(game):
+        """Return (white_time, black_time) adjusted for elapsed time since last move.
+
+        The DB stores the clock values as of the last move.  If a game is
+        active, the current player's clock has been ticking since then.
+        """
+        white_time = game.white_time
+        black_time = game.black_time
+        if game.status == 'active' and game.last_move_at:
+            elapsed = (timezone.now() - game.last_move_at).total_seconds()
+            # Determine whose clock is running from the FEN active color
+            parts = game.fen.split(' ')
+            active_color = parts[1] if len(parts) > 1 else 'w'
+            if active_color == 'w':
+                white_time = max(0, int(white_time - elapsed))
+            else:
+                black_time = max(0, int(black_time - elapsed))
+        return white_time, black_time
 
     # ── Database helpers ─────────────────────────────────────────────────────
 

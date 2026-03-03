@@ -166,10 +166,16 @@
   .chip-btn:hover { border-color: var(--color-gold); color: var(--color-gold); }
   .dark .chip-btn { border-color: var(--color-slate); color: var(--color-stone); }
 
+  /* Dark mode contrast: gold-light for small text on dark backgrounds */
+  .dark .vintage-badge { color: var(--color-gold-light); border-color: var(--color-gold-light); }
+  .dark .ticker-line { color: var(--color-stone); }
+
   ::selection {
     background: color-mix(in oklab, var(--color-gold) 45%, transparent);
     color: var(--color-ink);
   }
+
+  [x-cloak] { display: none !important; }
 
 }
 

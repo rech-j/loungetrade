@@ -12,6 +12,7 @@ class TradeForm(forms.Form):
         widget=forms.TextInput(attrs={
             'id': 'id_recipient_username',
             'class': INPUT_CLASSES,
+            'data-slash-focus': '',
             'placeholder': 'Search for a user...',
             'autocomplete': 'off',
             'spellcheck': 'false',
@@ -61,6 +62,7 @@ class MintForm(forms.Form):
         widget=forms.TextInput(attrs={
             'id': 'id_mint_recipient',
             'class': INPUT_CLASSES,
+            'data-slash-focus': '',
             'placeholder': 'Username to mint to...',
             'autocomplete': 'off',
             'spellcheck': 'false',
