@@ -1,6 +1,66 @@
 {% load coinflip_tags %}
+{% if chess_games or coinflip_games %}
+<div class="border-b-2 border-gold/30 dark:border-gold/20 bg-gold/5 dark:bg-gold/5">
+    <p class="px-4 py-2 text-[10px] uppercase tracking-widest text-gold font-medium">Active Games</p>
+    {% for g in chess_games %}
+    <div class="px-3 py-2.5 border-t border-stone/50 dark:border-slate/50">
+        <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium truncate">
+                    &#9822; Chess &mdash; {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
+                </p>
+                <p class="text-[10px] text-slate mt-0.5">
+                    {{ g.stake }} LC &middot; {% if g.status == 'active' %}In progress{% else %}Waiting for opponent{% endif %}
+                </p>
+            </div>
+            <div class="flex gap-1.5 flex-shrink-0">
+                <a href="{% url 'chess_play' g.pk %}" class="vintage-btn text-[10px] py-1 px-2.5">Play</a>
+                {% if g.status == 'pending' %}
+                    {% if g.creator == request.user %}
+                    <form method="post" action="{% url 'chess_cancel' g.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-[10px] py-1 px-2.5 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Cancel</button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'chess_decline' g.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-[10px] py-1 px-2.5 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Decline</button>
+                    </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% for c in coinflip_games %}
+    <div class="px-3 py-2.5 border-t border-stone/50 dark:border-slate/50">
+        <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium truncate">
+                    &#9854; Coin Flip &mdash; {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
+                </p>
+                <p class="text-[10px] text-slate mt-0.5">
+                    {{ c.stake }} LC &middot; {% if c.challenger == request.user %}Awaiting opponent{% else %}You were challenged{% endif %}
+                </p>
+            </div>
+            <div class="flex gap-1.5 flex-shrink-0">
+                <a href="{% url 'coinflip_play' c.pk %}" class="vintage-btn text-[10px] py-1 px-2.5">
+                    {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
+                </a>
+                {% if c.challenger != request.user %}
+                <form method="post" action="{% url 'coinflip_decline' c.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="vintage-btn-outline text-[10px] py-1 px-2.5 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Decline</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 {% if notifications %}
-<div class="max-h-64 overflow-y-auto" role="menu">
+<div class="max-h-52 overflow-y-auto" role="menu">
     {% for n in notifications %}
     <div class="px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0 {% if not n.is_read %}border-l-3 border-l-gold{% endif %}" role="menuitem">
         <a href="{% if n.link %}{{ n.link }}{% else %}#{% endif %}" class="block">
@@ -20,6 +80,6 @@
     </div>
     {% endfor %}
 </div>
-{% else %}
+{% elif not chess_games and not coinflip_games %}
 <div class="p-4 text-xs text-slate text-center uppercase tracking-wide">No new notifications</div>
 {% endif %}

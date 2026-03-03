@@ -5,6 +5,23 @@ from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 
 
+def _get_active_games(user):
+    from apps.chess.models import ChessGame
+    from apps.coinflip.models import CoinFlipChallenge
+
+    chess_games = ChessGame.objects.filter(
+        Q(creator=user) | Q(opponent=user),
+        status__in=['pending', 'active'],
+    ).select_related('creator', 'opponent').order_by('status', '-created_at')[:3]
+
+    coinflip_games = CoinFlipChallenge.objects.filter(
+        Q(challenger=user) | Q(opponent=user),
+        status='pending',
+    ).select_related('challenger', 'opponent').order_by('-created_at')[:3]
+
+    return chess_games, coinflip_games
+
+
 @login_required
 def notification_list(request):
     notifications = request.user.notifications.all()[:50]
@@ -15,19 +32,38 @@ def notification_list(request):
 
 @login_required
 def unread_partial(request):
-    notifications = request.user.notifications.filter(is_read=False)[:5]
-    count = request.user.notifications.filter(is_read=False).count()
+    user = request.user
+    notifications = user.notifications.filter(is_read=False)[:5]
+    count = user.notifications.filter(is_read=False).count()
+    chess_games, coinflip_games = _get_active_games(user)
     return render(request, 'notifications/partials/dropdown.html', {
         'notifications': notifications,
         'unread_count': count,
+        'chess_games': chess_games,
+        'coinflip_games': coinflip_games,
     })
 
 
 @login_required
 def unread_count(request):
-    count = request.user.notifications.filter(is_read=False).count()
+    from apps.chess.models import ChessGame
+    from apps.coinflip.models import CoinFlipChallenge
+
+    user = request.user
+    count = user.notifications.filter(is_read=False).count()
+    has_game_activity = (
+        ChessGame.objects.filter(
+            Q(creator=user) | Q(opponent=user),
+            status__in=['pending', 'active'],
+        ).exists()
+        or CoinFlipChallenge.objects.filter(
+            Q(challenger=user) | Q(opponent=user),
+            status='pending',
+        ).exists()
+    )
     return render(request, 'notifications/partials/badge.html', {
         'unread_count': count,
+        'has_game_activity': has_game_activity,
     })
 
 
@@ -76,4 +112,13 @@ def game_activity_badge(request):
         'pending_challenges': pending_challenges,
         'active_games': active_games,
         'total_activity': pending_challenges + active_games,
+    })
+
+
+@login_required
+def game_activity_mobile(request):
+    chess_games, coinflip_games = _get_active_games(request.user)
+    return render(request, 'notifications/partials/game_activity_mobile.html', {
+        'chess_games': chess_games,
+        'coinflip_games': coinflip_games,
     })

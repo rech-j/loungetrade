@@ -9,4 +9,5 @@ urlpatterns = [
     path('read/<int:pk>/', views.mark_read, name='notification_mark_read'),
     path('read-all/', views.mark_all_read, name='notifications_mark_all_read'),
     path('game-activity/', views.game_activity_badge, name='game_activity_badge'),
+    path('game-activity-mobile/', views.game_activity_mobile, name='game_activity_mobile'),
 ]

@@ -1,0 +1,52 @@
+{% if chess_games or coinflip_games %}
+<div class="border-t border-gold/30 dark:border-gold/20 pt-1 mt-1">
+    <p class="px-1 pb-1 text-[10px] uppercase tracking-widest text-gold font-medium">Active Games</p>
+    {% for g in chess_games %}
+    <div class="px-1 py-1.5 flex items-center justify-between gap-3">
+        <div class="min-w-0 flex-1">
+            <span class="text-sm text-slate truncate block">
+                &#9822; Chess &mdash; {% if g.creator == request.user %}vs {{ g.opponent.username }}{% else %}vs {{ g.creator.username }}{% endif %}
+                <span class="text-xs text-slate/70">({{ g.stake }} LC)</span>
+            </span>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+            <a href="{% url 'chess_play' g.pk %}" class="text-xs text-gold uppercase tracking-wide hover:text-gold/80">Play</a>
+            {% if g.status == 'pending' %}
+                {% if g.creator == request.user %}
+                <form method="post" action="{% url 'chess_cancel' g.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-burgundy uppercase tracking-wide hover:text-burgundy/80">Cancel</button>
+                </form>
+                {% else %}
+                <form method="post" action="{% url 'chess_decline' g.pk %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-burgundy uppercase tracking-wide hover:text-burgundy/80">Decline</button>
+                </form>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% for c in coinflip_games %}
+    <div class="px-1 py-1.5 flex items-center justify-between gap-3">
+        <div class="min-w-0 flex-1">
+            <span class="text-sm text-slate truncate block">
+                &#9854; Coin Flip &mdash; {% if c.challenger == request.user %}vs {{ c.opponent.username }}{% else %}vs {{ c.challenger.username }}{% endif %}
+                <span class="text-xs text-slate/70">({{ c.stake }} LC)</span>
+            </span>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+            <a href="{% url 'coinflip_play' c.pk %}" class="text-xs text-gold uppercase tracking-wide hover:text-gold/80">
+                {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
+            </a>
+            {% if c.challenger != request.user %}
+            <form method="post" action="{% url 'coinflip_decline' c.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-burgundy uppercase tracking-wide hover:text-burgundy/80">Decline</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}

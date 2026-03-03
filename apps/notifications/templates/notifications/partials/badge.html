@@ -1,3 +1,4 @@
+<span data-game-activity="{{ has_game_activity|yesno:'true,false' }}" class="hidden"></span>
 {% if unread_count > 0 %}
 <span class="absolute -top-1 -right-1 w-4 h-4 bg-gold text-ink text-[9px] font-bold flex items-center justify-center" aria-label="{{ unread_count }} unread">{{ unread_count }}</span>
 {% endif %}
