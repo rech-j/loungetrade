@@ -3,6 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
+from django.views.generic import RedirectView
 
 from apps.accounts.views import landing_page
 
@@ -12,6 +13,7 @@ def health_check(request):
 
 
 urlpatterns = [
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon/favicon.ico', permanent=True)),
     path('health/', health_check, name='health_check'),
     path('admin/', admin.site.urls),
     path('accounts/', include('allauth.urls')),
