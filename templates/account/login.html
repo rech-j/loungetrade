@@ -6,7 +6,7 @@
 <div class="max-w-sm mx-auto">
     <div class="text-center mb-10">
         <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Members Only</p>
-        <h1 class="font-serif text-3xl font-bold">Cloister members now welcome</h1>
+        <h1 class="font-venus-medium text-3xl">Cloister members now welcome</h1>
     </div>
 
     {% get_providers as socialaccount_providers %}
@@ -21,13 +21,13 @@
     <form method="post" action="{% url 'account_login' %}" class="space-y-5">
         {% csrf_token %}
         <div>
-            <label for="id_login" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Username</label>
+            <label for="id_login" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Username</label>
             <input type="text" name="login" id="id_login" required autofocus
                    class="vintage-input" placeholder="Your username"  autocomplete="username" autocapitalize="none" spellcheck="false">
         </div>
         <div x-data="{ show: false }">
             <div class="flex items-center justify-between mb-1.5">
-                <label for="id_password" class="text-xs font-medium tracking-wide uppercase">Password</label>
+                <label for="id_password" class="text-xs font-venus-medium tracking-wide uppercase">Password</label>
                 <button type="button" @click="show = !show"
                         class="flex items-center gap-1 text-xs text-slate hover:text-gold transition-colors">
                     <svg x-show="!show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">

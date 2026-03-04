@@ -8,14 +8,14 @@
 
 {% block content %}
 <div class="max-w-md mx-auto">
-    <h1 class="font-serif text-2xl font-bold mb-8">Edit Profile</h1>
+    <h1 class="font-venus-medium text-2xl mb-8">Edit Profile</h1>
 
     <form method="post" enctype="multipart/form-data" class="space-y-6" id="profile-form">
         {% csrf_token %}
 
         <div>
             <label for="{{ form.display_name.id_for_label }}"
-                   class="block text-xs font-medium mb-1.5 tracking-wide uppercase">{{ form.display_name.label }}</label>
+                   class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">{{ form.display_name.label }}</label>
             {{ form.display_name }}
             {% if form.display_name.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.display_name.errors.0 }}</p>
@@ -23,7 +23,7 @@
         </div>
 
         <div>
-            <label class="block text-xs font-medium mb-3 tracking-wide uppercase">Profile Picture</label>
+            <label class="block text-xs font-venus-medium mb-3 tracking-wide uppercase">Profile Picture</label>
 
             {% if profile.avatar %}
             <div class="mb-4">

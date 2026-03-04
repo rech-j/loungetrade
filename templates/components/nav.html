@@ -2,7 +2,7 @@
     <div class="max-w-4xl lg:max-w-5xl mx-auto px-4">
         <div class="flex items-center justify-between h-14">
             <a href="{% url 'landing' %}" class="flex items-center gap-2.5 text-gold tracking-wider">
-                <span class="hidden sm:inline text-sm uppercase tracking-[0.2em] font-medium">Lounge Coin</span>
+                <span class="hidden sm:inline text-sm uppercase tracking-[0.2em] font-venus-medium">Lounge Coin</span>
             </a>
 
             {% if request.user.is_authenticated %}
@@ -88,7 +88,7 @@
 
         {% if request.user.is_authenticated %}
         <div x-show="open" x-transition class="md:hidden border-t border-stone/50 dark:border-slate/50 py-3 space-y-1" hx-boost="true">
-            <div class="text-xs text-gold font-medium px-1 pb-2 tracking-wider uppercase"
+            <div class="text-xs text-gold font-venus-medium px-1 pb-2 tracking-wider uppercase"
                  hx-get="{% url 'balance_check' %}"
                  hx-trigger="load, every 15s"
                  hx-swap="innerHTML">

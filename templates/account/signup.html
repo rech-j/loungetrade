@@ -6,7 +6,7 @@
 <div class="max-w-sm mx-auto">
     <div class="text-center mb-10">
         <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">New Member</p>
-        <h1 class="font-serif text-3xl font-bold">Open Your Account</h1>
+        <h1 class="font-venus-medium text-3xl">Open Your Account</h1>
     </div>
 
     {% get_providers as socialaccount_providers %}
@@ -21,7 +21,7 @@
     <form method="post" action="{% url 'account_signup' %}" class="space-y-5">
         {% csrf_token %}
         <div>
-            <label for="id_username" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Username</label>
+            <label for="id_username" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Username</label>
             <input type="text" name="username" id="id_username" required autofocus
                    class="vintage-input" placeholder="Choose a handle" autocomplete="username" autocapitalize="none" spellcheck="false"
                    value="{{ form.username.value|default_if_none:'' }}">
@@ -30,7 +30,7 @@
             {% endif %}
         </div>
         <div>
-            <label for="id_email" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Email</label>
+            <label for="id_email" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Email</label>
             <input type="email" name="email" id="id_email" required
                    class="vintage-input" placeholder="your@email.com" autocomplete="email"
                    value="{{ form.email.value|default_if_none:'' }}">
@@ -40,7 +40,7 @@
         </div>
         <div x-data="{ show: false }">
             <div class="flex items-center justify-between mb-1.5">
-                <label for="id_password1" class="text-xs font-medium tracking-wide uppercase">Password</label>
+                <label for="id_password1" class="text-xs font-venus-medium tracking-wide uppercase">Password</label>
                 <button type="button" @click="show = !show"
                         class="flex items-center gap-1 text-xs text-slate hover:text-gold transition-colors">
                     <svg x-show="!show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">
@@ -60,7 +60,7 @@
         </div>
         <div x-data="{ show: false }">
             <div class="flex items-center justify-between mb-1.5">
-                <label for="id_password2" class="text-xs font-medium tracking-wide uppercase">Confirm</label>
+                <label for="id_password2" class="text-xs font-venus-medium tracking-wide uppercase">Confirm</label>
                 <button type="button" @click="show = !show"
                         class="flex items-center gap-1 text-xs text-slate hover:text-gold transition-colors">
                     <svg x-show="!show" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5">

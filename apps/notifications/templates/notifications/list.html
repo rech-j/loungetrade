@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
     <div class="flex items-center justify-between mb-8">
-        <h1 class="font-serif text-2xl font-bold">Notifications</h1>
+        <h1 class="font-venus-medium text-2xl">Notifications</h1>
         {% if notifications %}
         <form method="post" action="{% url 'notifications_mark_all_read' %}">
             {% csrf_token %}
@@ -20,9 +20,9 @@
             <div class="flex items-start justify-between gap-4">
                 <div class="flex-1">
                     {% if n.link %}
-                    <a href="{{ n.link }}" class="text-sm font-medium hover:text-gold">{{ n.title }}</a>
+                    <a href="{{ n.link }}" class="text-sm font-venus-medium hover:text-gold">{{ n.title }}</a>
                     {% else %}
-                    <p class="text-sm font-medium">{{ n.title }}</p>
+                    <p class="text-sm font-venus-medium">{{ n.title }}</p>
                     {% endif %}
                     <p class="text-sm text-slate mt-0.5">{{ n.message }}</p>
                     <p class="text-xs text-slate mt-1">{{ n.created_at|timesince }} ago</p>

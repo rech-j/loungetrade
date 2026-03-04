@@ -10,7 +10,7 @@
 <div class="max-w-md mx-auto">
     <div class="mb-8">
         <p class="text-xs tracking-[0.3em] uppercase text-gold mb-2">Administration</p>
-        <h1 class="font-serif text-2xl font-bold">Mint Coins</h1>
+        <h1 class="font-venus-medium text-2xl">Mint Coins</h1>
     </div>
 
     {% if not request.user.profile.is_admin_user %}
@@ -24,7 +24,7 @@
 
         <div x-data @user-selected.window="document.getElementById('{{ form.recipient_username.id_for_label }}').value = $event.detail.username">
             <div class="flex items-center justify-between">
-                <label for="{{ form.recipient_username.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Recipient</label>
+                <label for="{{ form.recipient_username.id_for_label }}" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Recipient</label>
                 <span class="text-[10px] uppercase tracking-widest text-slate">Press / to focus</span>
             </div>
             {{ form.recipient_username }}
@@ -35,7 +35,7 @@
         </div>
 
         <div>
-            <label for="{{ form.amount.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Amount</label>
+            <label for="{{ form.amount.id_for_label }}" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Amount</label>
             {{ form.amount }}
             {% if form.amount.errors %}
             <p class="text-burgundy text-xs mt-1">{{ form.amount.errors.0 }}</p>
@@ -44,7 +44,7 @@
 
         <div x-on:input="if($event.target.id === 'id_mint_note') noteLen = $event.target.value.length">
             <div class="flex items-center justify-between">
-                <label for="{{ form.note.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Note</label>
+                <label for="{{ form.note.id_for_label }}" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Note</label>
                 <span class="text-[10px] text-slate" x-text="`${noteLen}/200`"></span>
             </div>
             {{ form.note }}

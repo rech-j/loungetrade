@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
     <div class="mb-8">
-        <h1 class="font-serif text-2xl font-bold">The Tables</h1>
+        <h1 class="font-venus-medium text-2xl">The Tables</h1>
         <p class="text-slate text-sm mt-1">Challenge a fellow member to a wager.</p>
     </div>
 
@@ -14,7 +14,7 @@
     </div>
 
     <div class="vintage-card mb-10">
-        <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Coin Flip Challenge</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-gold mb-5">New Coin Flip Challenge</h2>
         <form method="post" action="{% url 'coinflip_create' %}" class="space-y-4"
               x-data="{ submitting: false }" @submit="submitting = true">
             {% csrf_token %}
@@ -28,7 +28,7 @@
             {% endif %}
 
             <div x-data @user-selected.window="$refs.opponentInput.value = $event.detail.username">
-                <label for="opponent" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Opponent</label>
+                <label for="opponent" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Opponent</label>
                 <input id="opponent" type="text" name="opponent_username" required
                        x-ref="opponentInput"
                        class="vintage-input"
@@ -42,12 +42,12 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label for="stake" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
+                    <label for="stake" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
                     <input id="stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
                            class="vintage-input" placeholder="Amount">
                 </div>
                 <div>
-                    <label for="choice" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Your Call</label>
+                    <label for="choice" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Your Call</label>
                     <select id="choice" name="choice" class="vintage-select">
                         <option value="heads">Heads</option>
                         <option value="tails">Tails</option>
@@ -63,14 +63,14 @@
 
     {% if pending_challenges %}
     <div class="mb-10">
-        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Open Challenges</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Challenges</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for c in pending_challenges %}
             <div class="flex items-center justify-between px-4 py-3">
                 <div>
                     <p class="text-sm">
-                        {% if c.challenger == request.user %}You challenged <span class="font-medium">{{ c.opponent.profile.get_display_name }}</span>
-                        {% else %}<span class="font-medium">{{ c.challenger.profile.get_display_name }}</span> challenged you{% endif %}
+                        {% if c.challenger == request.user %}You challenged <span class="font-venus-medium">{{ c.opponent.profile.get_display_name }}</span>
+                        {% else %}<span class="font-venus-medium">{{ c.challenger.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
                     <p class="text-xs text-slate">{{ c.stake }} LC &middot; {{ c.created_at|timesince }} ago</p>
                 </div>
@@ -85,7 +85,7 @@
 
     {% if recent_games %}
     <div>
-        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Recent Coin Flip Results</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Coin Flip Results</h2>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
             <div class="flex items-center justify-between px-4 py-3">

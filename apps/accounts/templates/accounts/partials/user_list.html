@@ -7,7 +7,7 @@
         @keydown.enter="$dispatch('user-selected', { username: '{{ user.username }}' }); $el.closest('ul').remove()"
         class="px-3 py-2 hover:bg-gold/10 cursor-pointer text-sm flex items-center justify-between">
         <span>
-            <span class="font-medium">{{ user.profile.get_display_name }}</span>
+            <span class="font-venus-medium">{{ user.profile.get_display_name }}</span>
             <span class="text-slate text-xs">@{{ user.username }}</span>
         </span>
         <span class="vintage-badge text-[9px]">{{ user.profile.balance }} LC</span>

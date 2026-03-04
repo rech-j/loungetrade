@@ -13,7 +13,7 @@
             {% endif %}
         </div>
         <div class="flex-1">
-            <h1 class="font-serif text-2xl font-bold">{{ profile.get_display_name }}</h1>
+            <h1 class="font-venus-medium text-2xl">{{ profile.get_display_name }}</h1>
             <p class="text-slate text-sm">@{{ request.user.username }}</p>
         </div>
         <a href="{% url 'profile_edit' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Edit</a>
@@ -31,25 +31,25 @@
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-0 border border-stone dark:border-slate mb-8">
         <div class="p-4 text-center border-r border-stone dark:border-slate">
             <p class="font-serif text-2xl font-bold">{{ games_played }}</p>
-            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Played</p>
+            <p class="text-xs text-slate mt-1 font-venus-medium uppercase tracking-wide">Played</p>
         </div>
         <div class="p-4 text-center border-r border-stone dark:border-slate">
             <p class="font-serif text-2xl font-bold text-patina">{{ games_won }}</p>
-            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Won</p>
+            <p class="text-xs text-slate mt-1 font-venus-medium uppercase tracking-wide">Won</p>
         </div>
         <div class="p-4 text-center border-r border-stone dark:border-slate">
             <p class="font-serif text-2xl font-bold">{{ win_rate }}%</p>
-            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Win Rate</p>
+            <p class="text-xs text-slate mt-1 font-venus-medium uppercase tracking-wide">Win Rate</p>
         </div>
         <div class="p-4 text-center">
             <p class="font-serif text-2xl font-bold text-gold">{{ total_wagered }}</p>
-            <p class="text-xs text-slate mt-1 uppercase tracking-wide">Wagered</p>
+            <p class="text-xs text-slate mt-1 font-venus-medium uppercase tracking-wide">Wagered</p>
         </div>
     </div>
 
     <div>
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xs tracking-widest uppercase text-slate">Recent Transactions</h2>
+            <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate">Recent Transactions</h2>
             <a href="{% url 'history' %}" class="text-xs text-gold hover:text-gold-dark">View ledger</a>
         </div>
 

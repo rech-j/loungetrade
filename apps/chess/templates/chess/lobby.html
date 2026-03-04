@@ -4,7 +4,7 @@
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
     <div class="mb-8">
-        <h1 class="font-serif text-2xl font-bold">The Tables</h1>
+        <h1 class="font-venus-medium text-2xl">The Tables</h1>
         <p class="text-slate text-sm mt-1">Chess for stakes, 10 minutes per player.</p>
     </div>
 
@@ -14,7 +14,7 @@
     </div>
 
     <div class="vintage-card mb-10">
-        <h2 class="text-xs tracking-widest uppercase text-gold mb-5">New Chess Match</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-gold mb-5">New Chess Match</h2>
         <form method="post" action="{% url 'chess_create' %}" class="space-y-4"
               x-data="{ submitting: false }" @submit="submitting = true">
             {% csrf_token %}
@@ -28,7 +28,7 @@
             {% endif %}
 
             <div x-data @user-selected.window="$refs.oppInput.value = $event.detail.username">
-                <label for="opp" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Opponent</label>
+                <label for="opp" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Opponent</label>
                 <input id="opp" type="text" name="opponent_username" required
                        x-ref="oppInput"
                        class="vintage-input"
@@ -42,12 +42,12 @@
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label for="chess-stake" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
+                    <label for="chess-stake" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
                     <input id="chess-stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
                            class="vintage-input" placeholder="Amount">
                 </div>
                 <div>
-                    <label for="chess-side" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">Play as</label>
+                    <label for="chess-side" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Play as</label>
                     <select id="chess-side" name="side" class="vintage-select">
                         <option value="random">Random</option>
                         <option value="white">White</option>
@@ -64,14 +64,14 @@
 
     {% if pending_games %}
     <div class="mb-10">
-        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Open Games</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Games</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for g in pending_games %}
             <div class="flex items-center justify-between px-4 py-3">
                 <div>
                     <p class="text-sm">
-                        {% if g.creator == request.user %}You challenged <span class="font-medium">{{ g.opponent.profile.get_display_name }}</span>
-                        {% else %}<span class="font-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
+                        {% if g.creator == request.user %}You challenged <span class="font-venus-medium">{{ g.opponent.profile.get_display_name }}</span>
+                        {% else %}<span class="font-venus-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
                     <p class="text-xs text-slate">{{ g.stake }} LC &middot; {{ g.status }} &middot; {{ g.created_at|timesince }} ago</p>
                 </div>
@@ -97,7 +97,7 @@
 
     {% if recent_games %}
     <div>
-        <h2 class="text-xs tracking-widest uppercase text-slate mb-4">Recent Chess Results</h2>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Chess Results</h2>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
             <div class="flex items-center justify-between px-4 py-3">
