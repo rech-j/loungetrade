@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Complete Sign Up - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto">
+    <div class="text-center mb-10">
+        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Almost There</p>
+        <h1 class="font-serif text-3xl font-bold">Complete Your Account</h1>
+    </div>
+
+    <p class="text-sm text-slate text-center mb-8">
+        {% blocktrans with provider_name=account.get_provider.name %}
+        You are signing in with {{ provider_name }}. Please complete the form below to finish creating your account.
+        {% endblocktrans %}
+    </p>
+
+    <form method="post" action="{% url 'socialaccount_signup' %}" class="space-y-5">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-xs font-medium mb-1.5 tracking-wide uppercase">
+                {{ field.label }}
+            </label>
+            <input type="{{ field.field.widget.input_type }}"
+                   name="{{ field.html_name }}"
+                   id="{{ field.id_for_label }}"
+                   class="vintage-input"
+                   {% if field.value %}value="{{ field.value }}"{% endif %}
+                   {% if field.field.required %}required{% endif %}
+                   {% if forloop.first %}autofocus{% endif %}>
+            {% if field.errors %}
+            <p class="text-burgundy text-xs mt-1">{{ field.errors.0 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+        {{ redirect_field }}
+        <button type="submit" class="vintage-btn w-full py-3">Create Account</button>
+    </form>
+</div>
+{% endblock %}

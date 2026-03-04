@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n account %}
+
+{% block title %}Confirm Email - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto text-center">
+    {% if confirmation %}
+        {% user_display confirmation.email_address.user as user_display %}
+        {% if can_confirm %}
+        <div class="mb-10">
+            <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Email Verification</p>
+            <h1 class="font-serif text-3xl font-bold">Confirm Your Email</h1>
+        </div>
+
+        <p class="text-sm text-slate mb-8">
+            {% blocktrans with email=confirmation.email_address.email %}
+            Please confirm that <a href="mailto:{{ email }}" class="text-gold hover:text-gold-dark">{{ email }}</a> belongs to the account <strong>{{ user_display }}</strong>.
+            {% endblocktrans %}
+        </p>
+
+        <form method="post" action="{% url 'account_confirm_email' confirmation.key %}">
+            {% csrf_token %}
+            {{ redirect_field }}
+            <button type="submit" class="vintage-btn w-full py-3">Confirm Email Address</button>
+        </form>
+
+        {% else %}
+        <div class="mb-10">
+            <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Verification Failed</p>
+            <h1 class="font-serif text-3xl font-bold">Already Confirmed</h1>
+        </div>
+
+        <p class="text-sm text-slate mb-8">
+            {% blocktrans with email=confirmation.email_address.email %}
+            Unable to confirm {{ email }} — it has already been confirmed by a different account.
+            {% endblocktrans %}
+        </p>
+
+        <a href="{% url 'account_login' %}" class="vintage-btn inline-block px-8 py-2.5">Back to Sign In</a>
+        {% endif %}
+
+    {% else %}
+    <div class="mb-10">
+        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Link Expired</p>
+        <h1 class="font-serif text-3xl font-bold">Invalid Link</h1>
+    </div>
+
+    <p class="text-sm text-slate mb-8">
+        {% url 'account_email' as email_url %}
+        {% blocktrans %}
+        This confirmation link has expired or is invalid. Please <a href="{{ email_url }}" class="text-gold hover:text-gold-dark">request a new confirmation email</a>.
+        {% endblocktrans %}
+    </p>
+
+    <a href="{% url 'account_login' %}" class="vintage-btn inline-block px-8 py-2.5">Back to Sign In</a>
+    {% endif %}
+</div>
+{% endblock %}

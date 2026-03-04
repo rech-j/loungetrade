@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}Login Cancelled - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-sm mx-auto text-center">
+    <div class="mb-10">
+        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-4">Cancelled</p>
+        <h1 class="font-serif text-3xl font-bold">Login Cancelled</h1>
+    </div>
+
+    <p class="text-sm text-slate mb-8">
+        {% url 'account_login' as login_url %}
+        {% blocktrans %}You cancelled the login process. If this was a mistake, you can <a href="{{ login_url }}" class="text-gold hover:text-gold-dark">try again</a>.{% endblocktrans %}
+    </p>
+
+    <a href="{% url 'account_login' %}" class="vintage-btn inline-block px-8 py-2.5">Back to Sign In</a>
+</div>
+{% endblock %}
