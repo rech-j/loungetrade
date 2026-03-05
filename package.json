@@ -2,9 +2,9 @@
   "name": "loungecoin",
   "private": true,
   "scripts": {
-    "build:css": "npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css",
-    "build:css:prod": "npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css --minify",
-    "watch:css": "npx @tailwindcss/cli -i ./static/css/input.css -o ./static/css/output.css --watch"
+    "build:css": "npx @tailwindcss/cli -i ./src/css/input.css -o ./static/css/output.css",
+    "build:css:prod": "npx @tailwindcss/cli -i ./src/css/input.css -o ./static/css/output.css --minify",
+    "watch:css": "npx @tailwindcss/cli -i ./src/css/input.css -o ./static/css/output.css --watch"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",

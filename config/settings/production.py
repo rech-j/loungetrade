@@ -42,8 +42,8 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Strict'
-CSRF_COOKIE_SAMESITE = 'Lax'  # 'Strict' breaks cross-site OAuth callbacks
+SESSION_COOKIE_SAMESITE = 'Lax'  # 'Strict' breaks cross-site OAuth callbacks (Google redirect loses session state)
+CSRF_COOKIE_SAMESITE = 'Lax'   # 'Strict' breaks cross-site OAuth callbacks
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SECURE_SSL_REDIRECT = True
@@ -52,7 +52,7 @@ SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CSRF_TRUSTED_ORIGINS = ['https://loungecoin.trade']
+CSRF_TRUSTED_ORIGINS = ['https://loungecoin.trade', 'https://www.loungecoin.trade']
 
 # Lock WebSocket CSP to this domain only (avoids the broad wss:/ws: wildcard).
 CSP_WS_ORIGIN = 'wss://loungecoin.trade'

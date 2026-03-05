@@ -3,7 +3,7 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.http import JsonResponse
 from django.urls import include, path
-from django.views.generic import RedirectView
+from django.views.generic import RedirectView, TemplateView
 
 from apps.accounts.views import landing_page
 
@@ -24,6 +24,7 @@ urlpatterns = [
     path('notifications/', include('apps.notifications.urls')),
     path('leaderboard/', include('apps.leaderboard.urls')),
     path('', landing_page, name='landing'),
+    path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
 ]
 
 if settings.DEBUG:
