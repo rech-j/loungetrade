@@ -64,16 +64,12 @@ CSP_WS_ORIGIN = 'wss://loungecoin.trade'
 # allauth: use HTTPS in email links (password reset, etc.)
 ACCOUNT_DEFAULT_HTTP_PROTOCOL = 'https'
 
-# Email - uses Django's built-in SMTP backend with env-configured credentials.
-# Works with any transactional email provider (Brevo, Mailgun, Resend, SES, etc.)
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp-relay.brevo.com')
-EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+# Email - Brevo transactional API via django-anymail (uses HTTPS, no SMTP port needed)
+EMAIL_BACKEND = 'anymail.backends.brevo.EmailBackend'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@loungecoin.trade')
-EMAIL_TIMEOUT = 10  # Seconds; prevents SMTP hangs from blocking requests indefinitely
+ANYMAIL = {
+    'BREVO_API_KEY': os.environ.get('BREVO_API_KEY', ''),
+}
 
 # Use Redis channel layer in production
 CHANNEL_LAYERS = {
