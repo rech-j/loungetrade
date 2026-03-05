@@ -54,6 +54,10 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 CSRF_TRUSTED_ORIGINS = ['https://loungecoin.trade', 'https://www.loungecoin.trade']
 
+# Gunicorn on a Unix socket sets REMOTE_ADDR to "" (no IP for socket connections).
+# Tell allauth to read the real client IP from the X-Real-IP header that Nginx sets.
+ALLAUTH_TRUSTED_CLIENT_IP_HEADER = "X-Real-IP"
+
 # Lock WebSocket CSP to this domain only (avoids the broad wss:/ws: wildcard).
 CSP_WS_ORIGIN = 'wss://loungecoin.trade'
 
