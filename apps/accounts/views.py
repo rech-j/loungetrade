@@ -112,6 +112,7 @@ def user_search_json(request):
 
 
 @login_required
+@rate_limit('balance_check', max_requests=60, window=60)
 def balance_check(request):
     """HTMX endpoint for real-time balance updates in the nav bar."""
     balance = request.user.profile.balance

@@ -8,6 +8,7 @@ own game-specific logic.
 
 import json
 import logging
+import time
 
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -27,10 +28,21 @@ class BaseGameConsumer(AsyncWebsocketConsumer):
     * ``do_game_transfer`` - atomic coin transfer between winner/loser
     * ``get_username`` - look up a username by PK
     * ``broadcast_error`` - send an error to the room group
+    * ``is_throttled`` - per-connection message rate limiting
     """
 
     game_type: str = ''
     db_async = staticmethod(database_sync_to_async)
+    MESSAGE_COOLDOWN = 0.15  # minimum seconds between messages
+
+    def is_throttled(self):
+        """Return True if the message should be dropped (too frequent)."""
+        now = time.monotonic()
+        last = getattr(self, '_last_msg_time', 0)
+        if now - last < self.MESSAGE_COOLDOWN:
+            return True
+        self._last_msg_time = now
+        return False
 
     # ── Shared database helpers ──────────────────────────────────────────
 

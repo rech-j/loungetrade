@@ -45,6 +45,8 @@ class CoinFlipChallenge(models.Model):
         ordering = ['-created_at']
         indexes = [
             models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['challenger', 'status']),
+            models.Index(fields=['opponent', 'status']),
         ]
         constraints = [
             models.CheckConstraint(

@@ -125,7 +125,8 @@ function chessApp() {
                 if (!this.gameOver && !event.wasClean && this.reconnectAttempts < 5) {
                     this.reconnectAttempts++;
                     this.errorMsg = 'Connection lost. Reconnecting...';
-                    setTimeout(() => this.connectWS(), 3000 * this.reconnectAttempts);
+                    var delay = 3000 * this.reconnectAttempts + Math.floor(Math.random() * 2000);
+                    setTimeout(() => this.connectWS(), delay);
                 } else if (this.reconnectAttempts >= 5) {
                     this.errorMsg = 'Connection lost. Please refresh the page.';
                 }

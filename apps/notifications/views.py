@@ -33,8 +33,9 @@ def notification_list(request):
 @login_required
 def unread_partial(request):
     user = request.user
-    notifications = user.notifications.filter(is_read=False)[:5]
-    count = user.notifications.filter(is_read=False).count()
+    unread_qs = user.notifications.filter(is_read=False)
+    count = unread_qs.count()
+    notifications = unread_qs[:5]
     chess_games, coinflip_games = _get_active_games(user)
     return render(request, 'notifications/partials/dropdown.html', {
         'notifications': notifications,

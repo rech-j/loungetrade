@@ -60,7 +60,7 @@
                 <div>
                     <p class="text-sm">
                         {% if tx.tx_type == 'mint' %}Minted
-                        {% elif tx.sender == request.user %}Sent to {{ tx.receiver.username }}
+                        {% elif tx.sender == request.user %}Sent to {% if tx.receiver %}{{ tx.receiver.username }}{% else %}Deleted User{% endif %}
                         {% else %}From {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
                         {% endif %}
                     </p>

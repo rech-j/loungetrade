@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponse, HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden, StreamingHttpResponse
 from django.shortcuts import render
 
 from apps.accounts.decorators import rate_limit
@@ -109,19 +109,29 @@ def history_view(request):
 
 @login_required
 def export_transactions(request):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
-    writer = csv.writer(response)
-    writer.writerow(['Date', 'Type', 'From', 'To', 'Amount', 'Note'])
-    for tx in Transaction.objects.filter(
+    txs = Transaction.objects.filter(
         Q(sender=request.user) | Q(receiver=request.user)
-    ).select_related('sender', 'receiver').order_by('-created_at'):
-        writer.writerow([
-            tx.created_at.strftime('%Y-%m-%d %H:%M'),
-            tx.get_tx_type_display(),
-            tx.sender.username if tx.sender else 'System',
-            tx.receiver.username if tx.receiver else '',
-            tx.amount,
-            tx.note,
-        ])
+    ).select_related('sender', 'receiver').order_by('-created_at').iterator()
+
+    class _Echo:
+        """Pseudo-buffer that csv.writer can write to."""
+        def write(self, value):
+            return value
+
+    writer = csv.writer(_Echo())
+
+    def rows():
+        yield writer.writerow(['Date', 'Type', 'From', 'To', 'Amount', 'Note'])
+        for tx in txs:
+            yield writer.writerow([
+                tx.created_at.strftime('%Y-%m-%d %H:%M'),
+                tx.get_tx_type_display(),
+                tx.sender.username if tx.sender else 'System',
+                tx.receiver.username if tx.receiver else '',
+                tx.amount,
+                tx.note,
+            ])
+
+    response = StreamingHttpResponse(rows(), content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="transactions.csv"'
     return response

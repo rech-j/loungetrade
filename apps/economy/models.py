@@ -21,7 +21,9 @@ class Transaction(models.Model):
     )
     receiver = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name='received_transactions',
     )
     amount = models.PositiveIntegerField()
@@ -38,4 +40,5 @@ class Transaction(models.Model):
 
     def __str__(self):
         sender_name = self.sender.username if self.sender else 'System'
-        return f'{sender_name} → {self.receiver.username}: {self.amount} coins'
+        receiver_name = self.receiver.username if self.receiver else 'Deleted User'
+        return f'{sender_name} → {receiver_name}: {self.amount} coins'

@@ -192,3 +192,18 @@ class MintViewTest(TestCase):
         })
         self.user.profile.refresh_from_db()
         self.assertEqual(self.user.profile.balance, 200)
+
+
+class TransactionCascadeTest(TestCase):
+    def test_deleting_receiver_preserves_transactions(self):
+        """Deleting a user must not destroy transactions where they were the receiver."""
+        alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
+        bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
+        alice.profile.balance = 100
+        alice.profile.save()
+        transfer_coins(alice, bob, 50, note='test')
+        tx_id = Transaction.objects.get(sender=alice, receiver=bob).pk
+        bob.delete()
+        tx = Transaction.objects.get(pk=tx_id)
+        self.assertIsNone(tx.receiver)
+        self.assertEqual(tx.amount, 50)

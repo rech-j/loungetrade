@@ -129,3 +129,13 @@ class UserSearchTest(TestCase):
         response = self.client.get('/profile/search/json/?q=b')
         data = response.json()
         self.assertEqual(len(data['users']), 0)
+
+    def test_search_html_escapes_username_in_js_context(self):
+        """Username with quotes must be JS-escaped in the HTML partial."""
+        User.objects.create_user("it's<test>", 'xss@test.com', 'pass1234')
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/profile/search/?q=it')
+        content = response.content.decode()
+        # Django's escapejs turns ' into \u0027 and < into \u003C
+        self.assertIn('\\u0027', content)
+        self.assertNotIn("it's", content)

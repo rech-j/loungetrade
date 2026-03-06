@@ -3,8 +3,8 @@
     {% for user in users %}
     <li role="option"
         tabindex="0"
-        @click="$dispatch('user-selected', { username: '{{ user.username }}' }); $el.closest('ul').remove()"
-        @keydown.enter="$dispatch('user-selected', { username: '{{ user.username }}' }); $el.closest('ul').remove()"
+        @click="$dispatch('user-selected', { username: '{{ user.username|escapejs }}' }); $el.closest('ul').remove()"
+        @keydown.enter="$dispatch('user-selected', { username: '{{ user.username|escapejs }}' }); $el.closest('ul').remove()"
         class="px-3 py-2 hover:bg-gold/10 cursor-pointer text-sm flex items-center justify-between">
         <span>
             <span class="font-venus-medium">{{ user.profile.get_display_name }}</span>
