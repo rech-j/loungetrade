@@ -17,8 +17,14 @@ function chessApp() {
         legalMoves: [],        // squares the selected piece can move to
         lastMove: null,        // { from, to }
         dragFrom: null,
+        touchGhost: null,
+        _touchDragSq: null,
+        _touchDragging: false,
+        _touchDragStartX: 0,
+        _touchDragStartY: 0,
         pendingPromotion: null, // { from, to } awaiting piece choice
 
+        currentTurn: 'w',      // 'w' | 'b' — reactive mirror of chess.turn()
         mySide: null,          // 'white' | 'black' | null (spectator/pending)
         myName: 'You',
         opponentName: 'Opponent',
@@ -31,6 +37,8 @@ function chessApp() {
         playerAvatars: {},     // { username: { avatar, initial } }
 
         reconnectAttempts: 0,
+        reconnectCountdown: 0,
+        _reconnectCountdownInterval: null,
         myTime: 600,
         opponentTime: 600,
         timerInterval: null,
@@ -41,9 +49,8 @@ function chessApp() {
         // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
-            var turn = this.chess.turn(); // 'w' or 'b'
-            return (turn === 'w' && this.mySide === 'white') ||
-                   (turn === 'b' && this.mySide === 'black');
+            return (this.currentTurn === 'w' && this.mySide === 'white') ||
+                   (this.currentTurn === 'b' && this.mySide === 'black');
         },
         get myTimeLow() { return this.myTime <= 30; },
         get opponentTimeLow() { return this.opponentTime <= 30; },
@@ -99,6 +106,20 @@ function chessApp() {
         get opponentAdvantage() {
             return -this.myAdvantage;
         },
+        get gameOverColorClass() {
+            if (this.gameOverTitle === 'You Win!') return 'border-patina';
+            if (this.gameOverTitle === 'You Lose') return 'border-burgundy';
+            return 'border-stone';
+        },
+        get gameOverTitleClass() {
+            if (this.gameOverTitle === 'You Win!') return 'text-patina';
+            if (this.gameOverTitle === 'You Lose') return 'text-burgundy';
+            return 'text-slate';
+        },
+        get turnText() {
+            if (!this.gameActive || !this.mySide) return '';
+            return this.isMyTurn ? 'Your move' : (this.opponentName + "'s turn");
+        },
 
         // Init
         init() {
@@ -119,15 +140,28 @@ function chessApp() {
         connectWS() {
             var proto = location.protocol === 'https:' ? 'wss' : 'ws';
             this.ws = new WebSocket(proto + '://' + location.host + '/ws/chess/' + this.$el.dataset.gameId + '/');
-            this.ws.onopen = () => { this.connected = true; this.errorMsg = ''; this.reconnectAttempts = 0; };
+            this.ws.onopen = () => {
+                this.connected = true;
+                this.errorMsg = '';
+                this.reconnectAttempts = 0;
+                this.reconnectCountdown = 0;
+                if (this._reconnectCountdownInterval) { clearInterval(this._reconnectCountdownInterval); this._reconnectCountdownInterval = null; }
+            };
             this.ws.onclose = (event) => {
                 this.connected = false;
                 if (!this.gameOver && !event.wasClean && this.reconnectAttempts < 5) {
                     this.reconnectAttempts++;
-                    this.errorMsg = 'Connection lost. Reconnecting...';
-                    setTimeout(() => this.connectWS(), 3000 * this.reconnectAttempts);
+                    var delay = 3000 * this.reconnectAttempts + Math.floor(Math.random() * 2000);
+                    this.reconnectCountdown = Math.round(delay / 1000);
+                    this.errorMsg = '';
+                    if (this._reconnectCountdownInterval) clearInterval(this._reconnectCountdownInterval);
+                    this._reconnectCountdownInterval = setInterval(() => {
+                        this.reconnectCountdown = Math.max(0, this.reconnectCountdown - 1);
+                    }, 1000);
+                    setTimeout(() => this.connectWS(), delay);
                 } else if (this.reconnectAttempts >= 5) {
                     this.errorMsg = 'Connection lost. Please refresh the page.';
+                    this.reconnectCountdown = 0;
                 }
             };
             this.ws.onerror = () => { this.errorMsg = 'Connection error.'; };
@@ -159,6 +193,7 @@ function chessApp() {
                 this.mySide = data.your_side;
                 this.chess.load(data.fen);
                 this.fen = data.fen;
+                this.currentTurn = this.chess.turn();
                 this.myTime = this.mySide === 'white' ? data.white_time : data.black_time;
                 this.opponentTime = this.mySide === 'white' ? data.black_time : data.white_time;
                 var myUser = this.mySide === 'white' ? data.white_player : data.black_player;
@@ -220,7 +255,9 @@ function chessApp() {
             var promotion = data.move.length === 5 ? data.move[4] : undefined;
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (result) {
+                this.playMoveSound();
                 this.fen = this.chess.fen();
+                this.currentTurn = this.chess.turn();
                 this.lastMove = { from: from, to: to };
                 this.sanMoves.push(result.san);
                 this.buildMovePairs();
@@ -402,8 +439,10 @@ function chessApp() {
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (!result) return false;
 
+            this.playMoveSound();
             this.lastMove = { from: from, to: to };
             this.fen = this.chess.fen();
+            this.currentTurn = this.chess.turn();
             this.selectedSq = null;
             this.legalMoves = [];
             this.sanMoves.push(result.san);
@@ -459,6 +498,22 @@ function chessApp() {
             }
         },
 
+        // Move sound
+        playMoveSound() {
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 480;
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            } catch (e) {}
+        },
+
         // Drag and drop
         handleDragStart(event, sq) {
             if (!this.canDragPiece(sq)) { event.preventDefault(); return; }
@@ -477,6 +532,58 @@ function chessApp() {
         resign() {
             this.confirmResign = false;
             this.ws.send(JSON.stringify({ action: 'resign' }));
+        },
+
+        // Touch drag for mobile
+        handleTouchStart(event) {
+            var touch = event.touches[0];
+            var el = document.elementFromPoint(touch.clientX, touch.clientY);
+            while (el && !el.dataset.sq) el = el.parentElement;
+            if (!el || !el.dataset.sq) return;
+            var sq = this.boardSquares.find(function(s) { return s.name === el.dataset.sq; });
+            if (!sq || !this.canDragPiece(sq)) { this._touchDragSq = null; return; }
+            this._touchDragSq = sq;
+            this._touchDragStartX = touch.clientX;
+            this._touchDragStartY = touch.clientY;
+            this._touchDragging = false;
+        },
+
+        handleTouchMove(event) {
+            if (!this._touchDragSq) return;
+            var touch = event.touches[0];
+            if (!this._touchDragging) {
+                var dx = touch.clientX - this._touchDragStartX;
+                var dy = touch.clientY - this._touchDragStartY;
+                if (Math.sqrt(dx * dx + dy * dy) < 10) return;
+                this._touchDragging = true;
+                this.dragFrom = this._touchDragSq.name;
+                this.selectSquare(this._touchDragSq.name);
+                var ghost = document.createElement('span');
+                var sq = this._touchDragSq;
+                ghost.textContent = this.pieceChar(sq.piece);
+                ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;font-size:2.5rem;line-height:1;opacity:0.8;transform:translate(-50%,-120%);';
+                ghost.style.left = touch.clientX + 'px';
+                ghost.style.top = touch.clientY + 'px';
+                document.body.appendChild(ghost);
+                this.touchGhost = ghost;
+            }
+            if (this.touchGhost) {
+                this.touchGhost.style.left = touch.clientX + 'px';
+                this.touchGhost.style.top = touch.clientY + 'px';
+            }
+        },
+
+        handleTouchEnd(event) {
+            if (this.touchGhost) { document.body.removeChild(this.touchGhost); this.touchGhost = null; }
+            if (this._touchDragging && this.dragFrom) {
+                var touch = event.changedTouches[0];
+                var el = document.elementFromPoint(touch.clientX, touch.clientY);
+                while (el && !el.dataset.sq) el = el.parentElement;
+                if (el && el.dataset.sq) { this.tryMove(this.dragFrom, el.dataset.sq); }
+                this.dragFrom = null;
+            }
+            this._touchDragSq = null;
+            this._touchDragging = false;
         },
     };
 }

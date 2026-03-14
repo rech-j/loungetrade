@@ -26,9 +26,9 @@
                     {% elif tx.tx_type == 'game_win' and tx.receiver == request.user %}
                         Won from {{ tx.sender.username }}
                     {% elif tx.tx_type == 'game_win' and tx.sender == request.user %}
-                        Lost to {{ tx.receiver.username }}
+                        Lost to {% if tx.receiver %}{{ tx.receiver.username }}{% else %}Deleted User{% endif %}
                     {% elif tx.sender == request.user %}
-                        Sent to {{ tx.receiver.username }}
+                        Sent to {% if tx.receiver %}{{ tx.receiver.username }}{% else %}Deleted User{% endif %}
                     {% else %}
                         From {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
                     {% endif %}

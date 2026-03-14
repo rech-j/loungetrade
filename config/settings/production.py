@@ -12,7 +12,7 @@ if not SECRET_KEY:
     raise ImproperlyConfigured('DJANGO_SECRET_KEY environment variable is required in production.')
 
 # Validate other required env vars
-_REQUIRED_ENV_VARS = ['DB_PASSWORD']
+_REQUIRED_ENV_VARS = ['DB_PASSWORD', 'BREVO_API_KEY', 'REDIS_URL']
 _missing = [var for var in _REQUIRED_ENV_VARS if not os.environ.get(var)]
 if _missing:
     raise ImproperlyConfigured(f'Missing required environment variables: {", ".join(_missing)}')

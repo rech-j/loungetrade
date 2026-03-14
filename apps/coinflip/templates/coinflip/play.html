@@ -3,7 +3,7 @@
 
 {% block extra_head %}
 <style>
-    .coin { width: 100px; height: 100px; perspective: 1000px; margin: 0 auto; }
+    .coin { width: 140px; height: 140px; perspective: 1000px; margin: 0 auto; }
     .coin-inner { width: 100%; height: 100%; transition: transform 0.1s; transform-style: preserve-3d; }
     .coin-inner.flipping { animation: coinFlip 2s ease-out forwards; }
     .coin-face {
@@ -63,10 +63,10 @@
 
     <div class="mb-8">
         <p class="text-xs tracking-widest uppercase text-slate mb-3">Coin Flip</p>
-        <h1 class="font-serif text-xl font-bold">
+        <h1 class="font-venus-medium text-xl">
             {{ challenge.challenger.profile.get_display_name }} vs {{ challenge.opponent.profile.get_display_name }}
         </h1>
-        <p class="text-gold font-medium mt-1">{{ challenge.stake }} LC at stake</p>
+        <div class="vintage-badge mt-1">{{ challenge.stake }} LC</div>
         <p class="text-xs text-slate mt-1">
             {{ challenge.challenger.profile.get_display_name }} called
             <span class="uppercase font-medium">{{ challenge.challenger_choice }}</span>
@@ -82,7 +82,7 @@
 
     <template x-if="errorMessage && status === 'error'">
         <div class="mt-4">
-            <p class="text-burgundy text-sm mb-4" x-text="errorMessage"></p>
+            <div class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMessage"></div>
             <a href="{% url 'coinflip_lobby' %}" class="vintage-btn-outline text-xs py-2 px-6">Back to Lobby</a>
         </div>
     </template>
@@ -91,7 +91,6 @@
 
     <template x-if="status === 'pending'">
         <div>
-            <p class="text-slate text-sm mb-4" x-show="connected">Waiting for players...</p>
             <p class="text-slate text-sm mb-4" x-show="!connected && !errorMessage">Connecting...</p>
 
             {% if not is_challenger %}
@@ -118,7 +117,7 @@
 
     <template x-if="status === 'completed'">
         <div class="mt-4">
-            <p class="font-serif text-lg font-bold mb-1">
+            <p class="font-venus-medium text-lg mb-1">
                 Landed on <span class="text-gold uppercase" x-text="flipResult"></span>
             </p>
             <p class="text-sm mt-1" :class="winner === '{{ request.user.username }}' ? 'text-patina' : 'text-burgundy'">

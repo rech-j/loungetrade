@@ -67,15 +67,23 @@
         <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Games</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for g in pending_games %}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
                     <p class="text-sm">
                         {% if g.creator == request.user %}You challenged <span class="font-venus-medium">{{ g.opponent.profile.get_display_name }}</span>
                         {% else %}<span class="font-venus-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
-                    <p class="text-xs text-slate">{{ g.stake }} LC &middot; {{ g.status }} &middot; {{ g.created_at|timesince }} ago</p>
+                    <p class="text-xs text-slate flex items-center gap-1.5">
+                        {{ g.stake }} LC &middot;
+                        {% if g.status == 'active' %}
+                        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-patina inline-block"></span><span class="text-patina font-medium">In Progress</span></span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold inline-block"></span><span class="text-gold font-medium">Pending</span></span>
+                        {% endif %}
+                        &middot; {{ g.created_at|timesince }} ago
+                    </p>
                 </div>
-                <div class="flex gap-2">
+                <div class="flex gap-2 flex-shrink-0">
                     <a href="{% url 'chess_play' g.pk %}" class="vintage-btn text-xs py-1.5 px-4">Play</a>
                     {% if g.creator == request.user and g.status == 'pending' %}
                     <form method="post" action="{% url 'chess_cancel' g.pk %}">
@@ -100,9 +108,9 @@
         <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Chess Results</h2>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div>
-                    <p class="text-sm">{{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm truncate">{{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
                     <p class="text-xs text-slate">
                         {{ g.stake }} LC &middot;
                         {% if g.winner == request.user %}Won{% elif g.winner %}Lost{% else %}Draw{% endif %}

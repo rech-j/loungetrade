@@ -88,6 +88,8 @@ class ChessConsumer(BaseGameConsumer):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
+        if self.is_throttled():
+            return
         try:
             data = json.loads(text_data)
         except json.JSONDecodeError:
@@ -431,10 +433,16 @@ class ChessConsumer(BaseGameConsumer):
             'moves_uci': moves,
             'last_move_at': timezone.now(),
         }
+        # Only accept times that are non-negative and not higher than the
+        # current stored value — prevents clients from inflating their clock.
         if white_time is not None:
-            update['white_time'] = int(white_time)
+            wt = int(white_time)
+            if 0 <= wt <= game.white_time:
+                update['white_time'] = wt
         if black_time is not None:
-            update['black_time'] = int(black_time)
+            bt = int(black_time)
+            if 0 <= bt <= game.black_time:
+                update['black_time'] = bt
         ChessGame.objects.filter(pk=game_id).update(**update)
 
     @database_sync_to_async

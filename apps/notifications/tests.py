@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 
 from .models import Notification
@@ -6,6 +7,7 @@ from .models import Notification
 
 class NotificationModelTest(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
 
     def test_create_notification(self):

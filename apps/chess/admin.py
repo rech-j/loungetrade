@@ -5,4 +5,5 @@ from .models import ChessGame
 class ChessGameAdmin(admin.ModelAdmin):
     list_display = ('white_player', 'black_player', 'stake', 'status', 'winner', 'created_at')
     list_filter = ('status',)
+    list_select_related = ('white_player', 'black_player', 'winner')
     readonly_fields = ('created_at', 'started_at', 'ended_at')

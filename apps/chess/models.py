@@ -81,7 +81,11 @@ class ChessGame(models.Model):
 
     class Meta:
         ordering = ['-created_at']
-        indexes = [models.Index(fields=['status', 'created_at'])]
+        indexes = [
+            models.Index(fields=['status', 'created_at']),
+            models.Index(fields=['creator', 'status']),
+            models.Index(fields=['opponent', 'status']),
+        ]
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(stake__gte=1),

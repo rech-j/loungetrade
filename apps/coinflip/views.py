@@ -139,3 +139,16 @@ def decline_challenge(request, challenge_id):
     challenge.save(update_fields=['status'])
     messages.info(request, 'Challenge declined.')
     return redirect('coinflip_lobby')
+
+
+@login_required
+def cancel_challenge(request, challenge_id):
+    if request.method != 'POST':
+        return redirect('coinflip_lobby')
+    challenge = get_object_or_404(
+        CoinFlipChallenge, pk=challenge_id, challenger=request.user, status='pending',
+    )
+    challenge.status = 'cancelled'
+    challenge.save(update_fields=['status'])
+    messages.info(request, 'Challenge cancelled.')
+    return redirect('coinflip_lobby')

@@ -13,7 +13,7 @@ class LeaderboardViewTest(TestCase):
         user.profile.save()
         response = self.client.get('/leaderboard/')
         self.assertContains(response, 'richuser')
-        self.assertContains(response, '1000')
+        self.assertContains(response, '1,000')
 
     def test_leaderboard_ordered_by_balance(self):
         u1 = User.objects.create_user('poor', 'poor@test.com', 'pass1234')
