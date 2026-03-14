@@ -66,17 +66,30 @@
         <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Challenges</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for c in pending_challenges %}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
                     <p class="text-sm">
                         {% if c.challenger == request.user %}You challenged <span class="font-venus-medium">{{ c.opponent.profile.get_display_name }}</span>
                         {% else %}<span class="font-venus-medium">{{ c.challenger.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
                     <p class="text-xs text-slate">{{ c.stake }} LC &middot; {{ c.created_at|timesince }} ago</p>
                 </div>
-                <a href="{% url 'coinflip_play' c.pk %}" class="vintage-btn text-xs py-1.5 px-4">
-                    {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
-                </a>
+                <div class="flex gap-2 flex-shrink-0">
+                    <a href="{% url 'coinflip_play' c.pk %}" class="vintage-btn text-xs py-1.5 px-4">
+                        {% if c.challenger == request.user %}Watch{% else %}Play{% endif %}
+                    </a>
+                    {% if c.challenger == request.user %}
+                    <form method="post" action="{% url 'coinflip_cancel' c.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-xs py-1.5 px-3 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Cancel</button>
+                    </form>
+                    {% elif c.opponent == request.user %}
+                    <form method="post" action="{% url 'coinflip_decline' c.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn-outline text-xs py-1.5 px-3 border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">Decline</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
             {% endfor %}
         </div>
@@ -88,16 +101,16 @@
         <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Coin Flip Results</h2>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div>
-                    <p class="text-sm">{{ g.challenger.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm truncate">{{ g.challenger.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
                     <p class="text-xs text-slate">
                         {{ g.stake }} LC &middot;
                         {% if g.winner == request.user %}Won{% else %}Lost{% endif %}
                         &middot; {{ g.flip_result }} &middot; {{ g.resolved_at|timesince }} ago
                     </p>
                 </div>
-                <span class="text-sm font-bold font-serif {% if g.winner == request.user %}text-patina{% else %}text-burgundy{% endif %}">
+                <span class="text-sm font-bold font-serif flex-shrink-0 {% if g.winner == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                     {% if g.winner == request.user %}+{{ g.stake }}{% else %}-{{ g.stake }}{% endif %}
                 </span>
             </div>
