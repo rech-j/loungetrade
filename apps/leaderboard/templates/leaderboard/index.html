@@ -1,33 +1,169 @@
 {% extends "base.html" %}
+{% load humanize %}
 {% block title %}Leaderboard - LC{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
+
     <div class="mb-8">
         <h1 class="font-venus-medium text-2xl">The Board</h1>
         <p class="text-slate text-sm mt-1">Fortune laid bare for all to see.</p>
     </div>
 
-    {% if user_rank is not None %}
+    {% if user_rank is not None and user_in_list %}
     <div class="ticker-line mb-6 text-center">
         Your standing: <span class="font-venus-medium text-gold">#{{ user_rank }}</span>
+    </div>
+    {% elif user_rank is not None %}
+    <div class="ticker-line mb-6 text-center">
+        Your standing: <span class="font-venus-medium text-gold">#{{ user_rank }}</span> &mdash; not yet in the top 50
     </div>
     {% endif %}
 
     {% if profiles %}
+
+    {# ── Podium: top 3 ── #}
+    {% if profiles|length >= 3 %}
+    <div class="grid grid-cols-3 gap-3 mb-6 border border-stone dark:border-slate border-t-2 border-t-gold pt-4 pb-5 px-4">
+
+        {# 2nd place #}
+        <div class="flex flex-col items-center pt-4">
+            <div x-data="{ open: false }"
+                 @mouseenter="open = true" @mouseleave="open = false"
+                 @click.stop="open = !open" @click.outside="open = false"
+                 class="relative mb-2 cursor-pointer">
+                <div class="w-14 h-14 border-2 border-stone dark:border-slate flex items-center justify-center overflow-hidden">
+                    {% with profile=profiles.1 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="font-serif text-lg font-bold text-slate">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <div x-show="open" x-cloak
+                     class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-24 h-24 border-2 border-stone dark:border-slate shadow-lg bg-cream dark:bg-walnut overflow-hidden">
+                    {% with profile=profiles.1 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="flex items-center justify-center w-full h-full font-serif text-2xl font-bold text-slate">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="text-xl mb-1">🥈</div>
+            <p class="font-venus-medium text-xs text-center truncate w-full px-1">{{ profiles.1.get_display_name }}</p>
+            <p class="font-serif text-xs font-bold text-slate mt-0.5">{{ profiles.1.balance|intcomma }}</p>
+            {% with d=profiles.1.delta_24h %}
+            {% if d > 0 %}<span class="text-patina text-xs mt-0.5">▲ +{{ d|intcomma }}</span>
+            {% elif d < 0 %}<span class="text-burgundy text-xs mt-0.5">▼ {{ d|intcomma }}</span>
+            {% endif %}{% endwith %}
+        </div>
+
+        {# 1st place — tallest column #}
+        <div class="flex flex-col items-center border-t-2 border-t-gold pt-2">
+            <div x-data="{ open: false }"
+                 @mouseenter="open = true" @mouseleave="open = false"
+                 @click.stop="open = !open" @click.outside="open = false"
+                 class="relative mb-2 cursor-pointer">
+                <div class="w-16 h-16 border-2 border-gold flex items-center justify-center overflow-hidden">
+                    {% with profile=profiles.0 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="font-serif text-xl font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <div x-show="open" x-cloak
+                     class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-28 h-28 border-2 border-gold shadow-lg bg-cream dark:bg-walnut overflow-hidden">
+                    {% with profile=profiles.0 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="flex items-center justify-center w-full h-full font-serif text-3xl font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="text-2xl mb-1">🥇</div>
+            <p class="font-venus-medium text-xs text-center truncate w-full px-1 text-gold">{{ profiles.0.get_display_name }}</p>
+            <p class="font-serif text-sm font-bold text-gold mt-0.5">{{ profiles.0.balance|intcomma }}</p>
+            {% with d=profiles.0.delta_24h %}
+            {% if d > 0 %}<span class="text-patina text-xs mt-0.5">▲ +{{ d|intcomma }}</span>
+            {% elif d < 0 %}<span class="text-burgundy text-xs mt-0.5">▼ {{ d|intcomma }}</span>
+            {% endif %}{% endwith %}
+        </div>
+
+        {# 3rd place #}
+        <div class="flex flex-col items-center pt-6">
+            <div x-data="{ open: false }"
+                 @mouseenter="open = true" @mouseleave="open = false"
+                 @click.stop="open = !open" @click.outside="open = false"
+                 class="relative mb-2 cursor-pointer">
+                <div class="w-12 h-12 border-2 border-stone dark:border-slate flex items-center justify-center overflow-hidden">
+                    {% with profile=profiles.2 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="font-serif text-base font-bold text-slate">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                <div x-show="open" x-cloak
+                     class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-20 h-20 border-2 border-stone dark:border-slate shadow-lg bg-cream dark:bg-walnut overflow-hidden">
+                    {% with profile=profiles.2 %}
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="flex items-center justify-center w-full h-full font-serif text-xl font-bold text-slate">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+            <div class="text-lg mb-1">🥉</div>
+            <p class="font-venus-medium text-xs text-center truncate w-full px-1">{{ profiles.2.get_display_name }}</p>
+            <p class="font-serif text-xs font-bold text-slate mt-0.5">{{ profiles.2.balance|intcomma }}</p>
+            {% with d=profiles.2.delta_24h %}
+            {% if d > 0 %}<span class="text-patina text-xs mt-0.5">▲ +{{ d|intcomma }}</span>
+            {% elif d < 0 %}<span class="text-burgundy text-xs mt-0.5">▼ {{ d|intcomma }}</span>
+            {% endif %}{% endwith %}
+        </div>
+
+    </div>
+    {% endif %}
+
+    {# ── Main list: all entries when < 3 total; #4 onward when podium is shown ── #}
+    {% if profiles|length > 0 %}
     <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for profile in profiles %}
-        <div class="flex items-center gap-4 px-4 py-3 {% if request.user.is_authenticated and profile.user == request.user %}bg-gold/5{% endif %} {% if forloop.counter <= 3 %}border-l-3 border-l-gold{% endif %}">
-            <span class="w-8 text-center text-xs font-bold font-serif {% if forloop.counter == 1 %}text-gold{% elif forloop.counter == 2 %}text-stone{% elif forloop.counter == 3 %}text-amber{% else %}text-slate{% endif %}">
+        {% if profiles|length < 3 or forloop.counter > 3 %}
+        <div class="flex items-center gap-4 px-4 py-3 {% if request.user.is_authenticated and profile.user == request.user %}bg-gold/5{% endif %}">
+
+            <span class="w-8 text-center text-xs font-bold font-serif text-slate flex-shrink-0">
                 {% if forloop.counter == 1 %}1st{% elif forloop.counter == 2 %}2nd{% elif forloop.counter == 3 %}3rd{% else %}{{ forloop.counter }}{% endif %}
             </span>
 
-            <div class="w-9 h-9 flex-shrink-0 border {% if forloop.counter <= 3 %}border-gold{% else %}border-stone dark:border-slate{% endif %} flex items-center justify-center overflow-hidden">
-                {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
-                {% else %}
-                <span class="font-serif text-xs font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
-                {% endif %}
+            <div x-data="{ open: false }"
+                 @mouseenter="open = true" @mouseleave="open = false"
+                 @click.stop="open = !open" @click.outside="open = false"
+                 class="relative flex-shrink-0 cursor-pointer">
+                <div class="w-9 h-9 border border-stone dark:border-slate flex items-center justify-center overflow-hidden">
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="font-serif text-xs font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                </div>
+                <div x-show="open" x-cloak
+                     class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-20 h-20 border-2 border-gold shadow-lg bg-cream dark:bg-walnut overflow-hidden">
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    {% else %}
+                    <span class="flex items-center justify-center w-full h-full font-serif text-2xl font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
+                    {% endif %}
+                </div>
             </div>
 
             <div class="flex-1 min-w-0">
@@ -35,12 +171,76 @@
                 <p class="text-xs text-slate">@{{ profile.user.username }}</p>
             </div>
 
-            <span class="font-serif text-sm font-bold text-gold">{{ profile.balance }}</span>
+            <div class="text-right flex-shrink-0">
+                <p class="font-serif text-sm font-bold text-gold">{{ profile.balance|intcomma }}</p>
+                {% with d=profile.delta_24h %}
+                {% if d > 0 %}<p class="text-patina text-xs">▲ +{{ d|intcomma }}</p>
+                {% elif d < 0 %}<p class="text-burgundy text-xs">▼ {{ d|intcomma }}</p>
+                {% else %}<p class="text-xs">&nbsp;</p>
+                {% endif %}{% endwith %}
+            </div>
+
         </div>
-        {% endfor %}
+        {% endif %}{% endfor %}
     </div>
+    {% endif %}
+
+    {# ── User anchor row (outside top 50) ── #}
+    {% if user_profile %}
+    <div class="mt-6">
+        <div class="ticker-line text-center mb-0">
+            You &mdash; ranked <span class="font-venus-medium text-gold">#{{ user_rank }}</span>
+        </div>
+        <div class="border border-t-0 border-stone dark:border-slate">
+            <div class="flex items-center gap-4 px-4 py-3 bg-gold/5">
+
+                <span class="w-8 text-center text-xs font-bold font-serif text-gold flex-shrink-0">
+                    {{ user_rank }}
+                </span>
+
+                <div x-data="{ open: false }"
+                     @mouseenter="open = true" @mouseleave="open = false"
+                     @click.stop="open = !open" @click.outside="open = false"
+                     class="relative flex-shrink-0 cursor-pointer">
+                    <div class="w-9 h-9 border border-gold flex items-center justify-center overflow-hidden">
+                        {% if user_profile.avatar %}
+                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <span class="font-serif text-xs font-bold text-gold">{{ user_profile.get_display_name|first|upper }}</span>
+                        {% endif %}
+                    </div>
+                    <div x-show="open" x-cloak
+                         class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-20 h-20 border-2 border-gold shadow-lg bg-cream dark:bg-walnut overflow-hidden">
+                        {% if user_profile.avatar %}
+                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <span class="flex items-center justify-center w-full h-full font-serif text-2xl font-bold text-gold">{{ user_profile.get_display_name|first|upper }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-venus-medium truncate">{{ user_profile.get_display_name }}</p>
+                    <p class="text-xs text-slate">@{{ user_profile.user.username }}</p>
+                </div>
+
+                <div class="text-right flex-shrink-0">
+                    <p class="font-serif text-sm font-bold text-gold">{{ user_profile.balance|intcomma }}</p>
+                    {% with d=user_profile.delta_24h %}
+                    {% if d > 0 %}<p class="text-patina text-xs">▲ +{{ d|intcomma }}</p>
+                    {% elif d < 0 %}<p class="text-burgundy text-xs">▼ {{ d|intcomma }}</p>
+                    {% else %}<p class="text-xs">&nbsp;</p>
+                    {% endif %}{% endwith %}
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     {% else %}
     <p class="text-slate text-sm">No members yet.</p>
     {% endif %}
+
 </div>
 {% endblock %}
