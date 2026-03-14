@@ -38,6 +38,10 @@
 .clock.low { color: #722f37; animation: pulse 1s infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 
+/* ── Your-turn ring ─────────────────────────── */
+.your-turn-ring { box-shadow: 0 0 0 3px #c9a84c; animation: ring-pulse 1.5s ease-in-out infinite; }
+@keyframes ring-pulse { 0%,100% { box-shadow: 0 0 0 3px rgba(201,168,76,1); } 50% { box-shadow: 0 0 0 5px rgba(201,168,76,0.4); } }
+
 </style>
 <script src="{% static 'js/chess-app.js' %}"></script>
 {% endblock %}
@@ -65,6 +69,9 @@
 
     <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
     <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
+    <div x-show="reconnectCountdown > 0" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy">
+        Connection lost. Reconnecting in <span x-text="reconnectCountdown"></span>s&hellip;
+    </div>
 
     <div class="grid grid-cols-1 md:grid-cols-[1fr_200px] lg:grid-cols-[1fr_260px] gap-6">
         <div>
@@ -89,6 +96,7 @@
 
             <div class="relative">
             <div class="chess-board" role="grid" aria-label="Chess board"
+                 :class="{ 'your-turn-ring': isMyTurn && gameActive }"
                  @dragover.prevent
                  @drop="handleDrop($event)"
                  @touchstart="handleTouchStart($event)"
@@ -129,7 +137,11 @@
             </div>
             </div>
 
-            <div class="flex items-center justify-between mt-2 px-1 gap-2">
+            <p x-show="gameActive && mySide" class="text-center text-xs mt-2 mb-1 font-medium tracking-wide"
+               :class="isMyTurn ? 'text-gold' : 'text-slate'"
+               x-text="isMyTurn ? 'Your move' : (opponentName + \'s turn')"></p>
+
+            <div class="flex items-center justify-between mt-1 px-1 gap-2">
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full border border-stone dark:border-slate overflow-hidden flex items-center justify-center bg-parchment dark:bg-walnut flex-shrink-0">
                         <img x-show="myAvatar" :src="myAvatar" :alt="myName" class="w-full h-full object-cover">
@@ -146,6 +158,22 @@
                 <span class="clock"
                       :class="{ active: isMyTurn && gameActive, low: myTimeLow }"
                       x-text="formatTime(myTime)">10:00</span>
+            </div>
+            <!-- Mobile resign (hidden on md+) -->
+            <div class="md:hidden mt-3" x-show="gameActive && mySide">
+                <div x-show="!confirmResign">
+                    <button @click="confirmResign = true"
+                            class="vintage-btn-outline w-full py-2 text-xs border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">
+                        Resign
+                    </button>
+                </div>
+                <div x-show="confirmResign" class="space-y-2">
+                    <p class="text-xs text-slate text-center">Resign and forfeit {{ game.stake }} LC?</p>
+                    <div class="flex gap-2">
+                        <button @click="resign()" class="vintage-btn flex-1 py-2 text-xs bg-burgundy hover:bg-burgundy/80">Confirm</button>
+                        <button @click="confirmResign = false" class="vintage-btn-outline flex-1 py-2 text-xs">Cancel</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -164,7 +192,7 @@
                 </div>
             </div>
 
-            <div x-show="gameActive && mySide" class="space-y-2">
+            <div x-show="gameActive && mySide" class="hidden md:block space-y-2">
                 <button @click="confirmResign = true"
                         x-show="!confirmResign"
                         class="vintage-btn-outline w-full py-2 text-xs border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">
@@ -181,18 +209,19 @@
                 <p class="text-xs text-slate uppercase tracking-wide mb-2">Moves</p>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="move-list">
                     <template x-for="(pair, i) in movePairs" :key="i">
-                        <div class="flex gap-2 text-xs">
+                        <div class="flex gap-2 text-xs rounded px-1 -mx-1"
+                             :class="i === movePairs.length - 1 ? 'bg-gold/10' : ''">
                             <span class="text-slate w-5 flex-shrink-0" x-text="(i+1) + '.'"></span>
                             <span x-text="pair[0]" class="font-mono"></span>
-                            <span x-text="pair[1] || ''" class="font-mono"></span>
+                            <span x-text="pair[1] || ''" class="font-mono text-slate"></span>
                         </div>
                     </template>
                     <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
                 </div>
             </div>
 
-            <div x-show="gameOver" class="vintage-card py-3">
-                <p class="font-serif text-lg font-bold" x-text="gameOverTitle"></p>
+            <div x-show="gameOver" class="vintage-card py-3 border-l-4" :class="gameOverColorClass">
+                <p class="font-serif text-lg font-bold" :class="gameOverTitleClass" x-text="gameOverTitle"></p>
                 <p class="text-sm text-slate mt-1" x-text="gameOverMsg"></p>
                 <a href="{% url 'chess_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
             </div>

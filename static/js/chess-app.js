@@ -36,6 +36,8 @@ function chessApp() {
         playerAvatars: {},     // { username: { avatar, initial } }
 
         reconnectAttempts: 0,
+        reconnectCountdown: 0,
+        _reconnectCountdownInterval: null,
         myTime: 600,
         opponentTime: 600,
         timerInterval: null,
@@ -104,6 +106,16 @@ function chessApp() {
         get opponentAdvantage() {
             return -this.myAdvantage;
         },
+        get gameOverColorClass() {
+            if (this.gameOverTitle === 'You Win!') return 'border-patina';
+            if (this.gameOverTitle === 'You Lose') return 'border-burgundy';
+            return 'border-stone';
+        },
+        get gameOverTitleClass() {
+            if (this.gameOverTitle === 'You Win!') return 'text-patina';
+            if (this.gameOverTitle === 'You Lose') return 'text-burgundy';
+            return 'text-slate';
+        },
 
         // Init
         init() {
@@ -124,16 +136,28 @@ function chessApp() {
         connectWS() {
             var proto = location.protocol === 'https:' ? 'wss' : 'ws';
             this.ws = new WebSocket(proto + '://' + location.host + '/ws/chess/' + this.$el.dataset.gameId + '/');
-            this.ws.onopen = () => { this.connected = true; this.errorMsg = ''; this.reconnectAttempts = 0; };
+            this.ws.onopen = () => {
+                this.connected = true;
+                this.errorMsg = '';
+                this.reconnectAttempts = 0;
+                this.reconnectCountdown = 0;
+                if (this._reconnectCountdownInterval) { clearInterval(this._reconnectCountdownInterval); this._reconnectCountdownInterval = null; }
+            };
             this.ws.onclose = (event) => {
                 this.connected = false;
                 if (!this.gameOver && !event.wasClean && this.reconnectAttempts < 5) {
                     this.reconnectAttempts++;
-                    this.errorMsg = 'Connection lost. Reconnecting...';
                     var delay = 3000 * this.reconnectAttempts + Math.floor(Math.random() * 2000);
+                    this.reconnectCountdown = Math.round(delay / 1000);
+                    this.errorMsg = '';
+                    if (this._reconnectCountdownInterval) clearInterval(this._reconnectCountdownInterval);
+                    this._reconnectCountdownInterval = setInterval(() => {
+                        this.reconnectCountdown = Math.max(0, this.reconnectCountdown - 1);
+                    }, 1000);
                     setTimeout(() => this.connectWS(), delay);
                 } else if (this.reconnectAttempts >= 5) {
                     this.errorMsg = 'Connection lost. Please refresh the page.';
+                    this.reconnectCountdown = 0;
                 }
             };
             this.ws.onerror = () => { this.errorMsg = 'Connection error.'; };
@@ -226,6 +250,7 @@ function chessApp() {
             var promotion = data.move.length === 5 ? data.move[4] : undefined;
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (result) {
+                this.playMoveSound();
                 this.fen = this.chess.fen();
                 this.lastMove = { from: from, to: to };
                 this.sanMoves.push(result.san);
@@ -408,6 +433,7 @@ function chessApp() {
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (!result) return false;
 
+            this.playMoveSound();
             this.lastMove = { from: from, to: to };
             this.fen = this.chess.fen();
             this.selectedSq = null;
@@ -463,6 +489,22 @@ function chessApp() {
                 }
                 this.ws.send(JSON.stringify({ action: 'game_over', reason: reason, winner: winner }));
             }
+        },
+
+        // Move sound
+        playMoveSound() {
+            try {
+                var ctx = new (window.AudioContext || window.webkitAudioContext)();
+                var osc = ctx.createOscillator();
+                var gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.frequency.value = 480;
+                gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            } catch (e) {}
         },
 
         // Drag and drop

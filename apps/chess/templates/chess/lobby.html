@@ -73,7 +73,15 @@
                         {% if g.creator == request.user %}You challenged <span class="font-venus-medium">{{ g.opponent.profile.get_display_name }}</span>
                         {% else %}<span class="font-venus-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
-                    <p class="text-xs text-slate">{{ g.stake }} LC &middot; {{ g.status }} &middot; {{ g.created_at|timesince }} ago</p>
+                    <p class="text-xs text-slate flex items-center gap-1.5">
+                        {{ g.stake }} LC &middot;
+                        {% if g.status == 'active' %}
+                        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-patina inline-block"></span><span class="text-patina font-medium">In Progress</span></span>
+                        {% else %}
+                        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-gold inline-block"></span><span class="text-gold font-medium">Pending</span></span>
+                        {% endif %}
+                        &middot; {{ g.created_at|timesince }} ago
+                    </p>
                 </div>
                 <div class="flex gap-2 flex-shrink-0">
                     <a href="{% url 'chess_play' g.pk %}" class="vintage-btn text-xs py-1.5 px-4">Play</a>
