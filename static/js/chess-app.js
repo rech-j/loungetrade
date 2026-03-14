@@ -24,6 +24,7 @@ function chessApp() {
         _touchDragStartY: 0,
         pendingPromotion: null, // { from, to } awaiting piece choice
 
+        currentTurn: 'w',      // 'w' | 'b' — reactive mirror of chess.turn()
         mySide: null,          // 'white' | 'black' | null (spectator/pending)
         myName: 'You',
         opponentName: 'Opponent',
@@ -48,9 +49,8 @@ function chessApp() {
         // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
-            var turn = this.chess.turn(); // 'w' or 'b'
-            return (turn === 'w' && this.mySide === 'white') ||
-                   (turn === 'b' && this.mySide === 'black');
+            return (this.currentTurn === 'w' && this.mySide === 'white') ||
+                   (this.currentTurn === 'b' && this.mySide === 'black');
         },
         get myTimeLow() { return this.myTime <= 30; },
         get opponentTimeLow() { return this.opponentTime <= 30; },
@@ -115,6 +115,10 @@ function chessApp() {
             if (this.gameOverTitle === 'You Win!') return 'text-patina';
             if (this.gameOverTitle === 'You Lose') return 'text-burgundy';
             return 'text-slate';
+        },
+        get turnText() {
+            if (!this.gameActive || !this.mySide) return '';
+            return this.isMyTurn ? 'Your move' : (this.opponentName + "'s turn");
         },
 
         // Init
@@ -189,6 +193,7 @@ function chessApp() {
                 this.mySide = data.your_side;
                 this.chess.load(data.fen);
                 this.fen = data.fen;
+                this.currentTurn = this.chess.turn();
                 this.myTime = this.mySide === 'white' ? data.white_time : data.black_time;
                 this.opponentTime = this.mySide === 'white' ? data.black_time : data.white_time;
                 var myUser = this.mySide === 'white' ? data.white_player : data.black_player;
@@ -252,6 +257,7 @@ function chessApp() {
             if (result) {
                 this.playMoveSound();
                 this.fen = this.chess.fen();
+                this.currentTurn = this.chess.turn();
                 this.lastMove = { from: from, to: to };
                 this.sanMoves.push(result.san);
                 this.buildMovePairs();
@@ -436,6 +442,7 @@ function chessApp() {
             this.playMoveSound();
             this.lastMove = { from: from, to: to };
             this.fen = this.chess.fen();
+            this.currentTurn = this.chess.turn();
             this.selectedSq = null;
             this.legalMoves = [];
             this.sanMoves.push(result.san);

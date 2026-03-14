@@ -139,7 +139,7 @@
 
             <p x-show="gameActive && mySide" class="text-center text-xs mt-2 mb-1 font-medium tracking-wide"
                :class="isMyTurn ? 'text-gold' : 'text-slate'"
-               x-text="isMyTurn ? 'Your move' : (opponentName + \'s turn')"></p>
+               x-text="turnText"></p>
 
             <div class="flex items-center justify-between mt-1 px-1 gap-2">
                 <div class="flex items-center gap-2 min-w-0">
