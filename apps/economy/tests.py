@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 
 from apps.accounts.models import UserProfile
@@ -207,3 +208,69 @@ class TransactionCascadeTest(TestCase):
         tx = Transaction.objects.get(pk=tx_id)
         self.assertIsNone(tx.receiver)
         self.assertEqual(tx.amount, 50)
+
+
+class TransactionHistoryViewTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
+        self.bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
+        self.alice.profile.balance = 100
+        self.alice.profile.save()
+        transfer_coins(self.alice, self.bob, 30, note='sent tx')
+
+    def test_history_requires_login(self):
+        response = self.client.get('/economy/history/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_history_returns_200(self):
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/economy/history/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_history_filter_sent(self):
+        self.client.login(username='bob', password='pass1234')
+        # Bob received but did not send, so filtered sent list should be empty
+        response = self.client.get('/economy/history/?filter=sent')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['page'].paginator.count, 0)
+
+    def test_history_filter_received(self):
+        self.client.login(username='bob', password='pass1234')
+        response = self.client.get('/economy/history/?filter=received')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['page'].paginator.count, 1)
+
+
+class ExportTransactionsTest(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
+        self.bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
+        self.alice.profile.balance = 100
+        self.alice.profile.save()
+        transfer_coins(self.alice, self.bob, 25, note='csv test')
+
+    def test_export_requires_login(self):
+        response = self.client.get('/economy/export/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_export_returns_csv_content_type(self):
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/economy/export/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('text/csv', response.get('Content-Type', ''))
+
+    def test_export_only_contains_own_transactions(self):
+        # Create a transaction that alice is not part of
+        eve = User.objects.create_user('eve', 'eve@test.com', 'pass1234')
+        self.bob.profile.balance = 50
+        self.bob.profile.save()
+        transfer_coins(self.bob, eve, 10, note='unrelated')
+
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/economy/export/')
+        content = b''.join(response.streaming_content).decode()
+
+        self.assertIn('csv test', content)
+        self.assertNotIn('unrelated', content)

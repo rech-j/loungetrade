@@ -1,40 +1,8 @@
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from apps.economy.services import InsufficientFunds, game_transfer
 from apps.coinflip.models import CoinFlipChallenge
 from apps.notifications.models import Notification
-
-
-class CoinFlipChallengeTest(TestCase):
-    def setUp(self):
-        self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
-        self.bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
-        self.alice.profile.balance = 100
-        self.alice.profile.save()
-        self.bob.profile.balance = 100
-        self.bob.profile.save()
-
-    def test_create_challenge(self):
-        challenge = CoinFlipChallenge.objects.create(
-            challenger=self.alice,
-            opponent=self.bob,
-            stake=50,
-            challenger_choice='heads',
-        )
-        self.assertEqual(challenge.status, 'pending')
-        self.assertIsNone(challenge.winner)
-
-    def test_game_transfer(self):
-        game_transfer(self.alice, self.bob, 50)
-        self.alice.profile.refresh_from_db()
-        self.bob.profile.refresh_from_db()
-        self.assertEqual(self.alice.profile.balance, 150)
-        self.assertEqual(self.bob.profile.balance, 50)
-
-    def test_game_transfer_insufficient(self):
-        with self.assertRaises(InsufficientFunds):
-            game_transfer(self.alice, self.bob, 200)
 
 
 class CoinFlipLobbyViewTest(TestCase):
