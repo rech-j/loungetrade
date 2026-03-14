@@ -17,6 +17,11 @@ function chessApp() {
         legalMoves: [],        // squares the selected piece can move to
         lastMove: null,        // { from, to }
         dragFrom: null,
+        touchGhost: null,
+        _touchDragSq: null,
+        _touchDragging: false,
+        _touchDragStartX: 0,
+        _touchDragStartY: 0,
         pendingPromotion: null, // { from, to } awaiting piece choice
 
         mySide: null,          // 'white' | 'black' | null (spectator/pending)
@@ -478,6 +483,58 @@ function chessApp() {
         resign() {
             this.confirmResign = false;
             this.ws.send(JSON.stringify({ action: 'resign' }));
+        },
+
+        // Touch drag for mobile
+        handleTouchStart(event) {
+            var touch = event.touches[0];
+            var el = document.elementFromPoint(touch.clientX, touch.clientY);
+            while (el && !el.dataset.sq) el = el.parentElement;
+            if (!el || !el.dataset.sq) return;
+            var sq = this.boardSquares.find(function(s) { return s.name === el.dataset.sq; });
+            if (!sq || !this.canDragPiece(sq)) { this._touchDragSq = null; return; }
+            this._touchDragSq = sq;
+            this._touchDragStartX = touch.clientX;
+            this._touchDragStartY = touch.clientY;
+            this._touchDragging = false;
+        },
+
+        handleTouchMove(event) {
+            if (!this._touchDragSq) return;
+            var touch = event.touches[0];
+            if (!this._touchDragging) {
+                var dx = touch.clientX - this._touchDragStartX;
+                var dy = touch.clientY - this._touchDragStartY;
+                if (Math.sqrt(dx * dx + dy * dy) < 10) return;
+                this._touchDragging = true;
+                this.dragFrom = this._touchDragSq.name;
+                this.selectSquare(this._touchDragSq.name);
+                var ghost = document.createElement('span');
+                var sq = this._touchDragSq;
+                ghost.textContent = this.pieceChar(sq.piece);
+                ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;font-size:2.5rem;line-height:1;opacity:0.8;transform:translate(-50%,-120%);';
+                ghost.style.left = touch.clientX + 'px';
+                ghost.style.top = touch.clientY + 'px';
+                document.body.appendChild(ghost);
+                this.touchGhost = ghost;
+            }
+            if (this.touchGhost) {
+                this.touchGhost.style.left = touch.clientX + 'px';
+                this.touchGhost.style.top = touch.clientY + 'px';
+            }
+        },
+
+        handleTouchEnd(event) {
+            if (this.touchGhost) { document.body.removeChild(this.touchGhost); this.touchGhost = null; }
+            if (this._touchDragging && this.dragFrom) {
+                var touch = event.changedTouches[0];
+                var el = document.elementFromPoint(touch.clientX, touch.clientY);
+                while (el && !el.dataset.sq) el = el.parentElement;
+                if (el && el.dataset.sq) { this.tryMove(this.dragFrom, el.dataset.sq); }
+                this.dragFrom = null;
+            }
+            this._touchDragSq = null;
+            this._touchDragging = false;
         },
     };
 }

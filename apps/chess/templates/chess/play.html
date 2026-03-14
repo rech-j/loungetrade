@@ -6,7 +6,7 @@
 <script src="{% static 'js/chess.min.js' %}"></script>
 <style>
 /* ── Chess board ─────────────────────────────── */
-.chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(100%, 480px); margin: 0 auto; border: 3px solid #c9a84c; box-shadow: 0 4px 20px rgba(26,20,16,0.2); user-select: none; }
+.chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(100%, 480px); margin: 0 auto; border: 3px solid #c9a84c; box-shadow: 0 4px 20px rgba(26,20,16,0.2); user-select: none; touch-action: none; }
 .chess-sq { position: relative; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .chess-sq.light { background: #f4f0e8; }
 .chess-sq.dark-sq { background: #b8a878; }
@@ -29,7 +29,7 @@
 .promo-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .promo-picker { display: flex; gap: 2px; background: #f4f0e8; border: 2px solid #c9a84c; box-shadow: 0 4px 16px rgba(0,0,0,0.3); padding: 4px; }
 .dark .promo-picker { background: #2c2218; border-color: #c9a84c; }
-.promo-picker button { width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; font-size: 1.6rem; cursor: pointer; border: none; background: transparent; transition: background 150ms; }
+.promo-picker button { width: clamp(3rem, 13vw, 4rem); height: clamp(3rem, 13vw, 4rem); display: flex; align-items: center; justify-content: center; font-size: clamp(1.6rem, 5vw, 2rem); cursor: pointer; border: none; background: transparent; transition: background 150ms; touch-action: manipulation; }
 .promo-picker button:hover { background: rgba(201,168,76,0.3); }
 
 /* ── Clock ─────────────────────────────────── */
@@ -68,13 +68,13 @@
 
     <div class="grid grid-cols-1 md:grid-cols-[1fr_200px] lg:grid-cols-[1fr_260px] gap-6">
         <div>
-            <div class="flex items-center justify-between mb-2 px-1">
-                <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between mb-2 px-1 gap-2">
+                <div class="flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full border border-stone dark:border-slate overflow-hidden flex items-center justify-center bg-parchment dark:bg-walnut flex-shrink-0">
                         <img x-show="opponentAvatar" :src="opponentAvatar" :alt="opponentName" class="w-full h-full object-cover">
                         <span x-show="!opponentAvatar" class="font-serif text-gold text-xs font-bold italic" x-text="opponentInitial"></span>
                     </div>
-                    <span class="text-sm font-medium" x-text="opponentName"></span>
+                    <span class="text-sm font-medium truncate max-w-[8rem]" x-text="opponentName"></span>
                     <div class="flex items-center gap-px ml-1" x-show="opponentCaptured.length > 0">
                         <template x-for="(pc, i) in opponentCaptured" :key="i">
                             <span class="text-xs leading-none opacity-70" x-text="pieceChar(pc)"></span>
@@ -90,9 +90,13 @@
             <div class="relative">
             <div class="chess-board" role="grid" aria-label="Chess board"
                  @dragover.prevent
-                 @drop="handleDrop($event)">
+                 @drop="handleDrop($event)"
+                 @touchstart="handleTouchStart($event)"
+                 @touchmove="handleTouchMove($event)"
+                 @touchend="handleTouchEnd($event)">
                 <template x-for="(sq, idx) in boardSquares" :key="sq.name">
                     <div :class="squareClass(sq, idx)"
+                         :data-sq="sq.name"
                          role="gridcell"
                          :aria-label="squareAriaLabel(sq)"
                          @click="handleSquareClick(sq)"
@@ -125,13 +129,13 @@
             </div>
             </div>
 
-            <div class="flex items-center justify-between mt-2 px-1">
-                <div class="flex items-center gap-2">
+            <div class="flex items-center justify-between mt-2 px-1 gap-2">
+                <div class="flex items-center gap-2 min-w-0">
                     <div class="w-7 h-7 rounded-full border border-stone dark:border-slate overflow-hidden flex items-center justify-center bg-parchment dark:bg-walnut flex-shrink-0">
                         <img x-show="myAvatar" :src="myAvatar" :alt="myName" class="w-full h-full object-cover">
                         <span x-show="!myAvatar" class="font-serif text-gold text-xs font-bold italic" x-text="myInitial"></span>
                     </div>
-                    <span class="text-sm font-medium" x-text="myName"></span>
+                    <span class="text-sm font-medium truncate max-w-[8rem]" x-text="myName"></span>
                     <div class="flex items-center gap-px ml-1" x-show="myCaptured.length > 0">
                         <template x-for="(pc, i) in myCaptured" :key="i">
                             <span class="text-xs leading-none opacity-70" x-text="pieceChar(pc)"></span>
