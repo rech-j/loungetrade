@@ -50,6 +50,7 @@ jobs:
           host: ${{ secrets.DO_SERVER_IP }}
           username: ${{ secrets.DO_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             cd /var/www/loungecoin
             export DJANGO_SETTINGS_MODULE=config.settings.production
