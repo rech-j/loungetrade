@@ -52,6 +52,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
+            set -e
             cd /var/www/loungecoin
             export DJANGO_SETTINGS_MODULE=config.settings.production
             git pull origin main

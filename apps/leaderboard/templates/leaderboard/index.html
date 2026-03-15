@@ -16,13 +16,12 @@
     </div>
     {% elif user_rank is not None %}
     <div class="ticker-line mb-6 text-center">
-        Your standing: <span class="font-venus-medium text-gold">#{{ user_rank }}</span> &mdash; not yet in the top 50
+        Your standing: <span class="font-venus-medium text-gold">#{{ user_rank }}</span> - not yet in the top 50
     </div>
     {% endif %}
 
     {% if profiles %}
 
-    {# ── Podium: top 3 ── #}
     {% if profiles|length >= 3 %}
     <div class="grid grid-cols-3 gap-3 mb-6 border border-stone dark:border-slate border-t-2 border-t-gold pt-4 pb-5 px-4">
 
@@ -61,7 +60,6 @@
             {% endif %}{% endwith %}
         </div>
 
-        {# 1st place — tallest column #}
         <div class="flex flex-col items-center border-t-2 border-t-gold pt-2">
             <div x-data="{ open: false }"
                  @mouseenter="open = true" @mouseleave="open = false"
@@ -96,7 +94,6 @@
             {% endif %}{% endwith %}
         </div>
 
-        {# 3rd place #}
         <div class="flex flex-col items-center pt-6">
             <div x-data="{ open: false }"
                  @mouseenter="open = true" @mouseleave="open = false"
@@ -134,7 +131,6 @@
     </div>
     {% endif %}
 
-    {# ── Main list: all entries when < 3 total; #4 onward when podium is shown ── #}
     {% if profiles|length > 0 %}
     <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for profile in profiles %}
@@ -185,11 +181,10 @@
     </div>
     {% endif %}
 
-    {# ── User anchor row (outside top 50) ── #}
     {% if user_profile %}
     <div class="mt-6">
         <div class="ticker-line text-center mb-0">
-            You &mdash; ranked <span class="font-venus-medium text-gold">#{{ user_rank }}</span>
+            You - ranked <span class="font-venus-medium text-gold">#{{ user_rank }}</span>
         </div>
         <div class="border border-t-0 border-stone dark:border-slate">
             <div class="flex items-center gap-4 px-4 py-3 bg-gold/5">
