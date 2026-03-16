@@ -532,3 +532,168 @@ class ChessConsumerGameOverTest(TransactionTestCase):
         self.bob.profile.refresh_from_db()
         self.assertEqual(self.alice.profile.balance, 200)
         self.assertEqual(self.bob.profile.balance, 200)
+
+
+@override_settings(CHANNEL_LAYERS=TEST_CHANNEL_LAYERS)
+class ChessConsumerDrawTest(TransactionTestCase):
+    """Tests for draw offer/accept/decline via WebSocket."""
+
+    def setUp(self):
+        channel_layers.backends = {}
+        self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
+        self.bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
+        self.alice.profile.balance = 200
+        self.alice.profile.save()
+        self.bob.profile.balance = 200
+        self.bob.profile.save()
+        # Active game: alice = white (to move), bob = black
+        self.game = ChessGame.objects.create(
+            creator=self.alice,
+            opponent=self.bob,
+            stake=100,
+            creator_side='white',
+            status='active',
+            white_player=self.alice,
+            black_player=self.bob,
+            started_at=timezone.now(),
+        )
+
+    def _comm(self, user):
+        app = _make_app()
+        comm = WebsocketCommunicator(app, f'/ws/chess/{self.game.pk}/')
+        comm.scope['user'] = user
+        return comm
+
+    async def _connect_active(self, comm):
+        connected, _ = await comm.connect()
+        self.assertTrue(connected)
+        await comm.receive_json_from()  # game_state
+        await comm.receive_json_from()  # player_connected (self)
+
+    def test_draw_offer_broadcasts_to_both(self):
+        """White offers draw — both players receive draw_offered."""
+        captured = []
+
+        async def run():
+            white_comm = self._comm(self.alice)
+            black_comm = self._comm(self.bob)
+
+            await self._connect_active(white_comm)
+            await self._connect_active(black_comm)
+            await white_comm.receive_json_from()  # player_connected(bob)
+
+            await white_comm.send_json_to({'action': 'offer_draw'})
+
+            captured.append(await white_comm.receive_json_from())
+            captured.append(await black_comm.receive_json_from())
+
+            await white_comm.disconnect()
+            await black_comm.disconnect()
+
+        async_to_sync(run)()
+
+        self.assertEqual(captured[0]['type'], 'draw_offered')
+        self.assertEqual(captured[0]['from_player'], 'alice')
+        self.assertEqual(captured[1]['type'], 'draw_offered')
+        self.assertEqual(captured[1]['from_player'], 'alice')
+
+        # Game should still be active
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.status, 'active')
+
+    def test_draw_accepted_ends_game_no_transfer(self):
+        """White offers draw, black accepts — game ends as draw, no coins transferred."""
+        captured = []
+
+        async def run():
+            white_comm = self._comm(self.alice)
+            black_comm = self._comm(self.bob)
+
+            await self._connect_active(white_comm)
+            await self._connect_active(black_comm)
+            await white_comm.receive_json_from()  # player_connected(bob)
+
+            # White offers draw
+            await white_comm.send_json_to({'action': 'offer_draw'})
+            await white_comm.receive_json_from()  # draw_offered
+            await black_comm.receive_json_from()  # draw_offered
+
+            # Black accepts
+            await black_comm.send_json_to({'action': 'respond_draw', 'accept': True})
+
+            captured.append(await white_comm.receive_json_from())
+            captured.append(await black_comm.receive_json_from())
+
+            await white_comm.disconnect()
+            await black_comm.disconnect()
+
+        async_to_sync(run)()
+
+        self.assertEqual(captured[0]['type'], 'chess_game_over')
+        self.assertEqual(captured[0]['reason'], 'draw')
+        self.assertIsNone(captured[0]['winner'])
+        self.assertEqual(captured[1]['type'], 'chess_game_over')
+        self.assertIsNone(captured[1]['winner'])
+
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.status, 'completed')
+        self.assertEqual(self.game.end_reason, 'draw')
+        self.assertIsNone(self.game.winner)
+
+        # Balances unchanged — no coin transfer for draws
+        self.alice.profile.refresh_from_db()
+        self.bob.profile.refresh_from_db()
+        self.assertEqual(self.alice.profile.balance, 200)
+        self.assertEqual(self.bob.profile.balance, 200)
+
+    def test_draw_declined_broadcasts_to_both(self):
+        """White offers draw, black declines — both get draw_declined, game continues."""
+        captured = []
+
+        async def run():
+            white_comm = self._comm(self.alice)
+            black_comm = self._comm(self.bob)
+
+            await self._connect_active(white_comm)
+            await self._connect_active(black_comm)
+            await white_comm.receive_json_from()  # player_connected(bob)
+
+            # White offers draw
+            await white_comm.send_json_to({'action': 'offer_draw'})
+            await white_comm.receive_json_from()  # draw_offered
+            await black_comm.receive_json_from()  # draw_offered
+
+            # Black declines
+            await black_comm.send_json_to({'action': 'respond_draw', 'accept': False})
+
+            captured.append(await white_comm.receive_json_from())
+            captured.append(await black_comm.receive_json_from())
+
+            await white_comm.disconnect()
+            await black_comm.disconnect()
+
+        async_to_sync(run)()
+
+        self.assertEqual(captured[0]['type'], 'draw_declined')
+        self.assertEqual(captured[0]['from_player'], 'bob')
+        self.assertEqual(captured[1]['type'], 'draw_declined')
+
+        # Game must still be active
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.status, 'active')
+
+    def test_draw_offer_rejected_when_not_your_turn(self):
+        """Black tries to offer draw on white's turn — rejected silently."""
+        async def run():
+            black_comm = self._comm(self.bob)
+            await self._connect_active(black_comm)
+
+            await black_comm.send_json_to({'action': 'offer_draw'})
+            self.assertTrue(await black_comm.receive_nothing())
+
+            await black_comm.disconnect()
+
+        async_to_sync(run)()
+
+        self.game.refresh_from_db()
+        self.assertEqual(self.game.status, 'active')

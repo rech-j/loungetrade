@@ -1,6 +1,6 @@
 function chessApp() {
     return {
-        // State (i have endless sadness in my heart)
+        // State
         ws: null,
         connected: false,
         gameActive: false,
@@ -46,6 +46,21 @@ function chessApp() {
         movePairs: [],         // [['e4', 'e5'], ['Nf3', ...], ...]
         sanMoves: [],          // all SAN moves in order
 
+        // Draw offer state
+        drawOfferPending: false,    // I sent a draw offer, waiting for response
+        drawOfferReceived: false,   // Opponent sent me a draw offer
+        drawOfferFrom: '',          // username who offered
+
+        // Premove state
+        premove: null,              // { from, to } or null
+        premoveHighlight: null,     // { from, to } for visual highlight
+
+        // Mobile move list
+        showMobileMoves: false,
+
+        // Animation state
+        _animating: false,
+
         // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
@@ -57,6 +72,8 @@ function chessApp() {
 
         // Captured pieces
         get capturedPieces() {
+            // Reference this.fen so Alpine re-evaluates when the board changes
+            var _fen = this.fen;
             if (!this.chess) return { white: [], black: [], whiteValue: 0, blackValue: 0 };
             var startingPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
             var pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
@@ -68,7 +85,6 @@ function chessApp() {
                     if (sq && sq.type !== 'k') onBoard[sq.color][sq.type]++;
                 }
             }
-            // Captured by white = black's missing pieces; captured by black = white's missing pieces
             var capturedByWhite = [];
             var capturedByBlack = [];
             var whiteValue = 0;
@@ -176,7 +192,10 @@ function chessApp() {
                 this.statusMsg = data.username + ' connected.';
                 setTimeout(() => { this.statusMsg = ''; }, 3000);
             } else if (data.type === 'player_disconnected') {
-                if (data.username !== this.myUsername) this.opponentOnline = false;
+                if (data.username !== this.myUsername) {
+                    this.opponentOnline = false;
+                    this.drawOfferReceived = false;
+                }
             } else if (data.type === 'chess_move') {
                 this.applyOpponentMove(data);
             } else if (data.type === 'chess_game_over') {
@@ -184,6 +203,16 @@ function chessApp() {
             } else if (data.type === 'chess_error') {
                 this.errorMsg = data.message;
                 this.stopTimer();
+            } else if (data.type === 'draw_offered') {
+                if (data.from_player === this.myUsername) {
+                    this.drawOfferPending = true;
+                } else {
+                    this.drawOfferReceived = true;
+                    this.drawOfferFrom = data.from_player;
+                }
+            } else if (data.type === 'draw_declined') {
+                this.drawOfferPending = false;
+                this.drawOfferReceived = false;
             }
         },
 
@@ -220,7 +249,6 @@ function chessApp() {
         },
 
         rebuildMoveList(movesUci) {
-            // Replay moves on a fresh chess instance to get SAN notation
             var temp = new Chess();
             this.sanMoves = [];
             var parts = movesUci.split(' ').filter(Boolean);
@@ -244,41 +272,73 @@ function chessApp() {
             this.$nextTick(() => {
                 var list = document.getElementById('move-list');
                 if (list) list.scrollTop = list.scrollHeight;
+                var mobileList = document.getElementById('mobile-move-list');
+                if (mobileList) mobileList.scrollTop = mobileList.scrollHeight;
             });
         },
 
         applyOpponentMove(data) {
-            // Don't apply our own moves (we already did)
             if (data.player === this.myUsername) return;
             var from = data.move.slice(0, 2);
             var to = data.move.slice(2, 4);
             var promotion = data.move.length === 5 ? data.move[4] : undefined;
-            var result = this.chess.move({ from: from, to: to, promotion: promotion });
-            if (result) {
-                this.playMoveSound();
-                this.fen = this.chess.fen();
-                this.currentTurn = this.chess.turn();
-                this.lastMove = { from: from, to: to };
-                this.sanMoves.push(result.san);
-                this.buildMovePairs();
-                this.renderBoard();
-                // Update times
-                if (data.white_time !== null) {
-                    if (this.mySide === 'white') this.myTime = data.white_time;
-                    else this.opponentTime = data.white_time;
+
+            // Clear draw state on any move
+            this.drawOfferPending = false;
+            this.drawOfferReceived = false;
+
+            // Animate the opponent's piece sliding
+            this.animateMove(from, to, () => {
+                var result = this.chess.move({ from: from, to: to, promotion: promotion });
+                if (result) {
+                    this.playMoveSoundForResult(result);
+                    this.fen = this.chess.fen();
+                    this.currentTurn = this.chess.turn();
+                    this.lastMove = { from: from, to: to };
+                    this.sanMoves.push(result.san);
+                    this.buildMovePairs();
+                    this.renderBoard();
+                    // Update times
+                    if (data.white_time !== null) {
+                        if (this.mySide === 'white') this.myTime = data.white_time;
+                        else this.opponentTime = data.white_time;
+                    }
+                    if (data.black_time !== null) {
+                        if (this.mySide === 'black') this.myTime = data.black_time;
+                        else this.opponentTime = data.black_time;
+                    }
+                    this.checkGameEnd();
+
+                    // Execute premove if queued
+                    if (this.premove) {
+                        var pm = this.premove;
+                        this.premove = null;
+                        this.premoveHighlight = null;
+                        this.$nextTick(() => {
+                            // Check if it's a promotion premove
+                            var piece = this.chess.get(pm.from);
+                            if (piece && piece.type === 'p') {
+                                var toRank = parseInt(pm.to[1]);
+                                if ((piece.color === 'w' && toRank === 8) || (piece.color === 'b' && toRank === 1)) {
+                                    // Auto-queen for premoves
+                                    this.executeMove(pm.from, pm.to, 'q');
+                                    return;
+                                }
+                            }
+                            this.executeMove(pm.from, pm.to, undefined);
+                        });
+                    }
                 }
-                if (data.black_time !== null) {
-                    if (this.mySide === 'black') this.myTime = data.black_time;
-                    else this.opponentTime = data.black_time;
-                }
-                this.checkGameEnd();
-            }
+            });
         },
 
         handleGameOver(data) {
             this.gameActive = false;
             this.gameOver = true;
             this.stopTimer();
+            this.premove = null;
+            this.premoveHighlight = null;
+            this._playSound('gameover');
             if (data.winner === null) {
                 this.gameOverTitle = 'Draw';
                 this.gameOverMsg = (data.reason === 'stalemate' ? 'Stalemate' : 'Draw agreed') + '. No coins transferred.';
@@ -318,7 +378,7 @@ function chessApp() {
 
         // Board rendering
         renderBoard() {
-            var board = this.chess.board(); // 8x8 array [rank8..rank1][fileA..fileH]
+            var board = this.chess.board();
             var files = ['a','b','c','d','e','f','g','h'];
             var squares = [];
             var flipped = this.mySide === 'black';
@@ -354,7 +414,13 @@ function chessApp() {
             var isCapture = this.legalMoves.some(function(m) { return m.to === sq.name; }) && this.chess.get(sq.name) ? ' legal-capture' : '';
             var isLast = this.lastMove && (sq.name === this.lastMove.from || sq.name === this.lastMove.to) ? ' last-move-sq' : '';
             var inCheck = this.chess.in_check() && sq.piece && sq.piece[1] === 'K' && sq.piece[0] === this.chess.turn() ? ' in-check' : '';
-            return base + selected + isLegal + isCapture + isLast + inCheck;
+            var isPremove = this.premoveHighlight && (sq.name === this.premoveHighlight.from || sq.name === this.premoveHighlight.to) ? ' premove-sq' : '';
+            return base + selected + isLegal + isCapture + isLast + inCheck + isPremove;
+        },
+
+        pieceImgSrc(piece) {
+            if (!piece) return '';
+            return '/static/img/pieces/' + piece + '.svg';
         },
 
         pieceChar(piece) {
@@ -375,16 +441,54 @@ function chessApp() {
         },
 
         canDragPiece(sq) {
-            if (!this.gameActive || !this.isMyTurn || !this.mySide) return false;
+            if (!this.gameActive || !this.mySide) return false;
             if (!sq.piece) return false;
             var color = sq.piece[0];
-            return (color === 'w' && this.mySide === 'white') || (color === 'b' && this.mySide === 'black');
+            var isMyPiece = (color === 'w' && this.mySide === 'white') || (color === 'b' && this.mySide === 'black');
+            // Allow dragging for premoves when it's not my turn
+            if (isMyPiece && !this.isMyTurn) return true;
+            if (isMyPiece && this.isMyTurn) return true;
+            return false;
         },
 
         // Interaction
         handleSquareClick(sq) {
-            if (!this.gameActive || !this.isMyTurn || !this.mySide) return;
+            if (!this.gameActive || !this.mySide) return;
 
+            // Premove logic: when it's not my turn
+            if (!this.isMyTurn) {
+                // Cancel existing premove if clicking on non-own piece without selection
+                if (this.premove && !this.selectedSq) {
+                    this.premove = null;
+                    this.premoveHighlight = null;
+                    return;
+                }
+
+                // Select own piece for premove
+                if (sq.piece && this.isMyPiece(sq.piece)) {
+                    this.selectedSq = sq.name;
+                    this.legalMoves = [];
+                    this.premove = null;
+                    this.premoveHighlight = null;
+                    return;
+                }
+
+                // Set premove target
+                if (this.selectedSq) {
+                    this.premove = { from: this.selectedSq, to: sq.name };
+                    this.premoveHighlight = { from: this.selectedSq, to: sq.name };
+                    this.selectedSq = null;
+                    this.legalMoves = [];
+                    return;
+                }
+                return;
+            }
+
+            // Clear premove when it becomes my turn and I click
+            this.premove = null;
+            this.premoveHighlight = null;
+
+            // Normal move logic
             if (this.selectedSq === sq.name) {
                 this.selectedSq = null;
                 this.legalMoves = [];
@@ -439,7 +543,7 @@ function chessApp() {
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (!result) return false;
 
-            this.playMoveSound();
+            this.playMoveSoundForResult(result);
             this.lastMove = { from: from, to: to };
             this.fen = this.chess.fen();
             this.currentTurn = this.chess.turn();
@@ -448,6 +552,9 @@ function chessApp() {
             this.sanMoves.push(result.san);
             this.buildMovePairs();
             this.renderBoard();
+
+            // Clear draw state on move
+            this.drawOfferReceived = false;
 
             var uci = from + to + (promotion || '');
             this.ws.send(JSON.stringify({
@@ -498,33 +605,132 @@ function chessApp() {
             }
         },
 
-        // Move sound
-        playMoveSound() {
+        // Sound system
+        _playSound(type) {
             try {
                 var ctx = new (window.AudioContext || window.webkitAudioContext)();
                 var osc = ctx.createOscillator();
                 var gain = ctx.createGain();
                 osc.connect(gain);
                 gain.connect(ctx.destination);
-                osc.frequency.value = 480;
-                gain.gain.setValueAtTime(0.12, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
-                osc.start();
-                osc.stop(ctx.currentTime + 0.08);
+
+                switch (type) {
+                    case 'move':
+                        osc.frequency.value = 600;
+                        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.06);
+                        break;
+                    case 'capture':
+                        osc.type = 'sawtooth';
+                        osc.frequency.value = 300;
+                        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.12);
+                        break;
+                    case 'check':
+                        osc.frequency.setValueAtTime(880, ctx.currentTime);
+                        osc.frequency.setValueAtTime(660, ctx.currentTime + 0.08);
+                        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.15);
+                        break;
+                    case 'castle':
+                        osc.frequency.value = 600;
+                        gain.gain.setValueAtTime(0.08, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.04);
+                        gain.gain.setValueAtTime(0.08, ctx.currentTime + 0.08);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.12);
+                        break;
+                    case 'gameover':
+                        osc.frequency.setValueAtTime(440, ctx.currentTime);
+                        osc.frequency.linearRampToValueAtTime(220, ctx.currentTime + 0.3);
+                        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+                        osc.start();
+                        osc.stop(ctx.currentTime + 0.4);
+                        break;
+                }
             } catch (e) {}
+        },
+
+        playMoveSoundForResult(result) {
+            if (this.chess.in_check()) {
+                this._playSound('check');
+            } else if (result.flags && (result.flags.indexOf('k') >= 0 || result.flags.indexOf('q') >= 0)) {
+                this._playSound('castle');
+            } else if (result.flags && (result.flags.indexOf('c') >= 0 || result.flags.indexOf('e') >= 0)) {
+                this._playSound('capture');
+            } else {
+                this._playSound('move');
+            }
+        },
+
+        // Move animation
+        animateMove(from, to, callback) {
+            if (this._animating) { callback(); return; }
+            var fromEl = document.querySelector('[data-sq="' + from + '"] .chess-piece');
+            var toCell = document.querySelector('[data-sq="' + to + '"]');
+            if (!fromEl || !toCell) { callback(); return; }
+
+            var fromRect = fromEl.getBoundingClientRect();
+            var toRect = toCell.getBoundingClientRect();
+            var dx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
+            var dy = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+
+            this._animating = true;
+            fromEl.classList.add('animating');
+            fromEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+            setTimeout(() => {
+                fromEl.classList.remove('animating');
+                fromEl.style.transform = '';
+                this._animating = false;
+                callback();
+            }, 150);
+        },
+
+        // Draw offers
+        offerDraw() {
+            if (!this.gameActive || !this.isMyTurn || this.drawOfferPending) return;
+            this.ws.send(JSON.stringify({ action: 'offer_draw' }));
+            this.drawOfferPending = true;
+        },
+
+        respondDraw(accept) {
+            this.ws.send(JSON.stringify({ action: 'respond_draw', accept: accept }));
+            this.drawOfferReceived = false;
         },
 
         // Drag and drop
         handleDragStart(event, sq) {
             if (!this.canDragPiece(sq)) { event.preventDefault(); return; }
             this.dragFrom = sq.name;
-            this.selectSquare(sq.name);
+            if (this.isMyTurn) {
+                this.selectSquare(sq.name);
+            } else {
+                // Premove drag
+                this.selectedSq = sq.name;
+                this.legalMoves = [];
+            }
         },
         handleDrop(event) { event.preventDefault(); },
         handleDropOnSquare(event, sq) {
             event.preventDefault();
             if (!this.dragFrom) return;
-            this.tryMove(this.dragFrom, sq.name);
+            if (this.isMyTurn) {
+                this.tryMove(this.dragFrom, sq.name);
+            } else {
+                // Premove drop
+                this.premove = { from: this.dragFrom, to: sq.name };
+                this.premoveHighlight = { from: this.dragFrom, to: sq.name };
+                this.selectedSq = null;
+            }
             this.dragFrom = null;
         },
 
@@ -557,11 +763,15 @@ function chessApp() {
                 if (Math.sqrt(dx * dx + dy * dy) < 10) return;
                 this._touchDragging = true;
                 this.dragFrom = this._touchDragSq.name;
-                this.selectSquare(this._touchDragSq.name);
-                var ghost = document.createElement('span');
-                var sq = this._touchDragSq;
-                ghost.textContent = this.pieceChar(sq.piece);
-                ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;font-size:2.5rem;line-height:1;opacity:0.8;transform:translate(-50%,-120%);';
+                if (this.isMyTurn) {
+                    this.selectSquare(this._touchDragSq.name);
+                } else {
+                    this.selectedSq = this._touchDragSq.name;
+                    this.legalMoves = [];
+                }
+                var ghost = document.createElement('img');
+                ghost.src = this.pieceImgSrc(this._touchDragSq.piece);
+                ghost.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;width:3.5rem;height:3.5rem;opacity:0.8;transform:translate(-50%,-120%);';
                 ghost.style.left = touch.clientX + 'px';
                 ghost.style.top = touch.clientY + 'px';
                 document.body.appendChild(ghost);
@@ -579,7 +789,16 @@ function chessApp() {
                 var touch = event.changedTouches[0];
                 var el = document.elementFromPoint(touch.clientX, touch.clientY);
                 while (el && !el.dataset.sq) el = el.parentElement;
-                if (el && el.dataset.sq) { this.tryMove(this.dragFrom, el.dataset.sq); }
+                if (el && el.dataset.sq) {
+                    if (this.isMyTurn) {
+                        this.tryMove(this.dragFrom, el.dataset.sq);
+                    } else {
+                        // Premove touch drop
+                        this.premove = { from: this.dragFrom, to: el.dataset.sq };
+                        this.premoveHighlight = { from: this.dragFrom, to: el.dataset.sq };
+                        this.selectedSq = null;
+                    }
+                }
                 this.dragFrom = null;
             }
             this._touchDragSq = null;

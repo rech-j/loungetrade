@@ -108,6 +108,10 @@ class ChessConsumer(BaseGameConsumer):
             await self.handle_timeout(data)
         elif action == 'game_over':
             await self.handle_game_over(data)
+        elif action == 'offer_draw':
+            await self.handle_offer_draw()
+        elif action == 'respond_draw':
+            await self.handle_respond_draw(data)
 
     async def handle_move(self, data):
         """Validate and relay a move to the other player.
@@ -361,7 +365,53 @@ class ChessConsumer(BaseGameConsumer):
                 'stake': game.stake,
             })
 
-    # ── Channel layer event handlers ────────────────────────────────────────
+    # Draw offer handling 
+
+    async def handle_offer_draw(self):
+        """Player offers a draw. Only allowed on their own turn."""
+        game = await self.get_game()
+        if not game or game.status != 'active':
+            return
+
+        side = game.get_player_side(self.user)
+        if not side:
+            return
+
+        # Only allow draw offers on your turn
+        board = chess.Board(game.fen)
+        if (board.turn == chess.WHITE and side != 'white') or \
+           (board.turn == chess.BLACK and side != 'black'):
+            return
+
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'draw_offered',
+            'from_player': self.user.username,
+        })
+
+    async def handle_respond_draw(self, data):
+        """Player accepts or declines a draw offer."""
+        game = await self.get_game()
+        if not game or game.status != 'active':
+            return
+
+        accepted = data.get('accept', False)
+        if accepted:
+            finished = await self.finish_game(game.pk, None, 'draw')
+            if not finished:
+                return
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'chess_game_over',
+                'winner': None,
+                'reason': 'draw',
+                'stake': game.stake,
+            })
+        else:
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'draw_declined',
+                'from_player': self.user.username,
+            })
+
+    # Channel layer event handlers 
 
     async def game_activated(self, event):
         """Sent to the whole group when the game transitions pending → active."""
@@ -411,13 +461,25 @@ class ChessConsumer(BaseGameConsumer):
             'stake': event['stake'],
         }))
 
+    async def draw_offered(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'draw_offered',
+            'from_player': event['from_player'],
+        }))
+
+    async def draw_declined(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'draw_declined',
+            'from_player': event['from_player'],
+        }))
+
     async def game_error(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chess_error',
             'message': event['message'],
         }))
 
-    # ── Time helpers ──────────────────────────────────────────────────────────
+    # Time helpers 
 
     @staticmethod
     def get_adjusted_times(game):
@@ -439,7 +501,7 @@ class ChessConsumer(BaseGameConsumer):
                 black_time = max(0, int(black_time - elapsed))
         return white_time, black_time
 
-    # ── Database helpers ─────────────────────────────────────────────────────
+    # Database helpers 
 
     @database_sync_to_async
     def get_game(self):
