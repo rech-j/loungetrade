@@ -685,6 +685,7 @@ function chessApp() {
 
             this._animating = true;
             fromEl.classList.add('animating');
+            void fromEl.offsetWidth;
             fromEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
 
             setTimeout(() => {

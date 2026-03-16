@@ -2,10 +2,6 @@
 {% load static %}
 {% block title %}Mint - LC{% endblock %}
 
-{% block extra_head %}
-<script src="{% static 'js/slash-focus.js' %}"></script>
-{% endblock %}
-
 {% block content %}
 <div class="max-w-md mx-auto">
     <div class="mb-8">
@@ -67,4 +63,5 @@
     </form>
     {% endif %}
 </div>
+<script src="{% static 'js/slash-focus.js' %}"></script>
 {% endblock %}

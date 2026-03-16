@@ -2,8 +2,7 @@
 {% load static %}
 {% block title %}Chess - LC{% endblock %}
 
-{% block extra_head %}
-<script src="{% static 'js/chess.min.js' %}"></script>
+{% block content %}
 <style>
 /*  Chess board  */
 .chess-board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(100%, 560px); margin: 0 auto; border: 3px solid #c9a84c; box-shadow: 0 4px 20px rgba(26,20,16,0.2); user-select: none; touch-action: none; }
@@ -56,10 +55,6 @@
 .chess-piece.animating { position: relative; z-index: 5; transition: transform 150ms ease; }
 
 </style>
-<script src="{% static 'js/chess-app.js' %}"></script>
-{% endblock %}
-
-{% block content %}
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
      x-data="chessApp()"
      data-game-id="{{ game.pk }}"
@@ -276,7 +271,7 @@
                 </div>
             </div>
 
-            <div class="vintage-card py-3">
+            <div class="hidden md:block vintage-card py-3">
                 <p class="text-xs text-slate uppercase tracking-wide mb-2">Moves</p>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="move-list">
                     <template x-for="(pair, i) in movePairs" :key="i">
@@ -307,4 +302,6 @@
         </div>
     </div>
 </div>
+<script src="{% static 'js/chess.min.js' %}"></script>
+<script src="{% static 'js/chess-app.js' %}"></script>
 {% endblock %}
