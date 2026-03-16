@@ -88,14 +88,17 @@ class ChessConsumer(BaseGameConsumer):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
-        if self.is_throttled():
-            return
         try:
             data = json.loads(text_data)
         except json.JSONDecodeError:
             return
 
         action = data.get('action')
+
+        # resign / timeout / game_over are one-time critical messages — never throttle them.
+        # Regular move messages are still rate-limited to prevent flooding.
+        if action == 'move' and self.is_throttled():
+            return
 
         if action == 'move':
             await self.handle_move(data)
@@ -164,6 +167,12 @@ class ChessConsumer(BaseGameConsumer):
             'white_time': white_time,
             'black_time': black_time,
         })
+
+        # Detect game-over server-side so the result is never lost to throttling
+        # (the client sends game_over right after move on the same connection,
+        # which would otherwise be dropped by the 0.15 s MESSAGE_COOLDOWN guard).
+        if board.is_game_over():
+            await self._finish_game_after_move(game, side, board)
 
     async def handle_resign(self):
         game = await self.get_game()
@@ -305,6 +314,52 @@ class ChessConsumer(BaseGameConsumer):
             'reason': reason,
             'stake': game.stake,
         })
+
+    async def _finish_game_after_move(self, game, side, board):
+        """Called from handle_move when python-chess reports the game is over.
+
+        ``side`` is the side that just moved ('white' or 'black').
+        ``board`` is the python-chess Board *after* the move has been pushed.
+        """
+        if board.is_checkmate():
+            reason = 'checkmate'
+            if side == 'white':
+                winner, loser = game.white_player, game.black_player
+            else:
+                winner, loser = game.black_player, game.white_player
+
+            finished = await self.finish_game(game.pk, winner.pk, reason)
+            if not finished:
+                return
+            try:
+                await self.do_game_transfer(winner.pk, loser.pk, game.stake, note='Chess - checkmate')
+            except InsufficientFunds:
+                await self.cancel_game_db(game.pk)
+                await self.broadcast_error('Game cancelled - insufficient balance.')
+                return
+
+            await self.create_chess_notifications(game, winner, loser, reason)
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'chess_game_over',
+                'winner': winner.username,
+                'reason': reason,
+                'stake': game.stake,
+            })
+        else:
+            # Stalemate, insufficient material, 75-move rule, or 5-fold repetition
+            if board.is_stalemate():
+                reason = 'stalemate'
+            else:
+                reason = 'draw'
+            finished = await self.finish_game(game.pk, None, reason)
+            if not finished:
+                return
+            await self.channel_layer.group_send(self.room_group_name, {
+                'type': 'chess_game_over',
+                'winner': None,
+                'reason': reason,
+                'stake': game.stake,
+            })
 
     # ── Channel layer event handlers ────────────────────────────────────────
 
