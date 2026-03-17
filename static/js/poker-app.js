@@ -21,6 +21,7 @@ function pokerApp() {
         activeSeat: -1,
         validActions: [],
         isMyTurn: false,
+        myChips: 0,
         raiseAmount: 0,
         timeout: 0,
         timeRemaining: 0,
@@ -136,6 +137,18 @@ function pokerApp() {
                     this.setPlayerOnline(data.username, false);
                     this.addLog(data.username + ' disconnected');
                     break;
+                case 'player_joined':
+                    this.handlePlayerJoined(data);
+                    break;
+                case 'player_left':
+                    this.handlePlayerLeft(data);
+                    break;
+                case 'table_cancelled':
+                    this.handleTableCancelled();
+                    break;
+                case 'table_started':
+                    this.handleTableStarted();
+                    break;
                 case 'game_over':
                     this.handleGameOver(data);
                     break;
@@ -160,8 +173,8 @@ function pokerApp() {
             this.handNumber = data.hand_number;
             this.dealerSeat = data.dealer_seat;
             this.isCreator = data.is_creator;
-            this.minPlayers = 3; // Will be set from table config
-            this.maxPlayers = 8;
+            this.minPlayers = data.min_players || 3;
+            this.maxPlayers = data.max_players || 8;
 
             // Build seats array (8 max seats)
             this.seats = [];
@@ -179,15 +192,22 @@ function pokerApp() {
                         lastAction: '',
                         isSmallBlind: false,
                         isBigBlind: false,
+                        hasCards: false,
+                        roundBet: 0,
                     });
                 } else {
                     this.seats.push({
                         seat: i, username: '', display_name: '', chips: 0,
                         status: '', is_online: false, avatar_url: '',
                         lastAction: '', isSmallBlind: false, isBigBlind: false,
+                        hasCards: false, roundBet: 0,
                     });
                 }
             }
+
+            // Update my chip count
+            const mySeatData = this.seats.find(s => s.username === this.myUsername);
+            if (mySeatData) this.myChips = mySeatData.chips;
 
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
@@ -223,6 +243,8 @@ function pokerApp() {
                         seat.lastAction = '';
                         seat.isSmallBlind = false;
                         seat.isBigBlind = false;
+                        seat.hasCards = p.status !== 'eliminated' && p.status !== 'spectating' && p.status !== 'left';
+                        seat.roundBet = 0;
                     }
                 }
             }
@@ -235,14 +257,15 @@ function pokerApp() {
             }
 
             // Mark blind positions
-            this.markBlinds(data.dealer_seat);
+            this.markBlinds(data.dealer_seat, data.small_blind, data.big_blind);
 
             this.addLog('--- Hand #' + data.hand_number + ' ---');
             this.statusMsg = '';
+            this.updateMyChips();
             this.checkCanRebuy();
         },
 
-        markBlinds(dealerSeat) {
+        markBlinds(dealerSeat, smallBlind, bigBlind) {
             const activePlayers = this.seats.filter(s => s.username && s.status !== 'eliminated' && s.status !== 'spectating' && s.status !== 'left');
             if (activePlayers.length < 2) return;
 
@@ -267,6 +290,8 @@ function pokerApp() {
             for (const s of this.seats) {
                 s.isSmallBlind = s.seat === sbSeat;
                 s.isBigBlind = s.seat === bbSeat;
+                if (s.seat === sbSeat) s.roundBet = smallBlind || 0;
+                if (s.seat === bbSeat) s.roundBet = bigBlind || 0;
             }
         },
 
@@ -312,8 +337,12 @@ function pokerApp() {
             const seat = this.seats.find(s => s.username === data.username);
             if (seat) {
                 seat.lastAction = data.poker_action;
-                if (data.poker_action === 'fold') seat.status = 'folded';
+                if (data.poker_action === 'fold') {
+                    seat.status = 'folded';
+                    seat.hasCards = false;
+                }
                 if (data.poker_action === 'all_in') seat.status = 'all_in';
+                if (data.amount > 0) seat.roundBet = (seat.roundBet || 0) + data.amount;
             }
             this.pot = data.pot;
 
@@ -333,11 +362,12 @@ function pokerApp() {
             }
             this.pot = data.pot;
 
-            // Clear last actions for new round
+            // Clear last actions and round bets for new round
             for (const s of this.seats) {
                 if (s.status !== 'folded' && s.status !== 'eliminated') {
                     s.lastAction = '';
                 }
+                s.roundBet = 0;
             }
 
             this.addLog('Community: ' + this.communityCards.map(c => this.formatCard(c)).join(' '));
@@ -350,6 +380,7 @@ function pokerApp() {
             this.isMyTurn = false;
             this.validActions = [];
             this.activeSeat = -1;
+            for (const s of this.seats) { s.hasCards = false; s.roundBet = 0; }
 
             if (data.community_cards) {
                 this.communityCards = data.community_cards.split(',').filter(c => c);
@@ -368,6 +399,7 @@ function pokerApp() {
                     seat.chips += r.winnings;
                 }
             }
+            this.updateMyChips();
         },
 
         handleHandComplete(data) {
@@ -376,6 +408,7 @@ function pokerApp() {
             this.isMyTurn = false;
             this.validActions = [];
             this.activeSeat = -1;
+            for (const s of this.seats) { s.hasCards = false; s.roundBet = 0; }
 
             const results = data.results || [];
             for (const r of results) {
@@ -385,6 +418,7 @@ function pokerApp() {
                     if (seat) seat.chips += r.winnings;
                 }
             }
+            this.updateMyChips();
         },
 
         handleGameOver(data) {
@@ -404,6 +438,7 @@ function pokerApp() {
                 seat.status = 'active';
             }
             this.addLog(data.username + ' rebuyed');
+            this.updateMyChips();
             this.checkCanRebuy();
         },
 
@@ -421,10 +456,59 @@ function pokerApp() {
             if (seat) seat.is_online = online;
         },
 
+        handlePlayerJoined(data) {
+            // Add or update the seat in the seats array
+            if (data.seat >= 0 && data.seat < this.seats.length) {
+                this.seats[data.seat] = {
+                    seat: data.seat,
+                    username: data.username,
+                    display_name: data.display_name || data.username,
+                    chips: data.chips,
+                    status: 'active',
+                    is_online: false,
+                    avatar_url: data.avatar_url || '',
+                    lastAction: '',
+                    isSmallBlind: false,
+                    isBigBlind: false,
+                    hasCards: false,
+                    roundBet: 0,
+                };
+            }
+            this.addLog(data.username + ' joined the table');
+        },
+
+        handlePlayerLeft(data) {
+            if (data.seat >= 0 && data.seat < this.seats.length) {
+                this.seats[data.seat] = {
+                    seat: data.seat, username: '', display_name: '', chips: 0,
+                    status: '', is_online: false, avatar_url: '',
+                    lastAction: '', isSmallBlind: false, isBigBlind: false,
+                    hasCards: false, roundBet: 0,
+                };
+            }
+            this.addLog(data.username + ' left the table');
+        },
+
+        handleTableCancelled() {
+            this.tableStatus = 'cancelled';
+            this.statusMsg = 'Table cancelled by creator. Buy-ins refunded.';
+            this.gameOver = true;
+        },
+
+        handleTableStarted() {
+            this.tableStatus = 'active';
+            this.statusMsg = 'Game started!';
+        },
+
         checkCanRebuy() {
             const mySeat = this.seats.find(s => s.username === this.myUsername);
             this.canRebuy = mySeat && mySeat.chips === 0 &&
                 (mySeat.status === 'eliminated' || mySeat.status === 'active' || mySeat.status === 'folded');
+        },
+
+        updateMyChips() {
+            const mySeat = this.seats.find(s => s.username === this.myUsername);
+            if (mySeat) this.myChips = mySeat.chips;
         },
 
         // Actions
@@ -490,3 +574,17 @@ function pokerApp() {
         },
     };
 }
+
+// Auto-init: wait for Alpine and pokerApp to be available, then init the container
+(function () {
+    var container = document.querySelector('[data-table-id]');
+    if (!container) return;
+    function tryInit() {
+        if (window.Alpine && typeof pokerApp !== 'undefined') {
+            window.Alpine.initTree(container);
+        } else {
+            setTimeout(tryInit, 20);
+        }
+    }
+    tryInit();
+}());

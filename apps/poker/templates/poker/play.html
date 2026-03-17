@@ -23,14 +23,14 @@
     transform: translate(-50%, -50%);
     z-index: 2;
 }
-.seat-0 { bottom: -10%; left: 50%; transform: translate(-50%, 0); }
-.seat-1 { bottom: 5%; left: 10%; transform: translate(-50%, 0); }
-.seat-2 { top: 15%; left: 5%; transform: translate(-50%, -50%); }
-.seat-3 { top: -5%; left: 25%; transform: translate(-50%, 0); }
-.seat-4 { top: -5%; left: 50%; transform: translate(-50%, 0); }
-.seat-5 { top: -5%; left: 75%; transform: translate(-50%, 0); }
-.seat-6 { top: 15%; right: 5%; left: auto; transform: translate(50%, -50%); }
-.seat-7 { bottom: 5%; right: 10%; left: auto; transform: translate(50%, 0); }
+.seat-0 { bottom: 2%; left: 50%; transform: translate(-50%, 0); }
+.seat-1 { bottom: 10%; left: 12%; transform: translate(-50%, 0); }
+.seat-2 { top: 22%; left: 8%; transform: translate(-50%, -50%); }
+.seat-3 { top: 4%; left: 28%; transform: translate(-50%, 0); }
+.seat-4 { top: 4%; left: 50%; transform: translate(-50%, 0); }
+.seat-5 { top: 4%; left: 72%; transform: translate(-50%, 0); }
+.seat-6 { top: 22%; right: 8%; left: auto; transform: translate(50%, -50%); }
+.seat-7 { bottom: 10%; right: 12%; left: auto; transform: translate(50%, 0); }
 
 /* Card styling */
 .poker-card {
@@ -116,8 +116,16 @@
 .raise-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #c9a84c;
+    cursor: pointer;
+    border: 2px solid #a88a3c;
+}
+.raise-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     background: #c9a84c;
     cursor: pointer;
@@ -194,6 +202,11 @@
                     <div x-show="seat.username"
                          class="poker-seat"
                          :class="'seat-' + seat.seat + (seat.seat === activeSeat ? ' active-seat-glow' : '')">
+                        <!-- Card backs (other players' hole cards) -->
+                        <div x-show="seat.hasCards && seat.username !== myUsername" class="flex gap-0.5 mb-0.5">
+                            <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
+                            <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
+                        </div>
                         <!-- Avatar -->
                         <div class="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center flex-shrink-0 mb-0.5"
                              :class="seat.status === 'folded' ? 'border-stone/50 opacity-50' : (seat.status === 'eliminated' ? 'border-burgundy/50 opacity-30' : 'border-gold/60 bg-parchment dark:bg-walnut')">
@@ -206,6 +219,10 @@
                             <p class="text-[0.65rem] text-cream font-medium leading-tight truncate max-w-[5rem]"
                                :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
                             <p class="text-[0.6rem] text-gold/80" x-text="seat.chips + ' chips'"></p>
+                        </div>
+                        <!-- Round bet (how much this player has put in this round) -->
+                        <div x-show="seat.roundBet > 0" class="mt-0.5">
+                            <span class="text-[0.6rem] text-cream/90 bg-ink/50 px-1.5 py-0.5 rounded" x-text="seat.roundBet"></span>
                         </div>
                         <!-- Dealer / Blind markers -->
                         <div class="flex gap-0.5 mt-0.5">
@@ -243,6 +260,12 @@
                     <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"
                          style="width: 60px; height: 84px; font-size: 1.1rem; margin: 0 2px;"></div>
                 </template>
+            </div>
+
+            <!-- Player's chip count -->
+            <div x-show="tableStatus === 'active'" class="mt-2 text-center">
+                <span class="text-xs text-slate">Your Chips:</span>
+                <span class="text-sm font-venus-medium text-gold" x-text="myChips"></span>
             </div>
 
             <!-- Action bar -->
@@ -287,11 +310,11 @@
                                    x-model.number="raiseAmount">
                         </div>
                         <div class="flex gap-2">
-                            <button @click="raiseAmount = va.min" class="vintage-btn-outline py-1 px-3 text-[0.65rem]">Min</button>
-                            <button @click="raiseAmount = Math.floor((va.min + va.max) / 2)" class="vintage-btn-outline py-1 px-3 text-[0.65rem]">1/2</button>
-                            <button @click="raiseAmount = va.max" class="vintage-btn-outline py-1 px-3 text-[0.65rem]">Max</button>
+                            <button @click="raiseAmount = va.min" class="vintage-btn-outline py-1.5 px-3 text-xs">Min</button>
+                            <button @click="raiseAmount = Math.floor((va.min + va.max) / 2)" class="vintage-btn-outline py-1.5 px-3 text-xs">1/2</button>
+                            <button @click="raiseAmount = va.max" class="vintage-btn-outline py-1.5 px-3 text-xs">Max</button>
                             <button @click="sendAction(va.action, raiseAmount)"
-                                    class="vintage-btn py-1.5 px-5 text-xs ml-auto">
+                                    class="vintage-btn py-2 px-5 text-xs ml-auto">
                                 <span x-text="va.action === 'bet' ? 'Bet' : 'Raise to'"></span>
                                 <span x-text="raiseAmount"></span>
                             </button>
@@ -425,18 +448,4 @@
 </div>
 
 <script src="{% static 'js/poker-app.js' %}"></script>
-<script>
-(function () {
-    var container = document.querySelector('[data-table-id]');
-    if (!container) return;
-    function tryInit() {
-        if (window.Alpine && typeof pokerApp !== 'undefined') {
-            window.Alpine.initTree(container);
-        } else {
-            setTimeout(tryInit, 20);
-        }
-    }
-    tryInit();
-}());
-</script>
 {% endblock %}

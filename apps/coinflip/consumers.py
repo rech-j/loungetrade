@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from apps.economy.services import InsufficientFunds
 from apps.games.mixins import BaseGameConsumer
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import CoinFlipChallenge
 
@@ -237,17 +237,17 @@ class CoinFlipConsumer(BaseGameConsumer):
         from django.contrib.auth.models import User
         winner = User.objects.select_related('profile').get(pk=winner_id)
         loser = User.objects.select_related('profile').get(pk=loser_id)
-        Notification.objects.create(
-            user=winner,
-            notif_type='game_result',
-            title='You Won!',
-            message=f'You won {challenge.stake} coins against {loser.profile.get_display_name()}! The coin landed on {flip_result}.',
+        send_notification(
+            winner,
+            'game_result',
+            'You Won!',
+            f'You won {challenge.stake} coins against {loser.profile.get_display_name()}! The coin landed on {flip_result}.',
             link='/coinflip/',
         )
-        Notification.objects.create(
-            user=loser,
-            notif_type='game_result',
-            title='You Lost',
-            message=f'You lost {challenge.stake} coins to {winner.profile.get_display_name()}. The coin landed on {flip_result}.',
+        send_notification(
+            loser,
+            'game_result',
+            'You Lost',
+            f'You lost {challenge.stake} coins to {winner.profile.get_display_name()}. The coin landed on {flip_result}.',
             link='/coinflip/',
         )

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from django.db import transaction
 
 from apps.accounts.models import UserProfile
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import Transaction
 
@@ -59,11 +59,11 @@ def transfer_coins(
             note=note,
         )
 
-        Notification.objects.create(
-            user=receiver,
-            notif_type='coin_received',
-            title='Coins Received',
-            message=f'{sender_profile.get_display_name()} sent you {amount} coins.',
+        send_notification(
+            receiver,
+            'coin_received',
+            'Coins Received',
+            f'{sender_profile.get_display_name()} sent you {amount} coins.',
             link='/profile/',
         )
 
@@ -105,11 +105,11 @@ def mint_coins(
             note=note or f'Minted by {admin_user.username}',
         )
 
-        Notification.objects.create(
-            user=target_user,
-            notif_type='coin_received',
-            title='Coins Minted',
-            message=f'An admin minted {amount} coins to your account.',
+        send_notification(
+            target_user,
+            'coin_received',
+            'Coins Minted',
+            f'An admin minted {amount} coins to your account.',
             link='/profile/',
         )
 

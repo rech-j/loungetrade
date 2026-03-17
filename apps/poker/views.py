@@ -1,3 +1,5 @@
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -7,9 +9,15 @@ from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import rate_limit
 from apps.economy.services import InsufficientFunds, poker_buy_in, poker_payout
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import PokerPlayer, PokerTable
+
+
+def _broadcast_to_table(table_id, event):
+    """Send a channel-layer event to all WebSocket consumers at a poker table."""
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(f'poker_{table_id}', event)
 
 
 @login_required
@@ -159,14 +167,12 @@ def create_table(request):
             )
             next_seat += 1
 
-            Notification.objects.create(
-                user=invited_user,
-                notif_type='game_invite',
-                title='Poker Invite!',
-                message=(
-                    f'{request.user.profile.get_display_name()} invited you to a poker table '
-                    f'for {stake} LC buy-in!'
-                ),
+            send_notification(
+                invited_user,
+                'game_invite',
+                'Poker Invite!',
+                f'{request.user.profile.get_display_name()} invited you to a poker table '
+                f'for {stake} LC buy-in!',
                 link=f'/poker/play/{table.pk}/',
             )
 
@@ -194,6 +200,14 @@ def join_table(request, table_id):
             existing.status = 'active'
             existing.coins_invested = table.stake
             existing.save(update_fields=['chips', 'status', 'coins_invested'])
+            _broadcast_to_table(table.pk, {
+                'type': 'player_joined',
+                'username': request.user.username,
+                'display_name': request.user.profile.get_display_name(),
+                'seat': existing.seat,
+                'chips': existing.chips,
+                'avatar_url': request.user.profile.avatar.url if request.user.profile.avatar else '',
+            })
             return redirect('poker_play', table_id=table.pk)
         else:
             return redirect('poker_play', table_id=table.pk)
@@ -231,6 +245,15 @@ def join_table(request, table_id):
         status='active',
         coins_invested=table.stake,
     )
+
+    _broadcast_to_table(table.pk, {
+        'type': 'player_joined',
+        'username': request.user.username,
+        'display_name': request.user.profile.get_display_name(),
+        'seat': seat,
+        'chips': table.starting_chips,
+        'avatar_url': request.user.profile.avatar.url if request.user.profile.avatar else '',
+    })
 
     return redirect('poker_play', table_id=table.pk)
 
@@ -274,12 +297,21 @@ def leave_table(request, table_id):
                 poker_payout([(p.user, p.coins_invested)], note=f'Poker table cancelled - Table #{table.pk}')
         table.status = 'cancelled'
         table.save(update_fields=['status'])
+        _broadcast_to_table(table.pk, {
+            'type': 'table_cancelled',
+        })
         messages.info(request, 'Poker table cancelled. Buy-ins refunded.')
     else:
         # Non-creator leaving: refund their buy-in
         if player.coins_invested > 0:
             poker_payout([(player.user, player.coins_invested)], note=f'Left poker table #{table.pk}')
+        left_seat = player.seat
         player.delete()
+        _broadcast_to_table(table.pk, {
+            'type': 'player_left',
+            'username': request.user.username,
+            'seat': left_seat,
+        })
         messages.info(request, 'Left the table. Buy-in refunded.')
 
     return redirect('poker_lobby')
@@ -301,5 +333,9 @@ def start_table(request, table_id):
     table.status = 'active'
     table.started_at = timezone.now()
     table.save(update_fields=['status', 'started_at'])
+
+    _broadcast_to_table(table.pk, {
+        'type': 'table_started',
+    })
 
     return redirect('poker_play', table_id=table.pk)

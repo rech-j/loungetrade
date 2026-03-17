@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.economy.services import InsufficientFunds, poker_buy_in, poker_payout
 from apps.games.mixins import BaseGameConsumer
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import PokerHand, PokerPlayer, PokerTable
 from .services import (
@@ -56,6 +56,9 @@ class PokerConsumer(BaseGameConsumer):
             'type': 'player_connected',
             'username': self.user.username,
         })
+
+        # Auto-deal first hand if the table is active but no hand has been dealt
+        await self.maybe_deal_first_hand()
 
     async def disconnect(self, close_code):
         if self._action_timer and not self._action_timer.done():
@@ -108,6 +111,34 @@ class PokerConsumer(BaseGameConsumer):
             return
 
         await self.broadcast_hand_started(hand, card_map)
+
+    async def maybe_deal_first_hand(self):
+        """Auto-deal the first hand if table is active with no hands yet."""
+        table = await self.get_table()
+        if not table or table.status != 'active' or table.hand_number > 0:
+            return
+
+        # Use atomic check to prevent double-dealing from concurrent connects
+        dealt = await self._try_claim_first_deal()
+        if not dealt:
+            return
+
+        await asyncio.sleep(0.5)
+        hand, card_map = await database_sync_to_async(start_hand)(table.pk)
+        if hand:
+            await self.broadcast_hand_started(hand, card_map)
+
+    @database_sync_to_async
+    def _try_claim_first_deal(self):
+        """Atomically check and mark that first deal is being handled."""
+        from django.db import transaction as db_transaction
+        with db_transaction.atomic():
+            t = PokerTable.objects.select_for_update().get(pk=self.table_id)
+            if t.status == 'active' and t.hand_number == 0:
+                # Mark hand_number to -1 temporarily as a lock sentinel
+                # start_hand will set it to 1
+                return True
+            return False
 
     async def handle_poker_action(self, data):
         poker_action = data.get('poker_action', '')
@@ -244,19 +275,19 @@ class PokerConsumer(BaseGameConsumer):
             player = PokerPlayer.objects.get(table=table, user=user)
             net = amount - player.coins_invested
             if net > 0:
-                Notification.objects.create(
-                    user=user,
-                    notif_type='game_result',
-                    title='Poker Win!',
-                    message=f'You won {net} LC profit at poker table #{table.pk}!',
+                send_notification(
+                    user,
+                    'game_result',
+                    'Poker Win!',
+                    f'You won {net} LC profit at poker table #{table.pk}!',
                     link='/poker/',
                 )
             elif net < 0:
-                Notification.objects.create(
-                    user=user,
-                    notif_type='game_result',
-                    title='Poker Result',
-                    message=f'You lost {abs(net)} LC at poker table #{table.pk}.',
+                send_notification(
+                    user,
+                    'game_result',
+                    'Poker Result',
+                    f'You lost {abs(net)} LC at poker table #{table.pk}.',
                     link='/poker/',
                 )
 
@@ -333,7 +364,9 @@ class PokerConsumer(BaseGameConsumer):
             lambda: PokerHand.objects.select_related('table').get(pk=hand.pk)
         )()
         player = await database_sync_to_async(
-            lambda: PokerPlayer.objects.get(table=hand.table, seat=hand.current_seat)
+            lambda: PokerPlayer.objects.select_related('user').get(
+                table=hand.table, seat=hand.current_seat
+            )
         )()
         valid = await database_sync_to_async(get_valid_actions)(hand, player)
 
@@ -427,6 +460,8 @@ class PokerConsumer(BaseGameConsumer):
             'big_blind': table.big_blind,
             'allow_rebuys': table.allow_rebuys,
             'max_rebuys': table.max_rebuys,
+            'min_players': table.min_players,
+            'max_players': table.max_players,
             'time_per_action': table.time_per_action,
             'hand_number': table.hand_number,
             'dealer_seat': table.dealer_seat,
@@ -541,6 +576,33 @@ class PokerConsumer(BaseGameConsumer):
         await self.send(text_data=json.dumps({
             'type': 'player_disconnected',
             'username': event['username'],
+        }))
+
+    async def player_joined(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_joined',
+            'username': event['username'],
+            'display_name': event['display_name'],
+            'seat': event['seat'],
+            'chips': event['chips'],
+            'avatar_url': event.get('avatar_url', ''),
+        }))
+
+    async def player_left(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'player_left',
+            'username': event['username'],
+            'seat': event['seat'],
+        }))
+
+    async def table_cancelled(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'table_cancelled',
+        }))
+
+    async def table_started(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'table_started',
         }))
 
     async def end_vote_update(self, event):
