@@ -161,3 +161,67 @@ def game_transfer(
         )
 
         return tx
+
+
+def poker_buy_in(
+    user: User,
+    amount: int,
+    note: str = '',
+) -> Transaction:
+    """Deduct coins from a user for a poker buy-in (coins held in escrow)."""
+    if amount <= 0:
+        raise InvalidTrade('Amount must be positive.')
+
+    with transaction.atomic():
+        profile = UserProfile.objects.select_for_update().get(user=user)
+
+        if profile.balance < amount:
+            raise InsufficientFunds(
+                f'Insufficient balance. You have {profile.balance} coins.'
+            )
+
+        profile.balance -= amount
+        profile.save(update_fields=['balance'])
+
+        tx = Transaction.objects.create(
+            sender=user,
+            receiver=None,
+            amount=amount,
+            tx_type='game',
+            note=note or 'Poker buy-in',
+        )
+
+        logger.info('Poker buy-in: user=%s amount=%d', user.username, amount)
+        return tx
+
+
+def poker_payout(
+    payouts: list,
+    note: str = '',
+) -> list:
+    """Credit multiple users atomically after a poker game.
+
+    payouts: list of (user, amount) tuples.
+    """
+    results = []
+    with transaction.atomic():
+        for user, amount in payouts:
+            if amount <= 0:
+                continue
+
+            profile = UserProfile.objects.select_for_update().get(user=user)
+            profile.balance += amount
+            profile.save(update_fields=['balance'])
+
+            tx = Transaction.objects.create(
+                sender=None,
+                receiver=user,
+                amount=amount,
+                tx_type='game',
+                note=note or 'Poker payout',
+            )
+            results.append(tx)
+
+            logger.info('Poker payout: user=%s amount=%d', user.username, amount)
+
+    return results
