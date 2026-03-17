@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import rate_limit
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import CoinFlipChallenge
 
@@ -100,11 +100,11 @@ def create_challenge(request):
         challenger_choice=choice,
     )
 
-    Notification.objects.create(
-        user=opponent,
-        notif_type='game_invite',
-        title='Game Challenge!',
-        message=f'{request.user.profile.get_display_name()} challenged you to a coin flip for {stake} coins!',
+    send_notification(
+        opponent,
+        'game_invite',
+        'Game Challenge!',
+        f'{request.user.profile.get_display_name()} challenged you to a coin flip for {stake} coins!',
         link=f'/coinflip/play/{challenge.pk}/',
     )
 

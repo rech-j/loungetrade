@@ -1,4 +1,4 @@
-{% if chess_games or coinflip_games %}
+{% if chess_games or coinflip_games or poker_tables %}
 <div class="border-t border-gold/30 dark:border-gold/20 pt-1 mt-1">
     <p class="px-1 pb-1 text-[10px] uppercase tracking-widest text-gold font-medium">Active Games</p>
     {% for g in chess_games %}
@@ -45,6 +45,19 @@
                 <button type="submit" class="text-xs text-burgundy uppercase tracking-wide hover:text-burgundy/80">Decline</button>
             </form>
             {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+    {% for t in poker_tables %}
+    <div class="px-1 py-1.5 flex items-center justify-between gap-3">
+        <div class="min-w-0 flex-1">
+            <span class="text-sm text-slate truncate block">
+                &#9830; Poker - Table #{{ t.pk }}
+                <span class="text-xs text-slate/70">({{ t.stake }} LC)</span>
+            </span>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+            <a href="{% url 'poker_play' t.pk %}" class="text-xs text-gold uppercase tracking-wide hover:text-gold/80">Play</a>
         </div>
     </div>
     {% endfor %}

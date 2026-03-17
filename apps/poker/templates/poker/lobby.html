@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Poker Lobby - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl lg:max-w-3xl mx-auto">
+    <div class="mb-8">
+        <h1 class="font-venus-medium text-2xl">The Tables</h1>
+        <p class="text-slate text-sm mt-1">Texas Hold'em for Lounge Coins.</p>
+    </div>
+
+    <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
+        <a href="{% url 'coinflip_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Coin Flip</a>
+        <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Chess</a>
+        <a href="{% url 'poker_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-t-3 border-t-gold text-gold">Poker</a>
+    </div>
+
+    <div class="vintage-card mb-10" x-data="{ showAdvanced: false, isPublic: true, allowRebuys: false, submitting: false, invitedUsers: [], inviteSearch: '' }">
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-gold mb-5">New Poker Table</h2>
+        <form method="post" action="{% url 'poker_create' %}" class="space-y-4"
+              @submit="submitting = true">
+            {% csrf_token %}
+
+            {% if messages %}
+            <div class="space-y-1">
+                {% for message in messages %}{% if message.tags == 'error' %}
+                <p class="text-burgundy text-xs">{{ message }}</p>
+                {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="poker-stake" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Buy-in (LC)</label>
+                    <input id="poker-stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
+                           class="vintage-input" placeholder="Amount" value="100">
+                </div>
+                <div>
+                    <label for="poker-max-players" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Max Players</label>
+                    <select id="poker-max-players" name="max_players" class="vintage-select">
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5">5</option>
+                        <option value="6" selected>6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="is_public" x-model="isPublic" checked class="accent-gold">
+                    <span class="text-xs">Public table (anyone can join)</span>
+                </label>
+            </div>
+
+            <div x-show="!isPublic" x-transition>
+                <label class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Invite Players</label>
+                <div x-data @user-selected.window="
+                    let u = $event.detail.username;
+                    if (u && !invitedUsers.includes(u) && u !== '{{ request.user.username }}') {
+                        invitedUsers.push(u);
+                    }
+                    inviteSearch = '';
+                ">
+                    <input type="text" x-model="inviteSearch"
+                           class="vintage-input"
+                           placeholder="Search for members..."
+                           autocomplete="off"
+                           hx-get="{% url 'user_search' %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#poker-invite-results"
+                           hx-vals='js:{q: document.querySelector("[x-model=inviteSearch]")?.value || ""}'>
+                    <div id="poker-invite-results"></div>
+                </div>
+                <div class="flex flex-wrap gap-1 mt-2">
+                    <template x-for="(user, i) in invitedUsers" :key="user">
+                        <div class="flex items-center gap-1 bg-gold/10 border border-gold/30 px-2 py-1 text-xs">
+                            <span x-text="user"></span>
+                            <button type="button" @click="invitedUsers.splice(i, 1)" class="text-slate hover:text-burgundy">&times;</button>
+                            <input type="hidden" name="invited_users" :value="user">
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <button type="button" @click="showAdvanced = !showAdvanced"
+                    class="text-xs text-slate hover:text-gold transition-colors">
+                <span x-text="showAdvanced ? 'Hide' : 'Show'"></span> advanced settings
+            </button>
+
+            <div x-show="showAdvanced" x-transition class="space-y-4 pt-2 border-t border-stone/30">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="poker-starting-chips" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Starting Chips</label>
+                        <input id="poker-starting-chips" type="number" name="starting_chips" min="100" value="1000"
+                               class="vintage-input">
+                    </div>
+                    <div>
+                        <label for="poker-min-players" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Min Players</label>
+                        <select id="poker-min-players" name="min_players" class="vintage-select">
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="poker-sb" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Small Blind</label>
+                        <input id="poker-sb" type="number" name="small_blind" min="1" value="10"
+                               class="vintage-input">
+                    </div>
+                    <div>
+                        <label for="poker-bb" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Big Blind</label>
+                        <input id="poker-bb" type="number" name="big_blind" min="2" value="20"
+                               class="vintage-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="poker-timer" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Time per Action</label>
+                        <select id="poker-timer" name="time_per_action" class="vintage-select">
+                            <option value="0">No timer</option>
+                            <option value="15">15 seconds</option>
+                            <option value="30" selected>30 seconds</option>
+                            <option value="60">60 seconds</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="flex items-center gap-2 cursor-pointer mt-5">
+                            <input type="checkbox" name="allow_rebuys" x-model="allowRebuys" class="accent-gold">
+                            <span class="text-xs">Allow rebuys</span>
+                        </label>
+                        <div x-show="allowRebuys" class="mt-2">
+                            <input type="number" name="max_rebuys" min="0" value="1" placeholder="Max (0=unlimited)"
+                                   class="vintage-input text-xs">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" :disabled="submitting" class="vintage-btn w-full py-3">
+                <span x-show="!submitting">Create Table</span>
+                <span x-show="submitting" x-cloak>Creating...</span>
+            </button>
+        </form>
+    </div>
+
+    {% if active_tables %}
+    <div class="mb-10">
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Your Active Tables</h2>
+        <div class="border border-gold/30 divide-y divide-gold/20">
+            {% for t in active_tables %}
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm">Table #{{ t.pk }} by <span class="font-venus-medium">{{ t.creator.profile.get_display_name }}</span></p>
+                    <p class="text-xs text-slate">
+                        {{ t.stake }} LC &middot;
+                        <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-patina inline-block"></span><span class="text-patina font-medium">In Progress</span></span>
+                        &middot; Hand #{{ t.hand_number }}
+                    </p>
+                </div>
+                <a href="{% url 'poker_play' t.pk %}" class="vintage-btn text-xs py-1.5 px-4">Play</a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if invited_tables %}
+    <div class="mb-10">
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Your Invites</h2>
+        <div class="border border-gold/30 divide-y divide-gold/20">
+            {% for t in invited_tables %}
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm"><span class="font-venus-medium">{{ t.creator.profile.get_display_name }}</span> invited you</p>
+                    <p class="text-xs text-slate">
+                        {{ t.stake }} LC buy-in &middot; {{ t.players.count }}/{{ t.max_players }} players
+                        &middot; {{ t.created_at|timesince }} ago
+                    </p>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    <form method="post" action="{% url 'poker_join' t.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn text-xs py-1.5 px-4">Join</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if public_tables %}
+    <div class="mb-10">
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Tables</h2>
+        <div class="border border-gold/30 divide-y divide-gold/20">
+            {% for t in public_tables %}
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm">Table by <span class="font-venus-medium">{{ t.creator.profile.get_display_name }}</span></p>
+                    <p class="text-xs text-slate">
+                        {{ t.stake }} LC buy-in &middot; {{ t.players.count }}/{{ t.max_players }} players
+                        &middot; Blinds {{ t.small_blind }}/{{ t.big_blind }}
+                        &middot; {{ t.created_at|timesince }} ago
+                    </p>
+                </div>
+                <div class="flex gap-2 flex-shrink-0">
+                    {% if t.creator == request.user %}
+                    <a href="{% url 'poker_play' t.pk %}" class="vintage-btn text-xs py-1.5 px-4">View</a>
+                    {% else %}
+                    <form method="post" action="{% url 'poker_join' t.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn text-xs py-1.5 px-4">Join</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recent_tables %}
+    <div>
+        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Poker Results</h2>
+        <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+            {% for t in recent_tables %}
+            <div class="flex items-center justify-between gap-3 px-4 py-3">
+                <div class="min-w-0">
+                    <p class="text-sm truncate">Table #{{ t.pk }} &middot; {{ t.stake }} LC buy-in</p>
+                    <p class="text-xs text-slate">
+                        Completed &middot; {{ t.ended_at|timesince }} ago
+                    </p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif not public_tables and not invited_tables and not active_tables %}
+    <div class="text-center py-8">
+        <p class="text-slate text-sm">No poker tables yet. Create one above.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

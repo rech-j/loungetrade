@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from apps.accounts.decorators import rate_limit
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import ChessGame
 
@@ -94,11 +94,11 @@ def create_game(request):
         creator_side=creator_side,
     )
 
-    Notification.objects.create(
-        user=opponent,
-        notif_type='game_invite',
-        title='Chess Challenge!',
-        message=f'{request.user.profile.get_display_name()} challenged you to a chess match for {stake} LC!',
+    send_notification(
+        opponent,
+        'game_invite',
+        'Chess Challenge!',
+        f'{request.user.profile.get_display_name()} challenged you to a chess match for {stake} LC!',
         link=f'/chess/play/{game.pk}/',
     )
 

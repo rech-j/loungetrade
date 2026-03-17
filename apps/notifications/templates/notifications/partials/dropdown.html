@@ -1,5 +1,5 @@
-{% load coinflip_tags %}
-{% if chess_games or coinflip_games %}
+{% load notification_tags %}
+{% if chess_games or coinflip_games or poker_tables %}
 <div class="border-b-2 border-gold/30 dark:border-gold/20 bg-gold/5 dark:bg-gold/5">
     <p class="px-4 py-2 text-[10px] uppercase tracking-widest text-gold font-medium">Active Games</p>
     {% for g in chess_games %}
@@ -57,29 +57,53 @@
         </div>
     </div>
     {% endfor %}
+    {% for t in poker_tables %}
+    <div class="px-3 py-2.5 border-t border-stone/50 dark:border-slate/50">
+        <div class="flex items-center justify-between gap-2">
+            <div class="min-w-0 flex-1">
+                <p class="text-xs font-medium truncate">
+                    &#9830; Poker - Table #{{ t.pk }}
+                </p>
+                <p class="text-[10px] text-slate mt-0.5">
+                    {{ t.stake }} LC &middot; {% if t.status == 'active' %}In progress{% else %}Waiting for players{% endif %}
+                </p>
+            </div>
+            <div class="flex gap-1.5 flex-shrink-0">
+                <a href="{% url 'poker_play' t.pk %}" class="vintage-btn text-[10px] py-1 px-2.5">Play</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endif %}
 {% if notifications %}
-<div class="max-h-52 overflow-y-auto" role="menu">
+<div class="notif-dropdown-list max-h-52 overflow-y-auto" role="menu">
     {% for n in notifications %}
-    <div class="px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0 {% if not n.is_read %}border-l-3 border-l-gold{% endif %}" role="menuitem">
+    <div class="notif-row px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate last:border-0 {% if not n.is_read %}border-l-3 border-l-gold{% endif %}" data-notif-id="{{ n.pk }}" role="menuitem">
         <a href="{% if n.link %}{{ n.link }}{% else %}#{% endif %}" class="block">
-            <p class="text-xs font-medium">{{ n.title }}</p>
+            <p class="text-xs font-medium"><span class="notif-icon mr-1">{{ n.notif_type|notif_icon }}</span>{{ n.title }}</p>
             <p class="text-xs text-slate mt-0.5">{{ n.message|truncatechars:70 }}</p>
             <p class="text-xs text-slate mt-0.5">{{ n.created_at|timesince }} ago</p>
         </a>
         {% if n.notif_type == 'game_invite' and n.link %}
-        {% get_challenge_id n.link as challenge_id %}
-        {% if challenge_id %}
-        <form method="post" action="{% url 'coinflip_decline' challenge_id %}" class="mt-1">
-            {% csrf_token %}
-            <button type="submit" class="text-xs text-burgundy hover:text-burgundy/80 uppercase tracking-wide">Decline</button>
-        </form>
+        {% get_game_info n.link as game_info %}
+        {% if game_info %}
+            {% if game_info.game_type == 'coinflip' %}
+            <form method="post" action="{% url 'coinflip_decline' game_info.game_id %}" class="mt-1">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-burgundy hover:text-burgundy/80 uppercase tracking-wide">Decline</button>
+            </form>
+            {% elif game_info.game_type == 'chess' %}
+            <form method="post" action="{% url 'chess_decline' game_info.game_id %}" class="mt-1">
+                {% csrf_token %}
+                <button type="submit" class="text-xs text-burgundy hover:text-burgundy/80 uppercase tracking-wide">Decline</button>
+            </form>
+            {% endif %}
         {% endif %}
         {% endif %}
     </div>
     {% endfor %}
 </div>
-{% elif not chess_games and not coinflip_games %}
+{% elif not chess_games and not coinflip_games and not poker_tables %}
 <div class="p-4 text-xs text-slate text-center uppercase tracking-wide">No new notifications</div>
 {% endif %}

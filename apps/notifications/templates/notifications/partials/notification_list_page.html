@@ -1,0 +1,24 @@
+{% load notification_tags %}
+{% for n in notifications %}
+{% include "notifications/partials/notification_row.html" %}
+{% endfor %}
+
+{% if page_obj.has_other_pages %}
+<div class="flex items-center justify-center gap-4 py-4">
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}"
+       hx-get="?page={{ page_obj.previous_page_number }}"
+       hx-target="#notification-list"
+       hx-swap="innerHTML"
+       class="text-xs text-gold uppercase tracking-wide hover:text-gold-dark">&laquo; Newer</a>
+    {% endif %}
+    <span class="text-xs text-slate">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}"
+       hx-get="?page={{ page_obj.next_page_number }}"
+       hx-target="#notification-list"
+       hx-swap="innerHTML"
+       class="text-xs text-gold uppercase tracking-wide hover:text-gold-dark">Older &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}

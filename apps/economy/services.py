@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from django.db import transaction
 
 from apps.accounts.models import UserProfile
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import Transaction
 
@@ -59,11 +59,11 @@ def transfer_coins(
             note=note,
         )
 
-        Notification.objects.create(
-            user=receiver,
-            notif_type='coin_received',
-            title='Coins Received',
-            message=f'{sender_profile.get_display_name()} sent you {amount} coins.',
+        send_notification(
+            receiver,
+            'coin_received',
+            'Coins Received',
+            f'{sender_profile.get_display_name()} sent you {amount} coins.',
             link='/profile/',
         )
 
@@ -105,11 +105,11 @@ def mint_coins(
             note=note or f'Minted by {admin_user.username}',
         )
 
-        Notification.objects.create(
-            user=target_user,
-            notif_type='coin_received',
-            title='Coins Minted',
-            message=f'An admin minted {amount} coins to your account.',
+        send_notification(
+            target_user,
+            'coin_received',
+            'Coins Minted',
+            f'An admin minted {amount} coins to your account.',
             link='/profile/',
         )
 
@@ -161,3 +161,67 @@ def game_transfer(
         )
 
         return tx
+
+
+def poker_buy_in(
+    user: User,
+    amount: int,
+    note: str = '',
+) -> Transaction:
+    """Deduct coins from a user for a poker buy-in (coins held in escrow)."""
+    if amount <= 0:
+        raise InvalidTrade('Amount must be positive.')
+
+    with transaction.atomic():
+        profile = UserProfile.objects.select_for_update().get(user=user)
+
+        if profile.balance < amount:
+            raise InsufficientFunds(
+                f'Insufficient balance. You have {profile.balance} coins.'
+            )
+
+        profile.balance -= amount
+        profile.save(update_fields=['balance'])
+
+        tx = Transaction.objects.create(
+            sender=user,
+            receiver=None,
+            amount=amount,
+            tx_type='game',
+            note=note or 'Poker buy-in',
+        )
+
+        logger.info('Poker buy-in: user=%s amount=%d', user.username, amount)
+        return tx
+
+
+def poker_payout(
+    payouts: list,
+    note: str = '',
+) -> list:
+    """Credit multiple users atomically after a poker game.
+
+    payouts: list of (user, amount) tuples.
+    """
+    results = []
+    with transaction.atomic():
+        for user, amount in payouts:
+            if amount <= 0:
+                continue
+
+            profile = UserProfile.objects.select_for_update().get(user=user)
+            profile.balance += amount
+            profile.save(update_fields=['balance'])
+
+            tx = Transaction.objects.create(
+                sender=None,
+                receiver=user,
+                amount=amount,
+                tx_type='game',
+                note=note or 'Poker payout',
+            )
+            results.append(tx)
+
+            logger.info('Poker payout: user=%s amount=%d', user.username, amount)
+
+    return results

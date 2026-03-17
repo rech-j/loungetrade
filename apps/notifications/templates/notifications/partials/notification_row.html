@@ -1,0 +1,41 @@
+{% load notification_tags %}
+<div class="notif-row px-4 py-3 {% if not n.is_read %}border-l-3 border-l-gold{% else %}opacity-60{% endif %}" data-notif-id="{{ n.pk }}">
+    <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+            {% if n.link %}
+            <a href="{{ n.link }}" class="text-sm font-venus-medium hover:text-gold">
+                <span class="notif-icon mr-1">{{ n.notif_type|notif_icon }}</span>{{ n.title }}
+            </a>
+            {% else %}
+            <p class="text-sm font-venus-medium">
+                <span class="notif-icon mr-1">{{ n.notif_type|notif_icon }}</span>{{ n.title }}
+            </p>
+            {% endif %}
+            <p class="text-sm text-slate mt-0.5">{{ n.message }}</p>
+            <p class="text-xs text-slate mt-1">{{ n.created_at|timesince }} ago</p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0 mt-1">
+            {% if not n.is_read %}
+            <form method="post" action="{% url 'notification_mark_read' n.pk %}" class="notif-mark-read">
+                {% csrf_token %}
+                <button type="submit"
+                        class="w-2 h-2 rounded-full bg-gold"
+                        title="Mark read"
+                        hx-post="{% url 'notification_mark_read' n.pk %}"
+                        hx-target="closest .notif-row"
+                        hx-swap="outerHTML"></button>
+            </form>
+            {% endif %}
+            <form method="post" action="{% url 'notification_delete' n.pk %}">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-xs text-slate hover:text-burgundy"
+                        title="Delete"
+                        hx-post="{% url 'notification_delete' n.pk %}"
+                        hx-target="closest .notif-row"
+                        hx-swap="outerHTML"
+                        hx-confirm="Delete this notification?">&times;</button>
+            </form>
+        </div>
+    </div>
+</div>

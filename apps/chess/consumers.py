@@ -7,7 +7,7 @@ from django.utils import timezone
 
 from apps.economy.services import InsufficientFunds
 from apps.games.mixins import BaseGameConsumer
-from apps.notifications.models import Notification
+from apps.notifications.services import send_notification
 
 from .models import ChessGame
 
@@ -591,17 +591,17 @@ class ChessConsumer(BaseGameConsumer):
             'resign': 'resignation',
             'timeout': 'timeout',
         }.get(reason, reason)
-        Notification.objects.create(
-            user=winner,
-            notif_type='game_result',
-            title='Chess Win!',
-            message=f'You won {game.stake} LC from {loser.profile.get_display_name()} by {reason_text}.',
+        send_notification(
+            winner,
+            'game_result',
+            'Chess Win!',
+            f'You won {game.stake} LC from {loser.profile.get_display_name()} by {reason_text}.',
             link='/chess/',
         )
-        Notification.objects.create(
-            user=loser,
-            notif_type='game_result',
-            title='Chess Defeat',
-            message=f'You lost {game.stake} LC to {winner.profile.get_display_name()} by {reason_text}.',
+        send_notification(
+            loser,
+            'game_result',
+            'Chess Defeat',
+            f'You lost {game.stake} LC to {winner.profile.get_display_name()} by {reason_text}.',
             link='/chess/',
         )

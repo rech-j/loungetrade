@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     'apps.economy',
     'apps.coinflip',
     'apps.chess',
+    'apps.poker',
     'apps.notifications',
     'apps.leaderboard',
 ]

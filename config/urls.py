@@ -21,6 +21,7 @@ urlpatterns = [
     path('economy/', include('apps.economy.urls')),
     path('coinflip/', include('apps.coinflip.urls')),
     path('chess/', include('apps.chess.urls')),
+    path('poker/', include('apps.poker.urls')),
     path('notifications/', include('apps.notifications.urls')),
     path('leaderboard/', include('apps.leaderboard.urls')),
     path('', landing_page, name='landing'),

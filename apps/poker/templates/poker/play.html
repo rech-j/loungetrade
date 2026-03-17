@@ -1,0 +1,451 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Poker Table #{{ table.pk }} - LC{% endblock %}
+
+{% block content %}
+<style>
+/* Poker table */
+.poker-table-felt {
+    background: radial-gradient(ellipse at center, #1a5c32 0%, #0f3d22 80%, #0a2a17 100%);
+    border: 4px solid #c9a84c;
+    border-radius: 120px;
+    min-height: 280px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Player seat positions around the table */
+.poker-seat {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+.seat-0 { bottom: 2%; left: 50%; transform: translate(-50%, 0); }
+.seat-1 { bottom: 10%; left: 12%; transform: translate(-50%, 0); }
+.seat-2 { top: 22%; left: 8%; transform: translate(-50%, -50%); }
+.seat-3 { top: 4%; left: 28%; transform: translate(-50%, 0); }
+.seat-4 { top: 4%; left: 50%; transform: translate(-50%, 0); }
+.seat-5 { top: 4%; left: 72%; transform: translate(-50%, 0); }
+.seat-6 { top: 22%; right: 8%; left: auto; transform: translate(50%, -50%); }
+.seat-7 { bottom: 10%; right: 12%; left: auto; transform: translate(50%, 0); }
+
+/* Card styling */
+.poker-card {
+    width: 48px;
+    height: 68px;
+    border-radius: 4px;
+    border: 1px solid #888;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    background: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: bold;
+    margin: 0 -8px;
+    position: relative;
+}
+.poker-card:first-child { margin-left: 0; }
+.poker-card.face-down {
+    background: linear-gradient(135deg, #8b1a1a 25%, #722f37 50%, #8b1a1a 75%);
+    background-size: 10px 10px;
+    border-color: #c9a84c;
+}
+.poker-card.hearts, .poker-card.diamonds { color: #c62828; }
+.poker-card.clubs, .poker-card.spades { color: #1a1410; }
+
+/* Community cards */
+.community-area {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 6px;
+    z-index: 1;
+}
+
+/* Pot display */
+.pot-display {
+    position: absolute;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+}
+
+/* Dealer button */
+.dealer-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #c9a84c;
+    color: #1a1410;
+    font-size: 0.55rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #a88a3c;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Action badges */
+.action-badge {
+    font-size: 0.6rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Raise slider */
+.raise-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #c9a84c33;
+    border-radius: 2px;
+    outline: none;
+}
+.raise-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #c9a84c;
+    cursor: pointer;
+    border: 2px solid #a88a3c;
+}
+.raise-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #c9a84c;
+    cursor: pointer;
+    border: 2px solid #a88a3c;
+}
+
+/* Active seat glow */
+.active-seat-glow {
+    animation: seat-pulse 1.5s ease-in-out infinite;
+}
+@keyframes seat-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(201,168,76,0.8); }
+    50% { box-shadow: 0 0 0 5px rgba(201,168,76,0.3); }
+}
+
+/* Timer bar */
+.timer-bar {
+    height: 3px;
+    background: #c9a84c;
+    transition: width 1s linear;
+    border-radius: 2px;
+}
+.timer-bar.low { background: #722f37; }
+</style>
+
+<div class="max-w-5xl lg:max-w-6xl mx-auto"
+     x-data="pokerApp()"
+     data-table-id="{{ table.pk }}"
+     data-username="{{ request.user.username }}"
+     data-table-status="{{ table.status }}"
+     data-is-creator="{{ is_creator|yesno:'true,false' }}"
+     x-init="init()">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-4">
+        <div>
+            <p class="text-xs tracking-widest uppercase text-slate">Texas Hold'em</p>
+            <h1 class="font-serif text-xl font-bold">Table #{{ table.pk }}</h1>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="vintage-badge">{{ table.stake }} LC buy-in</div>
+            <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" :class="connected ? 'bg-patina' : 'bg-burgundy animate-pulse'"></span>
+                <span class="text-xs" :class="connected ? 'text-patina' : 'text-burgundy'" x-text="connected ? 'Connected' : 'Reconnecting...'"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status messages -->
+    <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
+    <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
+        <div>
+            <!-- Poker table -->
+            <div class="poker-table-felt mx-auto" style="max-width: 700px;">
+                <!-- Pot display -->
+                <div class="pot-display">
+                    <div x-show="pot > 0" class="text-center">
+                        <span class="text-xs text-gold/70 uppercase tracking-wider">Pot</span>
+                        <p class="text-lg font-serif font-bold text-gold" x-text="pot"></p>
+                    </div>
+                </div>
+
+                <!-- Community cards -->
+                <div class="community-area">
+                    <template x-for="(card, i) in communityCards" :key="i">
+                        <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
+                    </template>
+                </div>
+
+                <!-- Player seats -->
+                <template x-for="(seat, i) in seats" :key="i">
+                    <div x-show="seat.username"
+                         class="poker-seat"
+                         :class="'seat-' + seat.seat + (seat.seat === activeSeat ? ' active-seat-glow' : '')">
+                        <!-- Card backs (other players' hole cards) -->
+                        <div x-show="seat.hasCards && seat.username !== myUsername" class="flex gap-0.5 mb-0.5">
+                            <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
+                            <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
+                        </div>
+                        <!-- Avatar -->
+                        <div class="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center flex-shrink-0 mb-0.5"
+                             :class="seat.status === 'folded' ? 'border-stone/50 opacity-50' : (seat.status === 'eliminated' ? 'border-burgundy/50 opacity-30' : 'border-gold/60 bg-parchment dark:bg-walnut')">
+                            <img x-show="seat.avatar_url" :src="seat.avatar_url" class="w-full h-full object-cover">
+                            <span x-show="!seat.avatar_url" class="font-serif text-gold text-xs font-bold italic"
+                                  x-text="(seat.display_name || seat.username || '?')[0].toUpperCase()"></span>
+                        </div>
+                        <!-- Name & chips -->
+                        <div class="text-center">
+                            <p class="text-[0.65rem] text-cream font-medium leading-tight truncate max-w-[5rem]"
+                               :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
+                            <p class="text-[0.6rem] text-gold/80" x-text="seat.chips + ' chips'"></p>
+                        </div>
+                        <!-- Round bet (how much this player has put in this round) -->
+                        <div x-show="seat.roundBet > 0" class="mt-0.5">
+                            <span class="text-[0.6rem] text-cream/90 bg-ink/50 px-1.5 py-0.5 rounded" x-text="seat.roundBet"></span>
+                        </div>
+                        <!-- Dealer / Blind markers -->
+                        <div class="flex gap-0.5 mt-0.5">
+                            <div x-show="seat.seat === dealerSeat" class="dealer-btn">D</div>
+                            <span x-show="seat.isSmallBlind" class="action-badge bg-blue-800/80 text-blue-200">SB</span>
+                            <span x-show="seat.isBigBlind" class="action-badge bg-purple-800/80 text-purple-200">BB</span>
+                        </div>
+                        <!-- Last action badge -->
+                        <div x-show="seat.lastAction" class="mt-0.5">
+                            <span class="action-badge"
+                                  :class="{
+                                      'bg-burgundy/80 text-cream': seat.lastAction === 'fold',
+                                      'bg-gold/80 text-ink': seat.lastAction === 'bet' || seat.lastAction === 'raise',
+                                      'bg-patina/80 text-cream': seat.lastAction === 'call',
+                                      'bg-stone/60 text-cream': seat.lastAction === 'check',
+                                      'bg-burgundy text-cream': seat.lastAction === 'all_in',
+                                  }"
+                                  x-text="seat.lastAction === 'all_in' ? 'ALL IN' : seat.lastAction"></span>
+                        </div>
+                        <!-- Online indicator -->
+                        <span class="w-1.5 h-1.5 rounded-full absolute -top-0.5 -right-0.5"
+                              :class="seat.is_online ? 'bg-patina' : 'bg-stone'"></span>
+                        <!-- Timer bar (only for active seat) -->
+                        <div x-show="seat.seat === activeSeat && timeRemaining > 0 && timeout > 0" class="w-full mt-0.5">
+                            <div class="timer-bar" :class="timeRemaining < 5 ? 'low' : ''"
+                                 :style="'width: ' + (timeRemaining / timeout * 100) + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- My hole cards -->
+            <div class="flex justify-center gap-2 mt-4" x-show="myCards.length > 0">
+                <template x-for="(card, i) in myCards" :key="i">
+                    <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"
+                         style="width: 60px; height: 84px; font-size: 1.1rem; margin: 0 2px;"></div>
+                </template>
+            </div>
+
+            <!-- Player's chip count -->
+            <div x-show="tableStatus === 'active'" class="mt-2 text-center">
+                <span class="text-xs text-slate">Your Chips:</span>
+                <span class="text-sm font-venus-medium text-gold" x-text="myChips"></span>
+            </div>
+
+            <!-- Action bar -->
+            <div x-show="isMyTurn && validActions.length > 0" class="mt-4 vintage-card py-3" x-transition>
+                <p class="text-xs text-gold uppercase tracking-wider mb-3 font-venus-medium">Your Action</p>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="va in validActions" :key="va.action">
+                        <div>
+                            <button x-show="va.action === 'fold'"
+                                    @click="sendAction('fold')"
+                                    class="vintage-btn-outline py-2 px-4 text-xs border-burgundy text-burgundy hover:bg-burgundy hover:text-cream">
+                                Fold
+                            </button>
+                            <button x-show="va.action === 'check'"
+                                    @click="sendAction('check')"
+                                    class="vintage-btn-outline py-2 px-4 text-xs">
+                                Check
+                            </button>
+                            <button x-show="va.action === 'call'"
+                                    @click="sendAction('call', va.amount)"
+                                    class="vintage-btn py-2 px-4 text-xs">
+                                Call <span x-text="va.amount"></span>
+                            </button>
+                            <button x-show="va.action === 'all_in'"
+                                    @click="sendAction('all_in', va.amount)"
+                                    class="vintage-btn py-2 px-4 text-xs bg-burgundy hover:bg-burgundy/80">
+                                All In <span x-text="va.amount"></span>
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                <!-- Bet/Raise slider -->
+                <template x-for="va in validActions" :key="'slider-' + va.action">
+                    <div x-show="va.action === 'bet' || va.action === 'raise'" class="mt-3 space-y-2">
+                        <div class="flex items-center gap-3">
+                            <input type="range" class="raise-slider flex-1"
+                                   :min="va.min" :max="va.max"
+                                   x-model.number="raiseAmount"
+                                   @input="raiseAmount = Math.max($event.target.value, va.min)">
+                            <input type="number" class="vintage-input w-20 text-center text-sm py-1"
+                                   :min="va.min" :max="va.max"
+                                   x-model.number="raiseAmount">
+                        </div>
+                        <div class="flex gap-2">
+                            <button @click="raiseAmount = va.min" class="vintage-btn-outline py-1.5 px-3 text-xs">Min</button>
+                            <button @click="raiseAmount = Math.floor((va.min + va.max) / 2)" class="vintage-btn-outline py-1.5 px-3 text-xs">1/2</button>
+                            <button @click="raiseAmount = va.max" class="vintage-btn-outline py-1.5 px-3 text-xs">Max</button>
+                            <button @click="sendAction(va.action, raiseAmount)"
+                                    class="vintage-btn py-2 px-5 text-xs ml-auto">
+                                <span x-text="va.action === 'bet' ? 'Bet' : 'Raise to'"></span>
+                                <span x-text="raiseAmount"></span>
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Waiting / Pending state -->
+            <div x-show="tableStatus === 'pending'" class="mt-4 vintage-card py-4 text-center">
+                <p class="text-sm text-slate mb-2">Waiting for players to join...</p>
+                <p class="text-xs text-slate mb-3">
+                    <span x-text="seats.filter(s => s.username && s.status !== 'invited').length"></span>/<span x-text="maxPlayers"></span> players joined
+                </p>
+                <button x-show="isCreator && seats.filter(s => s.username && s.status !== 'invited').length >= minPlayers"
+                        @click="startGame()"
+                        class="vintage-btn py-2 px-6 text-sm">
+                    Start Game
+                </button>
+                <form x-show="isCreator" method="post" action="{% url 'poker_leave' table.pk %}" class="mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-burgundy hover:text-burgundy/70">Cancel Table</button>
+                </form>
+                <form x-show="!isCreator" method="post" action="{% url 'poker_leave' table.pk %}" class="mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-burgundy hover:text-burgundy/70">Leave Table</button>
+                </form>
+            </div>
+
+            <!-- Game over -->
+            <div x-show="gameOver" class="mt-4 vintage-card py-4 border-l-4 border-gold" x-transition>
+                <p class="font-serif text-lg font-bold text-gold">Game Over</p>
+                <div class="mt-2 space-y-1">
+                    <template x-for="p in payoutResults" :key="p.username">
+                        <div class="flex justify-between text-sm">
+                            <span x-text="p.username"></span>
+                            <span :class="p.amount > 0 ? 'text-patina font-bold' : 'text-slate'" x-text="p.amount > 0 ? '+' + p.amount + ' LC' : '0 LC'"></span>
+                        </div>
+                    </template>
+                </div>
+                <a href="{% url 'poker_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-4">
+            <!-- Table info -->
+            <div class="vintage-card py-3">
+                <p class="text-xs text-slate uppercase tracking-wide mb-2">Table Info</p>
+                <div class="space-y-1 text-xs">
+                    <div class="flex justify-between"><span class="text-slate">Buy-in</span><span>{{ table.stake }} LC</span></div>
+                    <div class="flex justify-between"><span class="text-slate">Blinds</span><span>{{ table.small_blind }}/{{ table.big_blind }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate">Starting Chips</span><span>{{ table.starting_chips }}</span></div>
+                    <div class="flex justify-between"><span class="text-slate">Hand</span><span x-text="'#' + handNumber"></span></div>
+                </div>
+            </div>
+
+            <!-- Players list -->
+            <div class="vintage-card py-3">
+                <p class="text-xs text-slate uppercase tracking-wide mb-2">Players</p>
+                <div class="space-y-2">
+                    <template x-for="seat in seats.filter(s => s.username)" :key="seat.username">
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="w-2 h-2 rounded-full flex-shrink-0" :class="seat.is_online ? 'bg-patina' : 'bg-stone'"></span>
+                            <span class="flex-1 truncate" x-text="seat.display_name || seat.username"></span>
+                            <span class="text-slate" x-text="seat.chips + ' chips'"></span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Rebuy button -->
+            <div x-show="canRebuy" class="vintage-card py-3">
+                <button @click="sendRebuy()" class="vintage-btn w-full py-2 text-xs">
+                    Rebuy ({{ table.stake }} LC)
+                </button>
+                <p class="text-[0.6rem] text-slate text-center mt-1">You're out of chips</p>
+            </div>
+
+            <!-- Vote to end -->
+            <div x-show="tableStatus === 'active'" class="vintage-card py-3">
+                <button @click="sendVoteEnd(true)" x-show="!hasVotedEnd"
+                        class="vintage-btn-outline w-full py-2 text-xs">Vote to End Game</button>
+                <p x-show="hasVotedEnd" class="text-xs text-slate text-center">You voted to end.</p>
+                <div x-show="endVoteActive" class="mt-2">
+                    <p class="text-xs text-slate">
+                        Votes: <span x-text="endVoteYes"></span>/<span x-text="endVoteTotal"></span>
+                    </p>
+                    <button @click="sendVoteEnd(false)" x-show="hasVotedEnd"
+                            class="text-xs text-burgundy hover:text-burgundy/70 mt-1">Cancel Vote</button>
+                </div>
+            </div>
+
+            <!-- Hand history -->
+            <div class="vintage-card py-3">
+                <p class="text-xs text-slate uppercase tracking-wide mb-2">Hand Log</p>
+                <div class="max-h-48 overflow-y-auto space-y-0.5" id="hand-log">
+                    <template x-for="(entry, i) in handLog.slice(-20)" :key="i">
+                        <p class="text-[0.65rem] text-slate" x-text="entry"></p>
+                    </template>
+                    <p x-show="handLog.length === 0" class="text-xs text-slate">No actions yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Showdown overlay -->
+    <div x-show="showShowdown" x-transition class="fixed inset-0 bg-ink/60 flex items-center justify-center z-50" @click.self="showShowdown = false">
+        <div class="vintage-card max-w-md w-full mx-4 py-5">
+            <h3 class="font-serif text-lg font-bold text-gold text-center mb-4">Showdown</h3>
+            <div class="space-y-3">
+                <template x-for="r in showdownResults" :key="r.username">
+                    <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded" :class="r.winnings > 0 ? 'bg-gold/10' : ''">
+                        <div>
+                            <p class="text-sm font-medium" x-text="r.username"></p>
+                            <p class="text-xs text-slate" x-text="r.hand_name"></p>
+                            <div class="flex gap-1 mt-1" x-show="r.cards">
+                                <template x-for="card in (r.cards || '').split(',')" :key="card">
+                                    <span class="text-xs font-mono px-1 py-0.5 border border-stone rounded" :class="cardColorClass(card)" x-text="formatCard(card)"></span>
+                                </template>
+                            </div>
+                        </div>
+                        <span class="text-sm font-bold" :class="r.winnings > 0 ? 'text-patina' : 'text-slate'"
+                              x-text="r.winnings > 0 ? '+' + r.winnings : '0'"></span>
+                    </div>
+                </template>
+            </div>
+            <button @click="showShowdown = false" class="vintage-btn w-full mt-4 py-2 text-xs">Continue</button>
+        </div>
+    </div>
+</div>
+
+<script src="{% static 'js/poker-app.js' %}"></script>
+{% endblock %}
