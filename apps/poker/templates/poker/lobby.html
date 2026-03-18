@@ -9,9 +9,18 @@
     </div>
 
     <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
-        <a href="{% url 'coinflip_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Coin Flip</a>
-        <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase text-slate hover:text-gold transition-colors">Chess</a>
-        <a href="{% url 'poker_lobby' %}" class="flex-1 text-center py-2.5 text-xs tracking-wide uppercase border-t-3 border-t-gold text-gold">Poker</a>
+        <a href="{% url 'coinflip_lobby' %}" class="flex-1 text-center py-3 text-xs tracking-wide uppercase border-r border-stone/50 dark:border-slate/50 text-slate hover:text-gold transition-colors flex flex-col items-center gap-0.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 6v8M8 8h4M8 12h4" stroke-linecap="round"/></svg>
+            Coin Flip
+        </a>
+        <a href="{% url 'chess_lobby' %}" class="flex-1 text-center py-3 text-xs tracking-wide uppercase border-r border-stone/50 dark:border-slate/50 text-slate hover:text-gold transition-colors flex flex-col items-center gap-0.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M8 3.5C7 3.5 6 4.2 5.5 5L4 7.5h2.5L6 9h2L7 12h6l-1-3h2l-.5-1.5H16L14.5 5C14 4.2 13 3.5 12 3.5H8z"/><rect x="5" y="13.5" width="10" height="2" rx="1"/><rect x="4" y="15.5" width="12" height="1.5" rx="0.75"/></svg>
+            Chess
+        </a>
+        <a href="{% url 'poker_lobby' %}" class="flex-1 text-center py-3 text-xs tracking-wide uppercase border-t-3 border-t-gold text-gold flex flex-col items-center gap-0.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="4"/><line x1="3" y1="10" x2="6" y2="10" stroke-linecap="round"/><line x1="14" y1="10" x2="17" y2="10" stroke-linecap="round"/><line x1="10" y1="3" x2="10" y2="6" stroke-linecap="round"/><line x1="10" y1="14" x2="10" y2="17" stroke-linecap="round"/></svg>
+            Poker
+        </a>
     </div>
 
     <div class="vintage-card mb-10" x-data="{ showAdvanced: false, isPublic: true, allowRebuys: false, submitting: false, invitedUsers: [], inviteSearch: '' }">
@@ -150,7 +159,7 @@
 
     {% if active_tables %}
     <div class="mb-10">
-        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Your Active Tables</h2>
+        <h2 class="vintage-section-title">Your Active Tables</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for t in active_tables %}
             <div class="flex items-center justify-between gap-3 px-4 py-3">
@@ -171,7 +180,7 @@
 
     {% if invited_tables %}
     <div class="mb-10">
-        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Your Invites</h2>
+        <h2 class="vintage-section-title">Your Invites</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for t in invited_tables %}
             <div class="flex items-center justify-between gap-3 px-4 py-3">
@@ -196,7 +205,7 @@
 
     {% if public_tables %}
     <div class="mb-10">
-        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Open Tables</h2>
+        <h2 class="vintage-section-title">Open Tables</h2>
         <div class="border border-gold/30 divide-y divide-gold/20">
             {% for t in public_tables %}
             <div class="flex items-center justify-between gap-3 px-4 py-3">
@@ -226,7 +235,7 @@
 
     {% if recent_tables %}
     <div>
-        <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate mb-4">Recent Poker Results</h2>
+        <h2 class="vintage-section-title">Recent Poker Results</h2>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for t in recent_tables %}
             <div class="flex items-center justify-between gap-3 px-4 py-3">
@@ -241,9 +250,7 @@
         </div>
     </div>
     {% elif not public_tables and not invited_tables and not active_tables %}
-    <div class="text-center py-8">
-        <p class="text-slate text-sm">No poker tables yet. Create one above.</p>
-    </div>
+    <div class="vintage-empty-state">No poker tables yet. Create one above.</div>
     {% endif %}
 </div>
 {% endblock %}

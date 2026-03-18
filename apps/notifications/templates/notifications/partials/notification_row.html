@@ -14,13 +14,13 @@
             <p class="text-sm text-slate mt-0.5">{{ n.message }}</p>
             <p class="text-xs text-slate mt-1">{{ n.created_at|timesince }} ago</p>
         </div>
-        <div class="flex items-center gap-2 flex-shrink-0 mt-1">
+        <div class="flex items-center gap-2.5 flex-shrink-0 mt-0.5">
             {% if not n.is_read %}
             <form method="post" action="{% url 'notification_mark_read' n.pk %}" class="notif-mark-read">
                 {% csrf_token %}
                 <button type="submit"
-                        class="w-2 h-2 rounded-full bg-gold"
-                        title="Mark read"
+                        class="w-2.5 h-2.5 rounded-full bg-gold ring-2 ring-offset-1 ring-transparent hover:ring-gold/50 dark:ring-offset-walnut transition-all"
+                        title="Mark as read"
                         hx-post="{% url 'notification_mark_read' n.pk %}"
                         hx-target="closest .notif-row"
                         hx-swap="outerHTML"></button>
@@ -29,12 +29,14 @@
             <form method="post" action="{% url 'notification_delete' n.pk %}">
                 {% csrf_token %}
                 <button type="submit"
-                        class="text-xs text-slate hover:text-burgundy"
-                        title="Delete"
+                        class="text-stone dark:text-slate hover:text-burgundy transition-colors"
+                        title="Delete notification"
                         hx-post="{% url 'notification_delete' n.pk %}"
                         hx-target="closest .notif-row"
                         hx-swap="outerHTML"
-                        hx-confirm="Delete this notification?">&times;</button>
+                        hx-confirm="Delete this notification?">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </form>
         </div>
     </div>

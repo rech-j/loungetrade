@@ -574,17 +574,3 @@ function pokerApp() {
         },
     };
 }
-
-// Auto-init: wait for Alpine and pokerApp to be available, then init the container
-(function () {
-    var container = document.querySelector('[data-table-id]');
-    if (!container) return;
-    function tryInit() {
-        if (window.Alpine && typeof pokerApp !== 'undefined') {
-            window.Alpine.initTree(container);
-        } else {
-            setTimeout(tryInit, 20);
-        }
-    }
-    tryInit();
-}());

@@ -807,17 +807,3 @@ function chessApp() {
         },
     };
 }
-
-// Auto-init: wait for Alpine, chessApp, and Chess to be available, then init the container
-(function () {
-    var container = document.querySelector('[data-game-id]');
-    if (!container) return;
-    function tryInit() {
-        if (window.Alpine && typeof chessApp !== 'undefined' && typeof Chess !== 'undefined') {
-            window.Alpine.initTree(container);
-        } else {
-            setTimeout(tryInit, 20);
-        }
-    }
-    tryInit();
-}());

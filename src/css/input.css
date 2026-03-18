@@ -5,6 +5,33 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* ─── Subtle paper grain on body background ─── */
+body {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23g)' opacity='0.032'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  background-attachment: fixed;
+}
+
+/* ─── Page entrance animation ─── */
+@keyframes page-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+main {
+  animation: page-enter 260ms ease-out both;
+}
+
+/* ─── Notification badge subtle scale pulse ─── */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  55%       { transform: scale(1.25); }
+}
+
+.notif-badge-wrapper {
+  animation: badge-pulse 2.4s ease-in-out infinite;
+}
+
 @theme {
   --color-gold: #c9a84c;
   --color-gold-light: #e8d5a3;
@@ -186,6 +213,67 @@
   }
 
   [x-cloak] { display: none !important; }
+
+  /* ─── Section title: small-caps label with trailing gold rule ─── */
+  .vintage-section-title {
+    font-family: var(--font-venus-medium);
+    font-size: 0.6875rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-slate);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-bottom: 1rem;
+  }
+  .vintage-section-title::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--color-stone), transparent);
+  }
+  .dark .vintage-section-title { color: var(--color-stone); }
+  .dark .vintage-section-title::after {
+    background: linear-gradient(90deg, var(--color-slate), transparent);
+  }
+
+  /* ─── Generic table row with hover tint ─── */
+  .vintage-table-row {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    transition: background 120ms;
+  }
+  .vintage-table-row:hover {
+    background: color-mix(in oklab, var(--color-gold) 4%, transparent);
+  }
+
+  /* ─── Notification row hover tint ─── */
+  .notif-row {
+    transition: background 120ms;
+  }
+  .notif-row:hover {
+    background: color-mix(in oklab, var(--color-gold) 4%, transparent);
+  }
+
+  /* ─── Empty state: centered with diamond glyph above ─── */
+  .vintage-empty-state {
+    padding: 3rem 2rem;
+    text-align: center;
+    border: 1px solid var(--color-stone);
+    color: var(--color-slate);
+    font-size: 0.875rem;
+  }
+  .vintage-empty-state::before {
+    content: "◆";
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-stone);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.5em;
+    opacity: 0.6;
+  }
+  .dark .vintage-empty-state { border-color: var(--color-slate); }
 
 }
 

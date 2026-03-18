@@ -1,26 +1,29 @@
+{% with un=request.resolver_match.url_name %}
 <nav x-data="{ open: false }" class="bg-cream/95 dark:bg-ink/95 backdrop-blur-sm border-b-2 border-gold/30 dark:border-gold/20 sticky top-0 z-50">
     <div class="max-w-4xl lg:max-w-5xl mx-auto px-4">
         <div class="flex items-center justify-between h-14">
-            <a href="{% url 'landing' %}" class="flex items-center gap-2.5 text-gold tracking-wider">
+            <a href="{% url 'landing' %}" class="flex items-center gap-2 text-gold tracking-wider">
+                <svg class="w-3 h-3 flex-shrink-0" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
                 <span class="hidden sm:inline text-sm uppercase tracking-[0.2em] font-venus-medium">Lounge Coin</span>
             </a>
 
             {% if request.user.is_authenticated %}
             <div class="hidden md:flex items-center gap-1 text-sm" hx-boost="true">
-                <a href="{% url 'profile' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Profile</a>
-                <a href="{% url 'trade' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Exchange</a>
-                <a href="{% url 'coinflip_lobby' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Gamba</a>
-                <a href="{% url 'leaderboard' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Board</a>
+                <a href="{% url 'profile' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'profile' or un == 'profile_edit' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Profile</a>
+                <a href="{% url 'trade' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'trade' or un == 'history' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Exchange</a>
+                <a href="{% url 'coinflip_lobby' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'coinflip_lobby' or un == 'coinflip_play' or un == 'chess_lobby' or un == 'chess_play' or un == 'poker_lobby' or un == 'poker_play' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Gamba</a>
+                <a href="{% url 'leaderboard' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'leaderboard' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Board</a>
                 {% if request.user.profile.is_admin_user %}
-                <a href="{% url 'mint' %}" class="px-3 py-1.5 text-slate hover:text-gold transition-colors tracking-wide uppercase text-xs">Mint</a>
+                <a href="{% url 'mint' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'mint' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Mint</a>
                 {% endif %}
             </div>
 
             <div class="hidden md:flex items-center gap-3">
-                <span class="vintage-badge"
+                <span class="vintage-badge bg-gold/10 dark:bg-gold/[0.08] gap-1"
                       hx-get="{% url 'balance_check' %}"
                       hx-trigger="every 15s"
                       hx-swap="innerHTML">
+                    <svg class="w-2 h-2 opacity-70" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
                     {{ request.user.profile.balance }} LC
                 </span>
 
@@ -52,6 +55,9 @@
                          x-transition
                          role="menu"
                          class="absolute right-0 mt-2 w-80 bg-cream dark:bg-walnut border border-stone dark:border-slate shadow-lg overflow-hidden">
+                        <div class="flex items-center justify-between px-4 py-2.5 border-b border-stone dark:border-slate bg-parchment/60 dark:bg-walnut">
+                            <span class="text-[10px] font-venus-medium uppercase tracking-widest text-slate">Notifications</span>
+                        </div>
                         <div hx-get="{% url 'notifications_unread' %}"
                              hx-trigger="load"
                              hx-swap="innerHTML">
@@ -134,3 +140,4 @@
         {% endif %}
     </div>
 </nav>
+{% endwith %}

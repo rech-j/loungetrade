@@ -84,6 +84,9 @@ class PokerPlayer(models.Model):
     coins_invested = models.PositiveIntegerField(default=0)
 
     class Meta:
+        indexes = [
+            models.Index(fields=['user', 'status'], name='pokerplayer_user_status'),
+        ]
         constraints = [
             models.UniqueConstraint(fields=['table', 'seat'], name='unique_table_seat'),
             models.UniqueConstraint(fields=['table', 'user'], name='unique_table_user'),

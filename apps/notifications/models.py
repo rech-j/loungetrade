@@ -29,7 +29,12 @@ class Notification(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', 'is_read']),
+            models.Index(
+                fields=['user', '-created_at'],
+                condition=models.Q(is_read=False),
+                name='notif_user_unread',
+            ),
+            models.Index(fields=['user', '-created_at'], name='notif_user_recent'),
         ]
 
     def __str__(self):
