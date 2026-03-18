@@ -23,6 +23,7 @@ function pokerApp() {
         isMyTurn: false,
         myChips: 0,
         raiseAmount: 0,
+        cardsRevealed: [false, false],
         timeout: 0,
         timeRemaining: 0,
         _timerInterval: null,
@@ -236,6 +237,7 @@ function pokerApp() {
 
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
+                this.cardsRevealed = [true, true]; // already in hand, no flip
             }
 
             if (data.hand) {
@@ -279,9 +281,13 @@ function pokerApp() {
                 }
             }
 
-            // Set hole cards
+            // Set hole cards — start face-down, then flip sequentially
+            this.cardsRevealed = [false, false];
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
+                // Staggered reveal
+                setTimeout(() => this.cardsRevealed = [true, false], 400);
+                setTimeout(() => this.cardsRevealed = [true, true], 800);
             } else {
                 this.myCards = [];
             }
@@ -357,16 +363,21 @@ function pokerApp() {
         },
 
         startTimer(seconds) {
-            if (this._timerInterval) clearInterval(this._timerInterval);
+            if (this._timerRaf) cancelAnimationFrame(this._timerRaf);
             this.timeRemaining = seconds;
             if (seconds <= 0) return;
 
-            this._timerInterval = setInterval(() => {
-                this.timeRemaining = Math.max(0, this.timeRemaining - 1);
-                if (this.timeRemaining <= 0) {
-                    clearInterval(this._timerInterval);
+            this._timerStart = performance.now();
+            this._timerDuration = seconds;
+
+            const tick = (now) => {
+                const elapsed = (now - this._timerStart) / 1000;
+                this.timeRemaining = Math.max(0, this._timerDuration - elapsed);
+                if (this.timeRemaining > 0) {
+                    this._timerRaf = requestAnimationFrame(tick);
                 }
-            }, 1000);
+            };
+            this._timerRaf = requestAnimationFrame(tick);
         },
 
         handlePlayerActed(data) {

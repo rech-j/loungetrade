@@ -92,8 +92,48 @@
     background-size: 10px 10px;
     border-color: #c9a84c;
 }
-.poker-card.hearts, .poker-card.diamonds { color: #c62828; }
-.poker-card.clubs, .poker-card.spades { color: #1a1410; }
+
+/* Hole-card flip */
+.hole-card-flip {
+    perspective: 400px;
+    width: 60px;
+    height: 84px;
+}
+.hole-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.45s ease-in-out;
+    transform-style: preserve-3d;
+}
+.hole-card-flip.revealed .hole-card-inner {
+    transform: rotateY(180deg);
+}
+.hole-card-front,
+.hole-card-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 4px;
+    border: 1px solid #888;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+.hole-card-back {
+    background: linear-gradient(135deg, #8b1a1a 25%, #722f37 50%, #8b1a1a 75%);
+    background-size: 10px 10px;
+    border-color: #c9a84c;
+}
+.hole-card-front {
+    background: white;
+    transform: rotateY(180deg);
+}
+.poker-card.hearts, .poker-card.diamonds, .hole-card-front.hearts, .hole-card-front.diamonds { color: #c62828; }
+.poker-card.clubs, .poker-card.spades, .hole-card-front.clubs, .hole-card-front.spades { color: #1a1410; }
 
 /* Community cards */
 .community-area {
@@ -231,10 +271,10 @@
             <span x-text="isMyTurn ? 'Your turn to act' : 'Waiting for ' + (seats.find(s => s.seat === activeSeat)?.display_name || seats.find(s => s.seat === activeSeat)?.username || '...') + '...'"></span>
             <span x-show="timeRemaining > 0 && timeout > 0" class="text-xs tabular-nums"
                   :class="timeRemaining < 5 ? 'text-burgundy font-bold' : 'text-slate'"
-                  x-text="timeRemaining + 's'"></span>
+                  x-text="Math.ceil(timeRemaining) + 's'"></span>
         </div>
         <div x-show="timeRemaining > 0 && timeout > 0" class="mt-1.5 w-full h-1 bg-stone/20 rounded-full overflow-hidden">
-            <div class="h-full rounded-full transition-all duration-1000 linear"
+            <div class="h-full rounded-full"
                  :class="timeRemaining < 5 ? 'bg-burgundy' : 'bg-gold'"
                  :style="'width: ' + (timeRemaining / timeout * 100) + '%'"></div>
         </div>
@@ -315,11 +355,16 @@
                 </template>
             </div>
 
-            <!-- My hole cards -->
+            <!-- My hole cards (flip reveal) -->
             <div class="flex justify-center gap-2 mt-4" x-show="myCards.length > 0">
                 <template x-for="(card, i) in myCards" :key="i">
-                    <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"
-                         style="width: 60px; height: 84px; font-size: 1.1rem; margin: 0 2px;"></div>
+                    <div class="hole-card-flip"
+                         :class="(cardsRevealed[i]) ? 'revealed' : ''">
+                        <div class="hole-card-inner">
+                            <div class="hole-card-back"></div>
+                            <div class="hole-card-front" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
+                        </div>
+                    </div>
                 </template>
             </div>
 
