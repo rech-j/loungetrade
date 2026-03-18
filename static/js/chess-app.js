@@ -24,7 +24,7 @@ function chessApp() {
         _touchDragStartY: 0,
         pendingPromotion: null, // { from, to } awaiting piece choice
 
-        currentTurn: 'w',      // 'w' | 'b' — reactive mirror of chess.turn()
+        currentTurn: 'w',      // 'w' | 'b' - reactive mirror of chess.turn()
         mySide: null,          // 'white' | 'black' | null (spectator/pending)
         myName: 'You',
         opponentName: 'Opponent',
@@ -677,7 +677,7 @@ function chessApp() {
             }
         },
 
-        // Move animation — uses a fixed ghost so Alpine's DOM patches don't interfere
+        // Move animation - uses a fixed ghost so Alpine's DOM patches don't interfere
         animateMove(from, to, callback) {
             if (this._animating) { callback(); return; }
 

@@ -281,7 +281,7 @@ function pokerApp() {
                 }
             }
 
-            // Set hole cards — start face-down, then flip sequentially
+            // Set hole cards - start face-down, then flip sequentially
             this.cardsRevealed = [false, false];
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);

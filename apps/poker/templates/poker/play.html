@@ -4,7 +4,7 @@
 
 {% block content %}
 <style>
-/* Poker table wrapper — seats live in the padding around the felt */
+/* Poker table wrapper - seats live in the padding around the felt */
 .poker-table-area {
     position: relative;
     padding: 100px 60px 80px;
@@ -14,7 +14,7 @@
     .poker-table-area { padding: 110px 90px 90px; }
 }
 
-/* Poker table felt — visual surface for pot & community cards only */
+/* Poker table felt - visual surface for pot & community cards only */
 .poker-table-felt {
     background: radial-gradient(ellipse at center, #1a5c32 0%, #0f3d22 80%, #0a2a17 100%);
     border: 4px solid #c9a84c;
@@ -24,7 +24,7 @@
     box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Player seat positions — positioned relative to .poker-table-area (outside the felt) */
+/* Player seat positions - positioned relative to .poker-table-area (outside the felt) */
 .poker-seat {
     position: absolute;
     display: flex;
@@ -195,7 +195,7 @@
     border: 2px solid #a88a3c;
 }
 
-/* Active seat glow — subtle background highlight on the whole seat */
+/* Active seat glow - subtle background highlight on the whole seat */
 .active-seat-glow {
     background: rgba(201,168,76,0.1);
     border-radius: 8px;
@@ -230,7 +230,7 @@
 .community-area .poker-card:nth-child(4) { animation-delay: 0.24s; }
 .community-area .poker-card:nth-child(5) { animation-delay: 0.32s; }
 
-/* Showdown modal — solid opaque background so felt doesn't bleed through */
+/* Showdown modal - solid opaque background so felt doesn't bleed through */
 .showdown-modal {
     background: #f4f0e8;
 }
@@ -285,7 +285,7 @@
         <div>
             <!-- Poker table area (wrapper with padding for seats outside the felt) -->
             <div class="poker-table-area mx-auto" style="max-width: 700px;">
-                <!-- Felt surface — pot & community cards only -->
+                <!-- Felt surface - pot & community cards only -->
                 <div class="poker-table-felt">
                     <!-- Pot display -->
                     <div class="pot-display">
@@ -330,7 +330,7 @@
                         <p class="text-[0.6rem] text-cream font-medium leading-tight truncate w-full text-center mt-0.5"
                            :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
                         <p class="text-[0.55rem] text-gold/80 text-center" x-text="seat.chips + ' chips'"></p>
-                        <!-- Markers row: blinds, round bet, action — all inline -->
+                        <!-- Markers row: blinds, round bet, action - all inline -->
                         <div class="flex flex-wrap items-center justify-center gap-0.5 mt-0.5">
                             <span x-show="seat.isSmallBlind" class="action-badge bg-blue-800/80 text-blue-200">SB</span>
                             <span x-show="seat.isBigBlind" class="action-badge bg-purple-800/80 text-purple-200">BB</span>
@@ -573,7 +573,7 @@
                         @click="sendShowdownReady()"
                         class="vintage-btn w-full py-2 text-xs">Ready</button>
                 <p x-show="!iWasFolded && showdownReady[myUsername]"
-                   class="text-xs text-patina text-center font-venus-medium">You are ready — waiting for others...</p>
+                   class="text-xs text-patina text-center font-venus-medium">You are ready - waiting for others...</p>
                 <p x-show="iWasFolded"
                    class="text-xs text-slate text-center">Waiting for showdown players to ready up...</p>
             </div>
