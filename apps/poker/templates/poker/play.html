@@ -4,33 +4,71 @@
 
 {% block content %}
 <style>
-/* Poker table */
+/* Poker table wrapper - seats live in the padding around the felt */
+.poker-table-area {
+    position: relative;
+    padding: 100px 60px 80px;
+    margin-bottom: 90px; /* seats overflow ~50% of their height below the div; this prevents collision with content below */
+}
+@media (min-width: 640px) {
+    .poker-table-area { padding: 110px 90px 90px; }
+}
+
+/* Poker table felt - visual surface for pot & community cards only */
 .poker-table-felt {
     background: radial-gradient(ellipse at center, #1a5c32 0%, #0f3d22 80%, #0a2a17 100%);
     border: 4px solid #c9a84c;
     border-radius: 120px;
-    min-height: 280px;
+    min-height: 260px;
     position: relative;
     box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Player seat positions around the table */
+/* Player seat positions - positioned relative to .poker-table-area (outside the felt) */
 .poker-seat {
     position: absolute;
     display: flex;
     flex-direction: column;
     align-items: center;
-    transform: translate(-50%, -50%);
     z-index: 2;
+    width: 6rem;
 }
-.seat-0 { bottom: 2%; left: 50%; transform: translate(-50%, 0); }
-.seat-1 { bottom: 10%; left: 12%; transform: translate(-50%, 0); }
-.seat-2 { top: 22%; left: 8%; transform: translate(-50%, -50%); }
-.seat-3 { top: 4%; left: 28%; transform: translate(-50%, 0); }
-.seat-4 { top: 4%; left: 50%; transform: translate(-50%, 0); }
-.seat-5 { top: 4%; left: 72%; transform: translate(-50%, 0); }
-.seat-6 { top: 22%; right: 8%; left: auto; transform: translate(50%, -50%); }
-.seat-7 { bottom: 10%; right: 12%; left: auto; transform: translate(50%, 0); }
+
+/* Dealer token overlaid on avatar */
+.dealer-overlay {
+    position: absolute;
+    bottom: -6px;
+    left: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #c9a84c;
+    color: #1a1410;
+    font-size: 0.5rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #a88a3c;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    z-index: 3;
+}
+/* Bottom center (hero) */
+.seat-0 { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
+/* Bottom-left */
+.seat-1 { bottom: 6%; left: 8%; transform: translate(0%, 50%); }
+/* Left side */
+.seat-2 { top: 50%; left: 0; transform: translate(-30%, -50%); }
+/* Top-left */
+.seat-3 { top: 0; left: 12%; transform: translate(0%, -40%); }
+/* Top center */
+.seat-4 { top: 0; left: 50%; transform: translate(-50%, -40%); }
+/* Top-right */
+.seat-5 { top: 0; right: 12%; left: auto; transform: translate(0%, -40%); }
+/* Right side */
+.seat-6 { top: 50%; right: 0; left: auto; transform: translate(30%, -50%); }
+/* Bottom-right */
+.seat-7 { bottom: 6%; right: 8%; left: auto; transform: translate(0%, 50%); }
 
 /* Card styling */
 .poker-card {
@@ -54,8 +92,48 @@
     background-size: 10px 10px;
     border-color: #c9a84c;
 }
-.poker-card.hearts, .poker-card.diamonds { color: #c62828; }
-.poker-card.clubs, .poker-card.spades { color: #1a1410; }
+
+/* Hole-card flip */
+.hole-card-flip {
+    perspective: 400px;
+    width: 60px;
+    height: 84px;
+}
+.hole-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.45s ease-in-out;
+    transform-style: preserve-3d;
+}
+.hole-card-flip.revealed .hole-card-inner {
+    transform: rotateY(180deg);
+}
+.hole-card-front,
+.hole-card-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 4px;
+    border: 1px solid #888;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+.hole-card-back {
+    background: linear-gradient(135deg, #8b1a1a 25%, #722f37 50%, #8b1a1a 75%);
+    background-size: 10px 10px;
+    border-color: #c9a84c;
+}
+.hole-card-front {
+    background: white;
+    transform: rotateY(180deg);
+}
+.poker-card.hearts, .poker-card.diamonds, .hole-card-front.hearts, .hole-card-front.diamonds { color: #c62828; }
+.poker-card.clubs, .poker-card.spades, .hole-card-front.clubs, .hole-card-front.spades { color: #1a1410; }
 
 /* Community cards */
 .community-area {
@@ -77,21 +155,6 @@
     z-index: 1;
 }
 
-/* Dealer button */
-.dealer-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #c9a84c;
-    color: #1a1410;
-    font-size: 0.55rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #a88a3c;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
 
 /* Action badges */
 .action-badge {
@@ -132,13 +195,16 @@
     border: 2px solid #a88a3c;
 }
 
-/* Active seat glow */
+/* Active seat glow - subtle background highlight on the whole seat */
 .active-seat-glow {
+    background: rgba(201,168,76,0.1);
+    border-radius: 8px;
+    padding: 4px;
     animation: seat-pulse 1.5s ease-in-out infinite;
 }
 @keyframes seat-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(201,168,76,0.8); }
-    50% { box-shadow: 0 0 0 5px rgba(201,168,76,0.3); }
+    0%, 100% { box-shadow: 0 0 0 1px rgba(201,168,76,0.5); }
+    50% { box-shadow: 0 0 0 3px rgba(201,168,76,0.2); }
 }
 
 /* Timer bar */
@@ -149,6 +215,28 @@
     border-radius: 2px;
 }
 .timer-bar.low { background: #722f37; }
+
+/* Card deal animation */
+@keyframes card-deal {
+    from { opacity: 0; transform: translateY(-10px) scale(0.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.community-area .poker-card {
+    animation: card-deal 0.35s ease-out both;
+}
+.community-area .poker-card:nth-child(1) { animation-delay: 0s; }
+.community-area .poker-card:nth-child(2) { animation-delay: 0.08s; }
+.community-area .poker-card:nth-child(3) { animation-delay: 0.16s; }
+.community-area .poker-card:nth-child(4) { animation-delay: 0.24s; }
+.community-area .poker-card:nth-child(5) { animation-delay: 0.32s; }
+
+/* Showdown modal - solid opaque background so felt doesn't bleed through */
+.showdown-modal {
+    background: #f4f0e8;
+}
+.dark .showdown-modal {
+    background: #1a1410;
+}
 </style>
 
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
@@ -157,7 +245,7 @@
      data-username="{{ request.user.username }}"
      data-table-status="{{ table.status }}"
      data-is-creator="{{ is_creator|yesno:'true,false' }}"
-     x-init="init()">
+>
 
     <!-- Header -->
     <div class="flex items-center justify-between mb-4">
@@ -174,30 +262,48 @@
         </div>
     </div>
 
-    <!-- Status messages -->
-    <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
+    <!-- Turn indicator -->
+    <div x-show="tableStatus === 'active' && !gameOver && !showShowdown && activeSeat >= 0"
+         x-transition
+         class="mb-4 px-4 py-2.5 text-sm font-venus-medium border-l-3 transition-colors duration-300"
+         :class="isMyTurn ? 'border-gold bg-gold/15 text-gold' : 'border-stone/40 bg-parchment/50 dark:bg-walnut/50 text-slate'">
+        <div class="flex items-center justify-between">
+            <span x-text="isMyTurn ? 'Your turn to act' : 'Waiting for ' + (seats.find(s => s.seat === activeSeat)?.display_name || seats.find(s => s.seat === activeSeat)?.username || '...') + '...'"></span>
+            <span x-show="timeRemaining > 0 && timeout > 0" class="text-xs tabular-nums"
+                  :class="timeRemaining < 5 ? 'text-burgundy font-bold' : 'text-slate'"
+                  x-text="Math.ceil(timeRemaining) + 's'"></span>
+        </div>
+        <div x-show="timeRemaining > 0 && timeout > 0" class="mt-1.5 w-full h-1 bg-stone/20 rounded-full overflow-hidden">
+            <div class="h-full rounded-full"
+                 :class="timeRemaining < 5 ? 'bg-burgundy' : 'bg-gold'"
+                 :style="'width: ' + (timeRemaining / timeout * 100) + '%'"></div>
+        </div>
+    </div>
     <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
         <div>
-            <!-- Poker table -->
-            <div class="poker-table-felt mx-auto" style="max-width: 700px;">
-                <!-- Pot display -->
-                <div class="pot-display">
-                    <div x-show="pot > 0" class="text-center">
-                        <span class="text-xs text-gold/70 uppercase tracking-wider">Pot</span>
-                        <p class="text-lg font-serif font-bold text-gold" x-text="pot"></p>
+            <!-- Poker table area (wrapper with padding for seats outside the felt) -->
+            <div class="poker-table-area mx-auto" style="max-width: 700px;">
+                <!-- Felt surface - pot & community cards only -->
+                <div class="poker-table-felt">
+                    <!-- Pot display -->
+                    <div class="pot-display">
+                        <div x-show="pot > 0" class="text-center">
+                            <span class="text-xs text-gold/70 uppercase tracking-wider">Pot</span>
+                            <p class="text-lg font-serif font-bold text-gold" x-text="pot"></p>
+                        </div>
+                    </div>
+
+                    <!-- Community cards -->
+                    <div class="community-area">
+                        <template x-for="card in communityCards" :key="card">
+                            <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
+                        </template>
                     </div>
                 </div>
 
-                <!-- Community cards -->
-                <div class="community-area">
-                    <template x-for="(card, i) in communityCards" :key="i">
-                        <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
-                    </template>
-                </div>
-
-                <!-- Player seats -->
+                <!-- Player seats (positioned in the padding area around the felt) -->
                 <template x-for="(seat, i) in seats" :key="i">
                     <div x-show="seat.username"
                          class="poker-seat"
@@ -207,32 +313,30 @@
                             <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
                             <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
                         </div>
-                        <!-- Avatar -->
-                        <div class="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center flex-shrink-0 mb-0.5"
-                             :class="seat.status === 'folded' ? 'border-stone/50 opacity-50' : (seat.status === 'eliminated' ? 'border-burgundy/50 opacity-30' : 'border-gold/60 bg-parchment dark:bg-walnut')">
-                            <img x-show="seat.avatar_url" :src="seat.avatar_url" class="w-full h-full object-cover">
-                            <span x-show="!seat.avatar_url" class="font-serif text-gold text-xs font-bold italic"
-                                  x-text="(seat.display_name || seat.username || '?')[0].toUpperCase()"></span>
+                        <!-- Avatar + online indicator + dealer overlay -->
+                        <div class="relative">
+                            <div class="w-9 h-9 rounded-full border-2 overflow-hidden flex items-center justify-center flex-shrink-0"
+                                 :class="seat.status === 'folded' ? 'border-stone/50 opacity-50' : (seat.status === 'eliminated' ? 'border-burgundy/50 opacity-30' : 'border-gold/60 bg-parchment dark:bg-walnut')">
+                                <img x-show="seat.avatar_url" :src="seat.avatar_url" class="w-full h-full object-cover">
+                                <span x-show="!seat.avatar_url" class="font-serif text-gold text-xs font-bold italic"
+                                      x-text="(seat.display_name || seat.username || '?')[0].toUpperCase()"></span>
+                            </div>
+                            <span class="w-1.5 h-1.5 rounded-full absolute -top-0.5 -right-0.5"
+                                  :class="seat.is_online ? 'bg-patina' : 'bg-stone'"></span>
+                            <!-- Dealer token: overlaid bottom-left of avatar to keep badge row compact -->
+                            <div x-show="seat.seat === dealerSeat" class="dealer-overlay">D</div>
                         </div>
                         <!-- Name & chips -->
-                        <div class="text-center">
-                            <p class="text-[0.65rem] text-cream font-medium leading-tight truncate max-w-[5rem]"
-                               :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
-                            <p class="text-[0.6rem] text-gold/80" x-text="seat.chips + ' chips'"></p>
-                        </div>
-                        <!-- Round bet (how much this player has put in this round) -->
-                        <div x-show="seat.roundBet > 0" class="mt-0.5">
-                            <span class="text-[0.6rem] text-cream/90 bg-ink/50 px-1.5 py-0.5 rounded" x-text="seat.roundBet"></span>
-                        </div>
-                        <!-- Dealer / Blind markers -->
-                        <div class="flex gap-0.5 mt-0.5">
-                            <div x-show="seat.seat === dealerSeat" class="dealer-btn">D</div>
+                        <p class="text-[0.6rem] text-cream font-medium leading-tight truncate w-full text-center mt-0.5"
+                           :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
+                        <p class="text-[0.55rem] text-gold/80 text-center" x-text="seat.chips + ' chips'"></p>
+                        <!-- Markers row: blinds, round bet, action - all inline -->
+                        <div class="flex flex-wrap items-center justify-center gap-0.5 mt-0.5">
                             <span x-show="seat.isSmallBlind" class="action-badge bg-blue-800/80 text-blue-200">SB</span>
                             <span x-show="seat.isBigBlind" class="action-badge bg-purple-800/80 text-purple-200">BB</span>
-                        </div>
-                        <!-- Last action badge -->
-                        <div x-show="seat.lastAction" class="mt-0.5">
-                            <span class="action-badge"
+                            <span x-show="seat.roundBet > 0" class="text-[0.55rem] text-cream/90 bg-ink/50 px-1 py-0.5 rounded leading-none" x-text="seat.roundBet"></span>
+                            <span x-show="seat.lastAction"
+                                  class="action-badge"
                                   :class="{
                                       'bg-burgundy/80 text-cream': seat.lastAction === 'fold',
                                       'bg-gold/80 text-ink': seat.lastAction === 'bet' || seat.lastAction === 'raise',
@@ -242,9 +346,6 @@
                                   }"
                                   x-text="seat.lastAction === 'all_in' ? 'ALL IN' : seat.lastAction"></span>
                         </div>
-                        <!-- Online indicator -->
-                        <span class="w-1.5 h-1.5 rounded-full absolute -top-0.5 -right-0.5"
-                              :class="seat.is_online ? 'bg-patina' : 'bg-stone'"></span>
                         <!-- Timer bar (only for active seat) -->
                         <div x-show="seat.seat === activeSeat && timeRemaining > 0 && timeout > 0" class="w-full mt-0.5">
                             <div class="timer-bar" :class="timeRemaining < 5 ? 'low' : ''"
@@ -254,11 +355,16 @@
                 </template>
             </div>
 
-            <!-- My hole cards -->
+            <!-- My hole cards (flip reveal) -->
             <div class="flex justify-center gap-2 mt-4" x-show="myCards.length > 0">
                 <template x-for="(card, i) in myCards" :key="i">
-                    <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"
-                         style="width: 60px; height: 84px; font-size: 1.1rem; margin: 0 2px;"></div>
+                    <div class="hole-card-flip"
+                         :class="(cardsRevealed[i]) ? 'revealed' : ''">
+                        <div class="hole-card-inner">
+                            <div class="hole-card-back"></div>
+                            <div class="hole-card-front" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
+                        </div>
+                    </div>
                 </template>
             </div>
 
@@ -269,9 +375,10 @@
             </div>
 
             <!-- Action bar -->
-            <div x-show="isMyTurn && validActions.length > 0" class="mt-4 vintage-card py-3" x-transition>
-                <p class="text-xs text-gold uppercase tracking-wider mb-3 font-venus-medium">Your Action</p>
-                <div class="flex flex-wrap gap-2">
+            <div x-show="tableStatus === 'active' && !gameOver && !showShowdown && myCards.length > 0" class="mt-4 vintage-card py-3" x-transition>
+                <p x-show="isMyTurn && validActions.length > 0" class="text-xs text-gold uppercase tracking-wider mb-3 font-venus-medium">Your Action</p>
+                <p x-show="!isMyTurn || validActions.length === 0" class="text-xs text-slate text-center py-1">Waiting for action...</p>
+                <div x-show="isMyTurn && validActions.length > 0" class="flex flex-wrap gap-2">
                     <template x-for="va in validActions" :key="va.action">
                         <div>
                             <button x-show="va.action === 'fold'"
@@ -298,6 +405,7 @@
                     </template>
                 </div>
                 <!-- Bet/Raise slider -->
+                <template x-if="isMyTurn">
                 <template x-for="va in validActions" :key="'slider-' + va.action">
                     <div x-show="va.action === 'bet' || va.action === 'raise'" class="mt-3 space-y-2">
                         <div class="flex items-center gap-3">
@@ -320,6 +428,7 @@
                             </button>
                         </div>
                     </div>
+                </template>
                 </template>
             </div>
 
@@ -396,6 +505,17 @@
 
             <!-- Vote to end -->
             <div x-show="tableStatus === 'active'" class="vintage-card py-3">
+                <!-- Projected payout indicator -->
+                <div class="mb-3 pb-2 border-b border-stone/20">
+                    <p class="text-[0.6rem] text-slate uppercase tracking-wide mb-1">Current Payout</p>
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-sm font-venus-medium"
+                              :class="getMyProjectedNet() >= 0 ? 'text-patina' : 'text-burgundy'"
+                              x-text="(getMyProjectedNet() >= 0 ? '+' : '') + getMyProjectedNet() + ' LC'"></span>
+                        <span class="text-[0.6rem] text-slate"
+                              x-text="getMyProjectedPayout() + ' of ' + myCoinsInvested + ' invested'"></span>
+                    </div>
+                </div>
                 <button @click="sendVoteEnd(true)" x-show="!hasVotedEnd"
                         class="vintage-btn-outline w-full py-2 text-xs">Vote to End Game</button>
                 <p x-show="hasVotedEnd" class="text-xs text-slate text-center">You voted to end.</p>
@@ -412,8 +532,8 @@
             <div class="vintage-card py-3">
                 <p class="text-xs text-slate uppercase tracking-wide mb-2">Hand Log</p>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="hand-log">
-                    <template x-for="(entry, i) in handLog.slice(-20)" :key="i">
-                        <p class="text-[0.65rem] text-slate" x-text="entry"></p>
+                    <template x-for="entry in handLog.slice(-20)" :key="entry.id">
+                        <p class="text-[0.65rem] text-slate" x-text="entry.text"></p>
                     </template>
                     <p x-show="handLog.length === 0" class="text-xs text-slate">No actions yet.</p>
                 </div>
@@ -422,14 +542,17 @@
     </div>
 
     <!-- Showdown overlay -->
-    <div x-show="showShowdown" x-transition class="fixed inset-0 bg-ink/60 flex items-center justify-center z-50" @click.self="showShowdown = false">
-        <div class="vintage-card max-w-md w-full mx-4 py-5">
+    <div x-show="showShowdown" x-transition class="fixed inset-0 bg-ink/80 flex items-center justify-center z-50">
+        <div class="showdown-modal max-w-md w-full mx-4 py-5 px-6 rounded-lg border border-stone border-t-3 border-t-gold shadow-xl">
             <h3 class="font-serif text-lg font-bold text-gold text-center mb-4">Showdown</h3>
             <div class="space-y-3">
                 <template x-for="r in showdownResults" :key="r.username">
                     <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded" :class="r.winnings > 0 ? 'bg-gold/10' : ''">
                         <div>
-                            <p class="text-sm font-medium" x-text="r.username"></p>
+                            <div class="flex items-center gap-1.5">
+                                <p class="text-sm font-medium" x-text="r.username"></p>
+                                <span x-show="showdownReady[r.username] === true" class="text-[0.55rem] text-patina uppercase">Ready</span>
+                            </div>
                             <p class="text-xs text-slate" x-text="r.hand_name"></p>
                             <div class="flex gap-1 mt-1" x-show="r.cards">
                                 <template x-for="card in (r.cards || '').split(',')" :key="card">
@@ -442,7 +565,18 @@
                     </div>
                 </template>
             </div>
-            <button @click="showShowdown = false" class="vintage-btn w-full mt-4 py-2 text-xs">Continue</button>
+            <!-- Ready status & button -->
+            <div class="mt-4">
+                <p class="text-xs text-slate text-center mb-2"
+                   x-text="showdownReadyCount + '/' + showdownExpectedCount + ' players ready'"></p>
+                <button x-show="!iWasFolded && !showdownReady[myUsername]"
+                        @click="sendShowdownReady()"
+                        class="vintage-btn w-full py-2 text-xs">Ready</button>
+                <p x-show="!iWasFolded && showdownReady[myUsername]"
+                   class="text-xs text-patina text-center font-venus-medium">You are ready - waiting for others...</p>
+                <p x-show="iWasFolded"
+                   class="text-xs text-slate text-center">Waiting for showdown players to ready up...</p>
+            </div>
         </div>
     </div>
 </div>

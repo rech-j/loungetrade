@@ -95,7 +95,7 @@ class ChessConsumer(BaseGameConsumer):
 
         action = data.get('action')
 
-        # resign / timeout / game_over are one-time critical messages — never throttle them.
+        # resign / timeout / game_over are one-time critical messages - never throttle them.
         # Regular move messages are still rate-limited to prevent flooding.
         if action == 'move' and self.is_throttled():
             return
@@ -551,7 +551,7 @@ class ChessConsumer(BaseGameConsumer):
             'last_move_at': timezone.now(),
         }
         # Only accept times that are non-negative and not higher than the
-        # current stored value — prevents clients from inflating their clock.
+        # current stored value - prevents clients from inflating their clock.
         if white_time is not None:
             wt = int(white_time)
             if 0 <= wt <= game.white_time:

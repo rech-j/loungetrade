@@ -23,6 +23,7 @@ function pokerApp() {
         isMyTurn: false,
         myChips: 0,
         raiseAmount: 0,
+        cardsRevealed: [false, false],
         timeout: 0,
         timeRemaining: 0,
         _timerInterval: null,
@@ -35,7 +36,18 @@ function pokerApp() {
         showShowdown: false,
         showdownResults: [],
         handLog: [],
+        _logId: 0,
         canRebuy: false,
+        showdownReady: {},       // { username: true/false } ready status per player
+        showdownReadyCount: 0,
+        showdownExpectedCount: 0,
+        iWasFolded: false,       // whether I was folded this hand (auto-ready)
+
+        // Payout projection
+        myCoinsInvested: 0,
+        totalCoinsInvested: 0,
+        totalChips: 0,
+        stake: 0,
 
         // Vote state
         endVoteActive: false,
@@ -61,6 +73,12 @@ function pokerApp() {
         },
 
         connect() {
+            // Close any existing WebSocket to prevent duplicate connections
+            if (this.ws) {
+                this.ws.onclose = null;  // prevent reconnect loop
+                this.ws.close();
+            }
+
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const url = proto + '//' + location.host + '/ws/poker/' + this.tableId + '/';
 
@@ -155,6 +173,9 @@ function pokerApp() {
                 case 'player_eliminated':
                     this.addLog(data.username + ' eliminated');
                     break;
+                case 'showdown_ready_update':
+                    this.handleShowdownReadyUpdate(data);
+                    break;
                 case 'player_rebuyed':
                     this.handlePlayerRebuyed(data);
                     break;
@@ -175,6 +196,7 @@ function pokerApp() {
             this.isCreator = data.is_creator;
             this.minPlayers = data.min_players || 3;
             this.maxPlayers = data.max_players || 8;
+            this.stake = data.stake || 0;
 
             // Build seats array (8 max seats)
             this.seats = [];
@@ -189,28 +211,33 @@ function pokerApp() {
                         status: player.status,
                         is_online: player.is_online,
                         avatar_url: player.avatar_url || '',
+                        coins_invested: player.coins_invested || 0,
                         lastAction: '',
                         isSmallBlind: false,
                         isBigBlind: false,
                         hasCards: false,
                         roundBet: 0,
+                        potContrib: 0,
                     });
                 } else {
                     this.seats.push({
                         seat: i, username: '', display_name: '', chips: 0,
                         status: '', is_online: false, avatar_url: '',
+                        coins_invested: 0,
                         lastAction: '', isSmallBlind: false, isBigBlind: false,
-                        hasCards: false, roundBet: 0,
+                        hasCards: false, roundBet: 0, potContrib: 0,
                     });
                 }
             }
 
-            // Update my chip count
+            // Update my chip count and payout projection data
             const mySeatData = this.seats.find(s => s.username === this.myUsername);
             if (mySeatData) this.myChips = mySeatData.chips;
+            this.updatePayoutProjection();
 
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
+                this.cardsRevealed = [true, true]; // already in hand, no flip
             }
 
             if (data.hand) {
@@ -231,6 +258,10 @@ function pokerApp() {
             this.communityCards = [];
             this.showShowdown = false;
             this.showdownResults = [];
+            this.showdownReady = {};
+            this.showdownReadyCount = 0;
+            this.showdownExpectedCount = 0;
+            this.iWasFolded = false;
             this.tableStatus = 'active';
 
             // Update player chips and statuses
@@ -245,13 +276,18 @@ function pokerApp() {
                         seat.isBigBlind = false;
                         seat.hasCards = p.status !== 'eliminated' && p.status !== 'spectating' && p.status !== 'left';
                         seat.roundBet = 0;
+                        seat.potContrib = 0;
                     }
                 }
             }
 
-            // Set hole cards
+            // Set hole cards - start face-down, then flip sequentially
+            this.cardsRevealed = [false, false];
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
+                // Staggered reveal
+                setTimeout(() => this.cardsRevealed = [true, false], 400);
+                setTimeout(() => this.cardsRevealed = [true, true], 800);
             } else {
                 this.myCards = [];
             }
@@ -290,8 +326,14 @@ function pokerApp() {
             for (const s of this.seats) {
                 s.isSmallBlind = s.seat === sbSeat;
                 s.isBigBlind = s.seat === bbSeat;
-                if (s.seat === sbSeat) s.roundBet = smallBlind || 0;
-                if (s.seat === bbSeat) s.roundBet = bigBlind || 0;
+                if (s.seat === sbSeat) {
+                    s.roundBet = smallBlind || 0;
+                    s.potContrib = smallBlind || 0;
+                }
+                if (s.seat === bbSeat) {
+                    s.roundBet = bigBlind || 0;
+                    s.potContrib = bigBlind || 0;
+                }
             }
         },
 
@@ -321,16 +363,21 @@ function pokerApp() {
         },
 
         startTimer(seconds) {
-            if (this._timerInterval) clearInterval(this._timerInterval);
+            if (this._timerRaf) cancelAnimationFrame(this._timerRaf);
             this.timeRemaining = seconds;
             if (seconds <= 0) return;
 
-            this._timerInterval = setInterval(() => {
-                this.timeRemaining = Math.max(0, this.timeRemaining - 1);
-                if (this.timeRemaining <= 0) {
-                    clearInterval(this._timerInterval);
+            this._timerStart = performance.now();
+            this._timerDuration = seconds;
+
+            const tick = (now) => {
+                const elapsed = (now - this._timerStart) / 1000;
+                this.timeRemaining = Math.max(0, this._timerDuration - elapsed);
+                if (this.timeRemaining > 0) {
+                    this._timerRaf = requestAnimationFrame(tick);
                 }
-            }, 1000);
+            };
+            this._timerRaf = requestAnimationFrame(tick);
         },
 
         handlePlayerActed(data) {
@@ -342,9 +389,15 @@ function pokerApp() {
                     seat.hasCards = false;
                 }
                 if (data.poker_action === 'all_in') seat.status = 'all_in';
-                if (data.amount > 0) seat.roundBet = (seat.roundBet || 0) + data.amount;
+                if (data.amount > 0) {
+                    seat.roundBet = (seat.roundBet || 0) + data.amount;
+                    seat.potContrib = (seat.potContrib || 0) + data.amount;
+                }
+                // Update chip count from server
+                if (data.chips !== undefined) seat.chips = data.chips;
             }
             this.pot = data.pot;
+            this.updateMyChips();
 
             const amt = data.amount && data.amount > 0 ? ' ' + data.amount : '';
             this.addLog(data.username + ': ' + data.poker_action + amt);
@@ -358,7 +411,13 @@ function pokerApp() {
         handleCommunityCards(data) {
             if (data.cards) {
                 const newCards = data.cards.split(',').filter(c => c);
-                this.communityCards = this.communityCards.concat(newCards);
+                // Deduplicate: only add cards not already on the board
+                const existing = new Set(this.communityCards);
+                for (const card of newCards) {
+                    if (!existing.has(card)) {
+                        this.communityCards.push(card);
+                    }
+                }
             }
             this.pot = data.pot;
 
@@ -400,6 +459,29 @@ function pokerApp() {
                 }
             }
             this.updateMyChips();
+
+            // Ready-up tracking
+            const needsReady = data.needs_ready || [];
+            this.showdownReady = {};
+            for (const u of needsReady) {
+                this.showdownReady[u] = false;
+            }
+            this.showdownExpectedCount = needsReady.length;
+            this.showdownReadyCount = 0;
+
+            // Check if I was folded (auto-ready, no button needed)
+            this.iWasFolded = !needsReady.includes(this.myUsername);
+        },
+
+        handleShowdownReadyUpdate(data) {
+            if (this.showdownReady.hasOwnProperty(data.username)) {
+                this.showdownReady[data.username] = true;
+            }
+            this.showdownReadyCount = Object.values(this.showdownReady).filter(v => v).length;
+        },
+
+        sendShowdownReady() {
+            this.send({ action: 'showdown_ready' });
         },
 
         handleHandComplete(data) {
@@ -436,6 +518,7 @@ function pokerApp() {
             if (seat) {
                 seat.chips = data.chips;
                 seat.status = 'active';
+                if (data.coins_invested) seat.coins_invested = data.coins_invested;
             }
             this.addLog(data.username + ' rebuyed');
             this.updateMyChips();
@@ -467,14 +550,17 @@ function pokerApp() {
                     status: 'active',
                     is_online: false,
                     avatar_url: data.avatar_url || '',
+                    coins_invested: data.coins_invested || 0,
                     lastAction: '',
                     isSmallBlind: false,
                     isBigBlind: false,
                     hasCards: false,
                     roundBet: 0,
+                    potContrib: 0,
                 };
             }
             this.addLog(data.username + ' joined the table');
+            this.updatePayoutProjection();
         },
 
         handlePlayerLeft(data) {
@@ -482,8 +568,9 @@ function pokerApp() {
                 this.seats[data.seat] = {
                     seat: data.seat, username: '', display_name: '', chips: 0,
                     status: '', is_online: false, avatar_url: '',
+                    coins_invested: 0,
                     lastAction: '', isSmallBlind: false, isBigBlind: false,
-                    hasCards: false, roundBet: 0,
+                    hasCards: false, roundBet: 0, potContrib: 0,
                 };
             }
             this.addLog(data.username + ' left the table');
@@ -509,6 +596,51 @@ function pokerApp() {
         updateMyChips() {
             const mySeat = this.seats.find(s => s.username === this.myUsername);
             if (mySeat) this.myChips = mySeat.chips;
+            this.updatePayoutProjection();
+        },
+
+        updatePayoutProjection() {
+            const activePlayers = this.seats.filter(s => s.username && s.status !== 'invited');
+            this.totalCoinsInvested = activePlayers.reduce((sum, s) => sum + (s.coins_invested || 0), 0);
+            this.totalChips = activePlayers.reduce((sum, s) => sum + s.chips, 0);
+            const mySeat = this.seats.find(s => s.username === this.myUsername);
+            this.myCoinsInvested = mySeat ? (mySeat.coins_invested || 0) : 0;
+        },
+
+        getMyProjectedPayout() {
+            if (this.totalCoinsInvested === 0) return 0;
+
+            const activePlayers = this.seats.filter(s => s.username && s.status !== 'invited');
+
+            // Use effective chips (stack + pot contribution) to mirror server
+            // pot-refund logic: the server returns pot to stacks before payout
+            const effectiveChips = (s) => s.chips + (s.potContrib || 0);
+            const totalEffective = activePlayers.reduce((sum, s) => sum + effectiveChips(s), 0);
+            if (totalEffective === 0) return 0;
+
+            const mySeat = activePlayers.find(s => s.username === this.myUsername);
+            if (!mySeat || effectiveChips(mySeat) === 0) return 0;
+
+            // Mirror server logic: largest stack gets the rounding remainder
+            const myEffective = effectiveChips(mySeat);
+            const maxEffective = Math.max(...activePlayers.map(s => effectiveChips(s)));
+            const iAmLargest = myEffective === maxEffective;
+
+            if (iAmLargest) {
+                const othersSum = activePlayers
+                    .filter(s => s.username !== this.myUsername)
+                    .reduce((sum, s) => {
+                        const eff = effectiveChips(s);
+                        if (eff === 0) return sum;
+                        return sum + Math.floor((eff * this.totalCoinsInvested) / totalEffective);
+                    }, 0);
+                return this.totalCoinsInvested - othersSum;
+            }
+            return Math.floor((myEffective * this.totalCoinsInvested) / totalEffective);
+        },
+
+        getMyProjectedNet() {
+            return this.getMyProjectedPayout() - this.myCoinsInvested;
         },
 
         // Actions
@@ -549,7 +681,7 @@ function pokerApp() {
         },
 
         addLog(msg) {
-            this.handLog.push(msg);
+            this.handLog.push({ id: ++this._logId, text: msg });
             this.$nextTick(() => {
                 const el = document.getElementById('hand-log');
                 if (el) el.scrollTop = el.scrollHeight;
@@ -574,17 +706,3 @@ function pokerApp() {
         },
     };
 }
-
-// Auto-init: wait for Alpine and pokerApp to be available, then init the container
-(function () {
-    var container = document.querySelector('[data-table-id]');
-    if (!container) return;
-    function tryInit() {
-        if (window.Alpine && typeof pokerApp !== 'undefined') {
-            window.Alpine.initTree(container);
-        } else {
-            setTimeout(tryInit, 20);
-        }
-    }
-    tryInit();
-}());

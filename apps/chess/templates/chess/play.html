@@ -51,8 +51,7 @@
 .captured-piece { width: 1rem; height: 1rem; opacity: 0.8; margin-left: -2px; }
 .captured-piece:first-child { margin-left: 0; }
 
-/*  Move animation  */
-.chess-piece.animating { position: relative; z-index: 5; transition: transform 150ms ease; }
+/*  Move animation ghost - see animateMove() in chess-app.js  */
 
 </style>
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
@@ -65,7 +64,7 @@
      data-opponent-username="{{ game.opponent.username }}"
      data-opponent-avatar="{% if game.opponent.profile.avatar %}{{ game.opponent.profile.avatar.url }}{% endif %}"
      data-opponent-initial="{{ game.opponent.profile.get_display_name|first|upper }}"
-     x-init="myUsername = $el.dataset.username; init()">
+>
 
     <div class="flex items-center justify-between mb-4">
         <div>

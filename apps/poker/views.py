@@ -206,6 +206,7 @@ def join_table(request, table_id):
                 'display_name': request.user.profile.get_display_name(),
                 'seat': existing.seat,
                 'chips': existing.chips,
+                'coins_invested': existing.coins_invested,
                 'avatar_url': request.user.profile.avatar.url if request.user.profile.avatar else '',
             })
             return redirect('poker_play', table_id=table.pk)
@@ -252,6 +253,7 @@ def join_table(request, table_id):
         'display_name': request.user.profile.get_display_name(),
         'seat': seat,
         'chips': table.starting_chips,
+        'coins_invested': table.stake,
         'avatar_url': request.user.profile.avatar.url if request.user.profile.avatar else '',
     })
 

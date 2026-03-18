@@ -4,19 +4,19 @@
 {% block content %}
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
 
-    <div class="flex items-start gap-5 mb-10">
-        <div class="w-16 h-16 flex-shrink-0 border-2 border-gold flex items-center justify-center overflow-hidden">
+    <div class="flex items-start gap-6 mb-10">
+        <div class="w-24 h-24 flex-shrink-0 border-2 border-gold flex items-center justify-center overflow-hidden shadow-[0_0_0_4px_rgba(201,168,76,0.1)]">
             {% if profile.avatar %}
             <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
             {% else %}
-            <span class="font-serif text-gold text-xl font-bold italic">{{ profile.get_display_name|first|upper }}</span>
+            <span class="font-serif text-gold text-3xl font-bold italic">{{ profile.get_display_name|first|upper }}</span>
             {% endif %}
         </div>
-        <div class="flex-1">
+        <div class="flex-1 pt-1">
             <h1 class="font-venus-medium text-2xl">{{ profile.get_display_name }}</h1>
-            <p class="text-slate text-sm">@{{ request.user.username }}</p>
+            <p class="text-slate text-sm mt-0.5">@{{ request.user.username }}</p>
         </div>
-        <a href="{% url 'profile_edit' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Edit</a>
+        <a href="{% url 'profile_edit' %}" class="vintage-btn-outline text-xs py-1.5 px-4 mt-1">Edit</a>
     </div>
 
     <div class="border-t-3 border-gold border border-stone dark:border-slate p-6 mb-8">
@@ -40,6 +40,9 @@
         <div class="p-4 text-center border-r border-stone dark:border-slate">
             <p class="font-serif text-2xl font-bold">{{ win_rate }}%</p>
             <p class="text-xs text-slate mt-1 font-venus-medium uppercase tracking-wide">Win Rate</p>
+            <div class="mt-2.5 h-px bg-stone/30 dark:bg-slate/30 mx-1 overflow-hidden">
+                <div class="h-full bg-patina transition-all" style="width: {{ win_rate }}%"></div>
+            </div>
         </div>
         <div class="p-4 text-center">
             <p class="font-serif text-2xl font-bold text-gold">{{ total_wagered }}</p>
@@ -48,33 +51,45 @@
     </div>
 
     <div>
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xs font-venus-medium tracking-widest uppercase text-slate">Recent Transactions</h2>
-            <a href="{% url 'history' %}" class="text-xs text-gold hover:text-gold-dark">View ledger</a>
+        <div class="flex items-center gap-3 mb-4">
+            <h2 class="vintage-section-title mb-0 flex-1">Recent Transactions</h2>
+            <a href="{% url 'history' %}" class="text-xs text-gold hover:text-gold-dark flex-shrink-0">View ledger</a>
         </div>
 
         {% if transactions %}
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for tx in transactions %}
-            <div class="flex items-center justify-between px-4 py-3">
-                <div>
+            <div class="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-gold/[0.03]">
+                <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full
+                    {% if tx.tx_type == 'mint' %}bg-gold/10 text-gold
+                    {% elif tx.receiver == request.user %}bg-patina/10 text-patina
+                    {% else %}bg-burgundy/10 text-burgundy{% endif %}">
+                    {% if tx.tx_type == 'mint' %}
+                    <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
+                    {% elif tx.receiver == request.user %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                    {% else %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                    {% endif %}
+                </span>
+                <div class="flex-1 min-w-0">
                     <p class="text-sm">
                         {% if tx.tx_type == 'mint' %}Minted
                         {% elif tx.sender == request.user %}Sent to {% if tx.receiver %}{{ tx.receiver.username }}{% else %}Deleted User{% endif %}
                         {% else %}From {% if tx.sender %}{{ tx.sender.username }}{% else %}System{% endif %}
                         {% endif %}
                     </p>
-                    {% if tx.note %}<p class="text-xs text-slate">{{ tx.note }}</p>{% endif %}
+                    {% if tx.note %}<p class="text-xs text-slate truncate">{{ tx.note }}</p>{% endif %}
                     <p class="text-xs text-slate" title="{{ tx.created_at|date:'d M Y, g:i A' }}">{{ tx.created_at|timesince }} ago</p>
                 </div>
-                <span class="text-sm font-bold font-serif {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
+                <span class="text-sm font-bold font-serif flex-shrink-0 {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                     {% if tx.receiver == request.user %}+{% else %}-{% endif %}{{ tx.amount }}
                 </span>
             </div>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-slate text-sm">No transactions yet.</p>
+        <div class="vintage-empty-state">No transactions yet.</div>
         {% endif %}
     </div>
 </div>

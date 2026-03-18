@@ -4,13 +4,16 @@
 
 {% block content %}
 <div class="py-12 sm:py-20">
-    <div class="text-center mb-16">
-        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-6 italic font-serif">The house takes nothing. The lounge takes everything.</p>
-        <h1 class="font-serif text-5xl sm:text-6xl font-bold tracking-tight mb-2">
+    <div class="text-center mb-16 relative overflow-hidden">
+        <div class="absolute inset-0 flex items-center justify-center pointer-events-none select-none" aria-hidden="true">
+            <span class="font-serif font-bold text-gold leading-none" style="font-size: clamp(10rem, 38vw, 20rem); opacity: 0.038;">◆</span>
+        </div>
+        <p class="text-xs tracking-[0.3em] uppercase text-slate mb-6 italic font-serif relative">The house takes nothing. The lounge takes everything.</p>
+        <h1 class="font-serif text-5xl sm:text-6xl font-bold tracking-tight mb-2 relative">
             Lounge <span class="italic text-gold">Coin</span>
         </h1>
-        <div class="ornament max-w-sm mx-auto my-6"><span class="text-gold text-xs">&#9830;</span></div>
-        <p class="text-base text-slate max-w-md mx-auto leading-relaxed">
+        <div class="ornament max-w-sm mx-auto my-6 relative"><span class="text-gold text-xs">&#9830;</span></div>
+        <p class="text-base text-slate max-w-md mx-auto leading-relaxed relative">
             A private exchange for those who trade with nerve and play with conviction.
         </p>
     </div>
@@ -30,19 +33,22 @@
 
     <div class="grid sm:grid-cols-3 gap-0 border border-stone dark:border-slate">
         <div class="p-8 border-b sm:border-b-0 sm:border-r border-stone dark:border-slate">
-            <p class="text-xs tracking-widest uppercase text-gold mb-3">I.</p>
+            <svg class="w-5 h-5 text-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+            <p class="text-xs tracking-widest uppercase text-gold mb-2">I.</p>
             <h3 class="font-serif text-lg font-bold mb-2">The Exchange</h3>
             <p class="text-sm text-slate leading-relaxed">Send coins to any member of the lounge. Peer-to-peer, no middleman, instant settlement.</p>
         </div>
         <div class="p-8 border-b sm:border-b-0 sm:border-r border-stone dark:border-slate">
-            <p class="text-xs tracking-widest uppercase text-gold mb-3">II.</p>
+            <svg class="w-5 h-5 text-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+            <p class="text-xs tracking-widest uppercase text-gold mb-2">II.</p>
             <h3 class="font-serif text-lg font-bold mb-2">The Tables</h3>
-            <p class="text-sm text-slate leading-relaxed">Coin flips and chess matches settled in real time. Put up your stake, test your nerve and skill. Also gamble.</p>
+            <p class="text-sm text-slate leading-relaxed">Coin flips, chess matches, and poker - settled in real time. Put up your stake and test your nerve.</p>
         </div>
         <div class="p-8">
-            <p class="text-xs tracking-widest uppercase text-gold mb-3">III.</p>
+            <svg class="w-5 h-5 text-gold mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z"/></svg>
+            <p class="text-xs tracking-widest uppercase text-gold mb-2">III.</p>
             <h3 class="font-serif text-lg font-bold mb-2">The Board</h3>
-            <p class="text-sm text-slate leading-relaxed">You will win more, just gamble. Gamble with me. Please respond to my chess match please.</p>
+            <p class="text-sm text-slate leading-relaxed">The standing of every member, updated in real time. See who leads the lounge and where you rank.</p>
         </div>
     </div>
 
@@ -60,7 +66,7 @@
                 <p class="font-serif text-base italic leading-relaxed">"I thought this was a CS gambling site, now I am addicted. Lounge Coin has cost me everything and I wouldn't change a thing."</p>
                 <div class="flex items-center gap-2">
                     <span class="text-sm"><span class="text-gold">&#9733;&#9733;&#9733;</span><span class="text-stone dark:text-slate">&#9733;&#9733;</span></span>
-                    <span class="text-xs text-slate ml-1">— Gomen Amanai, Member since 2023</span>
+                    <span class="text-xs text-slate ml-1">- Gomen Amanai, Member since 2023</span>
                 </div>
             </div>
         </div>
@@ -77,7 +83,7 @@
                 <p class="font-serif text-base italic leading-relaxed">"This place sucks almost as much as Dark Knight trilogy. I need to go grind melee and make fake facebook marketplace posts inside of people's houses."</p>
                 <div class="flex items-center gap-2">
                     <span class="text-sm"><span class="text-gold">&#9733;&#9733;</span><span class="text-stone dark:text-slate">&#9733;&#9733;&#9733;</span></span>
-                    <span class="text-xs text-slate ml-1">— Bike L. Rack, Member since 2019</span>
+                    <span class="text-xs text-slate ml-1">- Bike L. Rack, Member since 2019</span>
                 </div>
             </div>
         </div>

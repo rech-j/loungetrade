@@ -26,7 +26,7 @@
     <div class="grid grid-cols-3 gap-3 mb-6 border border-stone dark:border-slate border-t-2 border-t-gold pt-4 pb-5 px-4">
 
         {# 2nd place #}
-        <div class="flex flex-col items-center pt-4">
+        <div class="flex flex-col items-center pt-4 pb-2">
             <div x-data="{ open: false }"
                  @mouseenter="open = true" @mouseleave="open = false"
                  @click.stop="open = !open" @click.outside="open = false"
@@ -51,7 +51,7 @@
                     {% endwith %}
                 </div>
             </div>
-            <div class="text-xl mb-1">🥈</div>
+            <div class="font-serif text-base font-bold text-stone dark:text-slate mb-1 tracking-widest">II</div>
             <p class="font-venus-medium text-xs text-center truncate w-full px-1">{{ profiles.1.get_display_name }}</p>
             <p class="font-serif text-xs font-bold text-slate mt-0.5">{{ profiles.1.balance|intcomma }}</p>
             {% with d=profiles.1.delta_24h %}
@@ -60,7 +60,7 @@
             {% endif %}{% endwith %}
         </div>
 
-        <div class="flex flex-col items-center border-t-2 border-t-gold pt-2">
+        <div class="flex flex-col items-center border-t-2 border-t-gold pt-2 pb-2 bg-gold/5">
             <div x-data="{ open: false }"
                  @mouseenter="open = true" @mouseleave="open = false"
                  @click.stop="open = !open" @click.outside="open = false"
@@ -85,7 +85,7 @@
                     {% endwith %}
                 </div>
             </div>
-            <div class="text-2xl mb-1">🥇</div>
+            <div class="font-serif text-xl font-bold text-gold mb-1 tracking-widest">I</div>
             <p class="font-venus-medium text-xs text-center truncate w-full px-1 text-gold">{{ profiles.0.get_display_name }}</p>
             <p class="font-serif text-sm font-bold text-gold mt-0.5">{{ profiles.0.balance|intcomma }}</p>
             {% with d=profiles.0.delta_24h %}
@@ -94,7 +94,7 @@
             {% endif %}{% endwith %}
         </div>
 
-        <div class="flex flex-col items-center pt-6">
+        <div class="flex flex-col items-center pt-6 pb-2">
             <div x-data="{ open: false }"
                  @mouseenter="open = true" @mouseleave="open = false"
                  @click.stop="open = !open" @click.outside="open = false"
@@ -119,7 +119,7 @@
                     {% endwith %}
                 </div>
             </div>
-            <div class="text-lg mb-1">🥉</div>
+            <div class="font-serif text-sm font-bold text-stone dark:text-slate mb-1 tracking-widest">III</div>
             <p class="font-venus-medium text-xs text-center truncate w-full px-1">{{ profiles.2.get_display_name }}</p>
             <p class="font-serif text-xs font-bold text-slate mt-0.5">{{ profiles.2.balance|intcomma }}</p>
             {% with d=profiles.2.delta_24h %}
@@ -135,7 +135,7 @@
     <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for profile in profiles %}
         {% if profiles|length < 3 or forloop.counter > 3 %}
-        <div class="flex items-center gap-4 px-4 py-3 {% if request.user.is_authenticated and profile.user == request.user %}bg-gold/5{% endif %}">
+        <div class="flex items-center gap-4 px-4 py-3 transition-colors hover:bg-gold/[0.04] {% if request.user.is_authenticated and profile.user == request.user %}bg-gold/5{% elif forloop.counter|divisibleby:2 %}bg-parchment/50 dark:bg-walnut/20{% endif %}">
 
             <span class="w-8 text-center text-xs font-bold font-serif text-slate flex-shrink-0">
                 {% if forloop.counter == 1 %}1st{% elif forloop.counter == 2 %}2nd{% elif forloop.counter == 3 %}3rd{% else %}{{ forloop.counter }}{% endif %}
@@ -187,7 +187,7 @@
             You - ranked <span class="font-venus-medium text-gold">#{{ user_rank }}</span>
         </div>
         <div class="border border-t-0 border-stone dark:border-slate">
-            <div class="flex items-center gap-4 px-4 py-3 bg-gold/5">
+            <div class="flex items-center gap-4 px-4 py-3 bg-gold/5 transition-colors hover:bg-gold/[0.08]">
 
                 <span class="w-8 text-center text-xs font-bold font-serif text-gold flex-shrink-0">
                     {{ user_rank }}

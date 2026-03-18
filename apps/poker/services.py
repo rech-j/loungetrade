@@ -97,11 +97,18 @@ def start_hand(table_id):
         if len(active_players) < 2:
             return None, {}
 
-        # Reset folded players to active for new hand
+        # Reset folded players to active for new hand (only those with chips)
         PokerPlayer.objects.filter(
-            table=table, status='folded'
+            table=table, status='folded', chips__gt=0,
         ).update(status='active')
         active_players = _get_active_seats(table)
+
+        # Players with 0 chips sit out until they rebuy
+        for p in active_players:
+            if p.chips == 0:
+                p.status = 'folded'
+                p.save(update_fields=['status'])
+        active_players = [p for p in active_players if p.chips > 0]
 
         # Rotate dealer
         seat_numbers = [p.seat for p in active_players]
@@ -176,6 +183,7 @@ def start_hand(table_id):
         hand.round_bets = {
             str(sb_player.user_id): sb_amount,
             str(bb_player.user_id): bb_amount,
+            '_acted': [],  # Blind posting does NOT count as acting
         }
         hand.save(update_fields=['pot', 'round_bets'])
 
@@ -286,6 +294,7 @@ def process_action(hand_id, player_id, action, amount=0):
 
         elif action == 'check':
             actual_amount = 0
+            round_bets[str(player.user_id)] = my_bet  # Mark as having acted
 
         elif action == 'call':
             to_call = hand.current_bet - my_bet
@@ -339,6 +348,13 @@ def process_action(hand_id, player_id, action, amount=0):
                 hand.current_bet = new_total
             hand.pot += actual_amount
 
+        # Mark this player as having explicitly acted (distinct from blind posting)
+        acted = round_bets.get('_acted', [])
+        player_key = str(player.user_id)
+        if player_key not in acted:
+            acted.append(player_key)
+        round_bets['_acted'] = acted
+
         hand.round_bets = round_bets
         hand.save(update_fields=['pot', 'current_bet', 'last_raise', 'round_bets'])
 
@@ -371,25 +387,19 @@ def process_action(hand_id, player_id, action, amount=0):
             player.seat,
         )
 
-        # Check if we've gone around and everyone has matched the bet
+        # Check if the round is complete by seeing whether the next player
+        # has already explicitly acted (not just posted a blind) and matched
+        # the current bet.  When a bet/raise increases current_bet,
+        # previously-acting players' recorded amounts fall below it, so
+        # they'll need to act again — handled naturally.
+        acted_set = set(round_bets.get('_acted', []))
         next_player = next((p for p in players_who_can_act if p.seat == next_s), None)
         if next_player:
-            np_bet = round_bets.get(str(next_player.user_id), 0)
-            # If next player has already matched current bet and has acted,
-            # check if ALL players have matched
-            all_matched = all(
-                round_bets.get(str(p.user_id), 0) >= hand.current_bet
-                for p in players_who_can_act
-            )
-            # Also check that the action that was just taken wasn't a bet/raise
-            # (which would reopen action)
-            if all_matched and action not in ('bet', 'raise', 'all_in'):
-                return hand, action, 'advance_round'
-            if all_matched and action in ('all_in',) and not any(
-                round_bets.get(str(p.user_id), 0) < hand.current_bet
-                for p in players_who_can_act
-            ):
-                # All-in didn't raise above current bet, round complete
+            np_key = str(next_player.user_id)
+            np_has_acted = np_key in acted_set
+            np_bet = round_bets.get(np_key, 0)
+
+            if np_has_acted and np_bet >= hand.current_bet:
                 return hand, action, 'advance_round'
 
         hand.current_seat = next_s
@@ -602,10 +612,32 @@ def check_table_over(table_id):
 def calculate_payouts(table_id):
     """Calculate proportional payouts based on chip counts.
 
+    If a hand is in progress, refund pot contributions back to player stacks
+    first so that unfinished-hand bets don't skew the proportional split.
+
     Returns list of (user, amount) tuples.
     """
     table = PokerTable.objects.get(pk=table_id)
     players = list(PokerPlayer.objects.filter(table=table).exclude(status='invited'))
+
+    # Refund any in-progress hand's pot back to contributors
+    current_hand = PokerHand.objects.filter(
+        table=table,
+    ).exclude(status='completed').order_by('-hand_number').first()
+
+    if current_hand and current_hand.pot > 0:
+        from django.db.models import Sum
+        contributions = (
+            PokerAction.objects.filter(hand=current_hand)
+            .values('player__user_id')
+            .annotate(total=Sum('amount'))
+        )
+        contrib_map = {c['player__user_id']: c['total'] for c in contributions}
+        for p in players:
+            refund = contrib_map.get(p.user_id, 0)
+            if refund > 0:
+                p.chips += refund
+                p.save(update_fields=['chips'])
 
     total_coins = sum(p.coins_invested for p in players)
     total_chips = sum(p.chips for p in players)

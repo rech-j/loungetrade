@@ -33,6 +33,11 @@ class PokerConsumer(BaseGameConsumer):
         self.user = self.scope['user']
         self._action_timer = None
 
+        self._showdown_ready = set()       # user_ids who are ready
+        self._showdown_expected = set()    # user_ids who must confirm
+        self._showdown_hand = None         # hand awaiting ready-up
+        self._showdown_is_owner = False    # only the broadcasting consumer tracks state
+
         if self.user.is_anonymous:
             await self.close()
             return
@@ -95,6 +100,8 @@ class PokerConsumer(BaseGameConsumer):
             await self.handle_rebuy()
         elif action == 'start_game':
             await self.handle_start_game()
+        elif action == 'showdown_ready':
+            await self.handle_showdown_ready()
 
     async def handle_start_game(self):
         """Creator starts the game via WebSocket (alternative to HTTP view)."""
@@ -168,6 +175,9 @@ class PokerConsumer(BaseGameConsumer):
         if self._action_timer and not self._action_timer.done():
             self._action_timer.cancel()
 
+        # Re-fetch player to get updated chip count after process_action
+        player = await self.get_player()
+
         # Broadcast the action
         await self.channel_layer.group_send(self.room_group_name, {
             'type': 'player_acted',
@@ -175,6 +185,7 @@ class PokerConsumer(BaseGameConsumer):
             'poker_action': action_taken,
             'amount': amount,
             'pot': hand.pot,
+            'chips': player.chips if player else 0,
         })
 
         if advance_info == 'winner':
@@ -219,8 +230,29 @@ class PokerConsumer(BaseGameConsumer):
                 await asyncio.sleep(0.5)
 
         hand, results = await database_sync_to_async(resolve_hand)(hand.pk)
+
+        # Determine which players need to confirm ready (non-folded)
+        players = await self.get_all_players()
+        non_folded = {
+            p.user_id for p in players
+            if p.status not in ('folded', 'eliminated', 'spectating', 'left', 'invited')
+        }
+        folded_active = {
+            p.user_id for p in players
+            if p.status == 'folded'
+        }
+
+        # Set up ready tracking on this consumer (the one managing the hand)
+        self._showdown_is_owner = True
+        self._showdown_hand = hand
+        self._showdown_expected = non_folded
+        self._showdown_ready = set(folded_active)  # folded players auto-ready
+
         await self.broadcast_hand_result(hand, results, showdown=True)
-        await self.check_and_continue(hand)
+
+        # If all players were folded (edge case), continue immediately
+        if non_folded.issubset(self._showdown_ready):
+            await self._proceed_after_showdown()
 
     async def check_and_continue(self, hand):
         """Check if game is over, otherwise deal next hand."""
@@ -312,6 +344,48 @@ class PokerConsumer(BaseGameConsumer):
             'votes': vote_info,
         })
 
+    async def handle_showdown_ready(self):
+        """Player confirms they've seen the showdown results."""
+        # Broadcast to all consumers so the owner can track it
+        await self.channel_layer.group_send(self.room_group_name, {
+            'type': 'showdown_ready_signal',
+            'user_id': self.user.pk,
+            'username': self.user.username,
+        })
+
+    async def showdown_ready_signal(self, event):
+        """Channel layer handler — only the owner consumer tracks state."""
+        user_id = event['user_id']
+        username = event['username']
+
+        # Forward to client so UI can update the ready indicator
+        await self.send(text_data=json.dumps({
+            'type': 'showdown_ready_update',
+            'username': username,
+        }))
+
+        # Only the consumer that owns the showdown tracks readiness
+        if not self._showdown_is_owner:
+            return
+
+        self._showdown_ready.add(user_id)
+
+        # Check if all expected players are ready
+        if self._showdown_expected.issubset(self._showdown_ready):
+            await self._proceed_after_showdown()
+
+    async def _proceed_after_showdown(self):
+        """Continue the game after all showdown players are ready."""
+        self._showdown_is_owner = False
+        hand = self._showdown_hand
+        self._showdown_hand = None
+        self._showdown_ready.clear()
+        self._showdown_expected.clear()
+
+        if hand:
+            await asyncio.sleep(1)
+            await self.check_and_continue(hand)
+
     async def handle_rebuy(self):
         success = await database_sync_to_async(process_rebuy)(
             self.table_id, self.user.pk
@@ -322,6 +396,7 @@ class PokerConsumer(BaseGameConsumer):
                 'type': 'player_rebuyed',
                 'username': self.user.username,
                 'chips': player.chips if player else 0,
+                'coins_invested': player.coins_invested if player else 0,
             })
         else:
             await self.send(text_data=json.dumps({
@@ -381,40 +456,65 @@ class PokerConsumer(BaseGameConsumer):
             'current_bet': hand.current_bet,
             'pot': hand.pot,
             'timeout': timeout,
+            'hand_id': hand.pk,
+            'user_id': player.user_id,
+            # Designate this consumer as the timer owner
+            '_timer_owner': self.channel_name,
         })
-
-        # Start action timer
-        if timeout > 0:
-            if self._action_timer and not self._action_timer.done():
-                self._action_timer.cancel()
-            self._action_timer = asyncio.ensure_future(
-                self.action_timeout(hand.pk, player.user_id, timeout)
-            )
 
     async def action_timeout(self, hand_id, user_id, timeout):
         """Auto-fold if player doesn't act in time."""
         try:
             await asyncio.sleep(timeout)
+
+            # Guard: verify the hand still expects this player's action
+            hand = await database_sync_to_async(
+                lambda: PokerHand.objects.select_related('table').get(pk=hand_id)
+            )()
+            if hand.status in ('completed', 'showdown'):
+                return
+            player = await database_sync_to_async(
+                lambda: PokerPlayer.objects.get(table=hand.table, user_id=user_id)
+            )()
+            if hand.current_seat != player.seat:
+                return
+
             hand, action_taken, advance_info = await database_sync_to_async(
                 process_action
             )(hand_id, user_id, 'fold')
 
             if action_taken:
                 username = await self.get_username(user_id)
+                fold_player = await database_sync_to_async(
+                    lambda: PokerPlayer.objects.get(table_id=self.table_id, user_id=user_id)
+                )()
                 await self.channel_layer.group_send(self.room_group_name, {
                     'type': 'player_acted',
                     'username': username,
                     'poker_action': 'fold',
                     'amount': 0,
                     'pot': hand.pot,
+                    'chips': fold_player.chips,
                 })
 
                 if advance_info == 'winner':
                     hand, results = await database_sync_to_async(resolve_hand)(hand.pk)
                     await self.broadcast_hand_result(hand, results, showdown=False)
                     await self.check_and_continue(hand)
-                elif advance_info in ('showdown', 'advance_round'):
+                elif advance_info == 'showdown':
                     await self.deal_remaining_and_showdown(hand)
+                elif advance_info == 'advance_round':
+                    hand, new_cards = await database_sync_to_async(advance_round)(hand.pk)
+                    if hand.status == 'showdown' or new_cards is None:
+                        await self.deal_remaining_and_showdown(hand)
+                    else:
+                        await self.channel_layer.group_send(self.room_group_name, {
+                            'type': 'community_cards',
+                            'cards': new_cards,
+                            'round': hand.status,
+                            'pot': hand.pot,
+                        })
+                        await self.send_action_required(hand)
                 else:
                     await self.send_action_required(hand)
         except asyncio.CancelledError:
@@ -432,12 +532,21 @@ class PokerConsumer(BaseGameConsumer):
                 'cards': r.get('cards', '') if showdown else '',
             })
 
-        await self.channel_layer.group_send(self.room_group_name, {
+        event = {
             'type': 'showdown' if showdown else 'hand_complete',
             'results': result_data,
             'community_cards': hand.community_cards,
             'pot': hand.pot,
-        })
+        }
+
+        # For showdowns, include who needs to confirm ready
+        if showdown and self._showdown_expected:
+            ready_usernames = []
+            for uid in self._showdown_expected:
+                ready_usernames.append(await self.get_username(uid))
+            event['needs_ready'] = ready_usernames
+
+        await self.channel_layer.group_send(self.room_group_name, event)
 
     async def send_table_state(self):
         """Send complete table state to the connecting player."""
@@ -477,6 +586,7 @@ class PokerConsumer(BaseGameConsumer):
                     'status': p.status,
                     'is_online': p.is_online,
                     'avatar_url': p.user.profile.avatar.url if p.user.profile.avatar else '',
+                    'coins_invested': p.coins_invested,
                 }
                 for p in players
             ],
@@ -499,6 +609,11 @@ class PokerConsumer(BaseGameConsumer):
 
     async def hand_started(self, event):
         """Send hand_started to client, with their private hole cards."""
+        # New hand — cancel any lingering timer from the previous hand
+        if self._action_timer and not self._action_timer.done():
+            self._action_timer.cancel()
+            self._action_timer = None
+
         hand = await self.get_current_hand()
         my_cards = ''
         if hand and hand.player_hands:
@@ -516,6 +631,12 @@ class PokerConsumer(BaseGameConsumer):
         }))
 
     async def action_required(self, event):
+        # Cancel any stale timer on THIS consumer — a new turn has started,
+        # so any timer we were running for the previous turn is obsolete.
+        if self._action_timer and not self._action_timer.done():
+            self._action_timer.cancel()
+            self._action_timer = None
+
         await self.send(text_data=json.dumps({
             'type': 'action_required',
             'seat': event['seat'],
@@ -526,6 +647,13 @@ class PokerConsumer(BaseGameConsumer):
             'timeout': event['timeout'],
         }))
 
+        # Only the designated consumer starts the server-side timer
+        timeout = event.get('timeout', 0)
+        if timeout > 0 and event.get('_timer_owner') == self.channel_name:
+            self._action_timer = asyncio.ensure_future(
+                self.action_timeout(event['hand_id'], event['user_id'], timeout)
+            )
+
     async def player_acted(self, event):
         await self.send(text_data=json.dumps({
             'type': 'player_acted',
@@ -533,6 +661,7 @@ class PokerConsumer(BaseGameConsumer):
             'poker_action': event['poker_action'],
             'amount': event['amount'],
             'pot': event['pot'],
+            'chips': event.get('chips', 0),
         }))
 
     async def community_cards(self, event):
@@ -544,12 +673,15 @@ class PokerConsumer(BaseGameConsumer):
         }))
 
     async def showdown(self, event):
-        await self.send(text_data=json.dumps({
+        data = {
             'type': 'showdown',
             'results': event['results'],
             'community_cards': event['community_cards'],
             'pot': event['pot'],
-        }))
+        }
+        if 'needs_ready' in event:
+            data['needs_ready'] = event['needs_ready']
+        await self.send(text_data=json.dumps(data))
 
     async def hand_complete(self, event):
         await self.send(text_data=json.dumps({
@@ -585,6 +717,7 @@ class PokerConsumer(BaseGameConsumer):
             'display_name': event['display_name'],
             'seat': event['seat'],
             'chips': event['chips'],
+            'coins_invested': event.get('coins_invested', 0),
             'avatar_url': event.get('avatar_url', ''),
         }))
 
@@ -629,6 +762,7 @@ class PokerConsumer(BaseGameConsumer):
             'type': 'player_rebuyed',
             'username': event['username'],
             'chips': event['chips'],
+            'coins_invested': event.get('coins_invested', 0),
         }))
 
     async def game_error(self, event):

@@ -9,17 +9,31 @@
     </div>
 
     <div class="flex gap-2 mb-6 flex-wrap">
-        <a href="?filter=all" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'all' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">All</a>
-        <a href="?filter=sent" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'sent' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Sent</a>
-        <a href="?filter=received" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'received' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Received</a>
-        <a href="?filter=games" class="text-xs tracking-wide uppercase px-3 py-1.5 border {% if current_filter == 'games' %}border-gold bg-gold text-ink{% else %}border-stone dark:border-slate text-slate hover:text-gold hover:border-gold{% endif %} transition-colors">Games</a>
+        <a href="?filter=all" class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if current_filter == 'all' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">All</a>
+        <a href="?filter=sent" class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if current_filter == 'sent' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Sent</a>
+        <a href="?filter=received" class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if current_filter == 'received' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Received</a>
+        <a href="?filter=games" class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if current_filter == 'games' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Games</a>
     </div>
 
     {% if page %}
     <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
         {% for tx in page %}
-        <div class="flex items-center justify-between px-4 py-3">
-            <div>
+        <div class="vintage-table-row gap-3">
+            <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full
+                {% if tx.tx_type == 'mint' %}bg-gold/10 text-gold
+                {% elif tx.tx_type == 'game_win' and tx.receiver == request.user %}bg-patina/10 text-patina
+                {% elif tx.tx_type == 'game_win' and tx.sender == request.user %}bg-burgundy/10 text-burgundy
+                {% elif tx.receiver == request.user %}bg-patina/10 text-patina
+                {% else %}bg-burgundy/10 text-burgundy{% endif %}">
+                {% if tx.tx_type == 'mint' %}
+                <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
+                {% elif tx.receiver == request.user %}
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+                {% else %}
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 10l7-7m0 0l7 7m-7-7v18"/></svg>
+                {% endif %}
+            </span>
+            <div class="flex-1 min-w-0">
                 <p class="text-sm">
                     {% if tx.tx_type == 'mint' %}
                         Minted by admin
@@ -34,11 +48,11 @@
                     {% endif %}
                 </p>
                 {% if tx.note %}
-                <p class="text-xs text-slate">{{ tx.note }}</p>
+                <p class="text-xs text-slate truncate">{{ tx.note }}</p>
                 {% endif %}
                 <p class="text-xs text-slate">{{ tx.created_at|date:"d M Y, g:i A" }}</p>
             </div>
-            <span class="text-sm font-bold font-serif {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
+            <span class="text-sm font-bold font-serif flex-shrink-0 {% if tx.receiver == request.user %}text-patina{% else %}text-burgundy{% endif %}">
                 {% if tx.receiver == request.user %}+{% else %}-{% endif %}{{ tx.amount }}
             </span>
         </div>
@@ -67,7 +81,7 @@
     {% endif %}
 
     {% else %}
-    <p class="text-slate text-sm">No transactions on record.</p>
+    <div class="vintage-empty-state">No transactions on record.</div>
     {% endif %}
 </div>
 {% endblock %}

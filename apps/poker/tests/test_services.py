@@ -237,3 +237,120 @@ class CalculatePayoutsTest(TestCase):
         payouts = calculate_payouts(table.pk)
         total = sum(amount for _, amount in payouts)
         self.assertEqual(total, 300)  # 3 * 100 LC invested
+
+    def test_pot_refunded_before_payout(self):
+        """When a hand is in progress, pot chips are refunded to stacks
+        before calculating proportional payouts."""
+        users = []
+        for i in range(3):
+            u = User.objects.create_user(f'payout_refund{i}', password='pass')
+            users.append(u)
+
+        table = PokerTable.objects.create(
+            creator=users[0], stake=100, starting_chips=1000,
+            small_blind=10, big_blind=20,
+        )
+        table.status = 'active'
+        table.save()
+
+        for i, u in enumerate(users):
+            PokerPlayer.objects.create(
+                table=table, user=u, seat=i, chips=1000,
+                status='active', coins_invested=100,
+            )
+
+        # Start a hand (posts blinds, deducting from stacks into pot)
+        hand, _ = start_hand(table.pk)
+        pot_before = hand.pot  # should be 30 (10 SB + 20 BB)
+        self.assertEqual(pot_before, 30)
+
+        # Chips in stacks are now 1000+990+980 = 2970, but total should be 3000
+        players = list(PokerPlayer.objects.filter(table=table).order_by('seat'))
+        stack_total = sum(p.chips for p in players)
+        self.assertEqual(stack_total, 2970)
+
+        # Calculate payouts — should refund pot first, so total LC = 300
+        payouts = calculate_payouts(table.pk)
+        total = sum(amount for _, amount in payouts)
+        self.assertEqual(total, 300)
+
+        # Verify stacks were restored (pot refunded back)
+        players = list(PokerPlayer.objects.filter(table=table).order_by('seat'))
+        stack_total_after = sum(p.chips for p in players)
+        self.assertEqual(stack_total_after, 3000)
+
+
+class StartHandZeroChipsTest(TestCase):
+    """Players with 0 chips should be excluded from new hands."""
+
+    def setUp(self):
+        self.users = []
+        for i in range(3):
+            u = User.objects.create_user(f'zero_chips{i}', password='pass')
+            self.users.append(u)
+
+        self.table = PokerTable.objects.create(
+            creator=self.users[0], stake=100, starting_chips=1000,
+            small_blind=10, big_blind=20,
+        )
+        self.table.status = 'active'
+        self.table.save()
+
+        for i, u in enumerate(self.users):
+            chips = 0 if i == 2 else 1000
+            PokerPlayer.objects.create(
+                table=self.table, user=u, seat=i, chips=chips, status='active',
+            )
+
+    def test_zero_chip_player_excluded(self):
+        hand, card_map = start_hand(self.table.pk)
+        self.assertIsNotNone(hand)
+        # Only 2 players should be dealt cards
+        self.assertEqual(len(card_map), 2)
+        # The 0-chip player should not have cards
+        self.assertNotIn(str(self.users[2].pk), card_map)
+
+    def test_zero_chip_player_set_to_folded(self):
+        start_hand(self.table.pk)
+        zero_player = PokerPlayer.objects.get(table=self.table, user=self.users[2])
+        self.assertEqual(zero_player.status, 'folded')
+        self.assertEqual(zero_player.chips, 0)
+
+
+class ActedTrackingTest(TestCase):
+    """The _acted list in round_bets tracks explicit actions, not blind posts."""
+
+    def setUp(self):
+        self.users = []
+        for i in range(3):
+            u = User.objects.create_user(f'acted{i}', password='pass')
+            self.users.append(u)
+
+        self.table = PokerTable.objects.create(
+            creator=self.users[0], stake=100, starting_chips=1000,
+            small_blind=10, big_blind=20,
+        )
+        self.table.status = 'active'
+        self.table.save()
+
+        for i, u in enumerate(self.users):
+            PokerPlayer.objects.create(
+                table=self.table, user=u, seat=i, chips=1000, status='active',
+            )
+
+        self.hand, _ = start_hand(self.table.pk)
+
+    def test_blinds_not_in_acted(self):
+        """Blind posting should not count as having acted."""
+        acted = self.hand.round_bets.get('_acted', [])
+        self.assertEqual(acted, [])
+
+    def test_action_added_to_acted(self):
+        """An explicit action should add the player to _acted."""
+        current_player = PokerPlayer.objects.get(
+            table=self.table, seat=self.hand.current_seat,
+        )
+        hand, action, _ = process_action(
+            self.hand.pk, current_player.user_id, 'call', 20,
+        )
+        self.assertIn(str(current_player.user_id), hand.round_bets['_acted'])
