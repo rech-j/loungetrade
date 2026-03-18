@@ -286,6 +286,7 @@ def process_action(hand_id, player_id, action, amount=0):
 
         elif action == 'check':
             actual_amount = 0
+            round_bets[str(player.user_id)] = my_bet  # Mark as having acted
 
         elif action == 'call':
             to_call = hand.current_bet - my_bet
@@ -371,25 +372,17 @@ def process_action(hand_id, player_id, action, amount=0):
             player.seat,
         )
 
-        # Check if we've gone around and everyone has matched the bet
+        # Check if the round is complete by seeing whether the next player
+        # has already acted and matched the current bet.  When a bet/raise
+        # increases current_bet, previously-acting players' recorded amounts
+        # fall below it, so they'll need to act again — handled naturally.
         next_player = next((p for p in players_who_can_act if p.seat == next_s), None)
         if next_player:
-            np_bet = round_bets.get(str(next_player.user_id), 0)
-            # If next player has already matched current bet and has acted,
-            # check if ALL players have matched
-            all_matched = all(
-                round_bets.get(str(p.user_id), 0) >= hand.current_bet
-                for p in players_who_can_act
-            )
-            # Also check that the action that was just taken wasn't a bet/raise
-            # (which would reopen action)
-            if all_matched and action not in ('bet', 'raise', 'all_in'):
-                return hand, action, 'advance_round'
-            if all_matched and action in ('all_in',) and not any(
-                round_bets.get(str(p.user_id), 0) < hand.current_bet
-                for p in players_who_can_act
-            ):
-                # All-in didn't raise above current bet, round complete
+            np_key = str(next_player.user_id)
+            np_has_acted = np_key in round_bets
+            np_bet = round_bets.get(np_key, 0)
+
+            if np_has_acted and np_bet >= hand.current_bet:
                 return hand, action, 'advance_round'
 
         hand.current_seat = next_s

@@ -395,6 +395,19 @@ class PokerConsumer(BaseGameConsumer):
         """Auto-fold if player doesn't act in time."""
         try:
             await asyncio.sleep(timeout)
+
+            # Guard: verify the hand still expects this player's action
+            hand = await database_sync_to_async(
+                lambda: PokerHand.objects.select_related('table').get(pk=hand_id)
+            )()
+            if hand.status in ('completed', 'showdown'):
+                return
+            player = await database_sync_to_async(
+                lambda: PokerPlayer.objects.get(table=hand.table, user_id=user_id)
+            )()
+            if hand.current_seat != player.seat:
+                return
+
             hand, action_taken, advance_info = await database_sync_to_async(
                 process_action
             )(hand_id, user_id, 'fold')
@@ -413,8 +426,20 @@ class PokerConsumer(BaseGameConsumer):
                     hand, results = await database_sync_to_async(resolve_hand)(hand.pk)
                     await self.broadcast_hand_result(hand, results, showdown=False)
                     await self.check_and_continue(hand)
-                elif advance_info in ('showdown', 'advance_round'):
+                elif advance_info == 'showdown':
                     await self.deal_remaining_and_showdown(hand)
+                elif advance_info == 'advance_round':
+                    hand, new_cards = await database_sync_to_async(advance_round)(hand.pk)
+                    if hand.status == 'showdown' or new_cards is None:
+                        await self.deal_remaining_and_showdown(hand)
+                    else:
+                        await self.channel_layer.group_send(self.room_group_name, {
+                            'type': 'community_cards',
+                            'cards': new_cards,
+                            'round': hand.status,
+                            'pot': hand.pot,
+                        })
+                        await self.send_action_required(hand)
                 else:
                     await self.send_action_required(hand)
         except asyncio.CancelledError:

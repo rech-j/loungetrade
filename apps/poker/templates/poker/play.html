@@ -175,6 +175,20 @@
     border-radius: 2px;
 }
 .timer-bar.low { background: #722f37; }
+
+/* Card deal animation */
+@keyframes card-deal {
+    from { opacity: 0; transform: translateY(-10px) scale(0.85); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.community-area .poker-card {
+    animation: card-deal 0.35s ease-out both;
+}
+.community-area .poker-card:nth-child(1) { animation-delay: 0s; }
+.community-area .poker-card:nth-child(2) { animation-delay: 0.08s; }
+.community-area .poker-card:nth-child(3) { animation-delay: 0.16s; }
+.community-area .poker-card:nth-child(4) { animation-delay: 0.24s; }
+.community-area .poker-card:nth-child(5) { animation-delay: 0.32s; }
 </style>
 
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
@@ -200,8 +214,23 @@
         </div>
     </div>
 
-    <!-- Status messages -->
-    <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
+    <!-- Turn indicator -->
+    <div x-show="tableStatus === 'active' && !gameOver && !showShowdown && activeSeat >= 0"
+         x-transition
+         class="mb-4 px-4 py-2.5 text-sm font-venus-medium border-l-3 transition-colors duration-300"
+         :class="isMyTurn ? 'border-gold bg-gold/15 text-gold' : 'border-stone/40 bg-parchment/50 dark:bg-walnut/50 text-slate'">
+        <div class="flex items-center justify-between">
+            <span x-text="isMyTurn ? 'Your turn to act' : 'Waiting for ' + (seats.find(s => s.seat === activeSeat)?.display_name || seats.find(s => s.seat === activeSeat)?.username || '...') + '...'"></span>
+            <span x-show="timeRemaining > 0 && timeout > 0" class="text-xs tabular-nums"
+                  :class="timeRemaining < 5 ? 'text-burgundy font-bold' : 'text-slate'"
+                  x-text="timeRemaining + 's'"></span>
+        </div>
+        <div x-show="timeRemaining > 0 && timeout > 0" class="mt-1.5 w-full h-1 bg-stone/20 rounded-full overflow-hidden">
+            <div class="h-full rounded-full transition-all duration-1000 linear"
+                 :class="timeRemaining < 5 ? 'bg-burgundy' : 'bg-gold'"
+                 :style="'width: ' + (timeRemaining / timeout * 100) + '%'"></div>
+        </div>
+    </div>
     <div x-show="errorMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-burgundy bg-burgundy/10 text-burgundy" x-text="errorMsg"></div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
@@ -220,7 +249,7 @@
 
                     <!-- Community cards -->
                     <div class="community-area">
-                        <template x-for="(card, i) in communityCards" :key="i">
+                        <template x-for="card in communityCards" :key="card">
                             <div class="poker-card" :class="cardColorClass(card)" x-text="formatCard(card)"></div>
                         </template>
                     </div>
@@ -293,9 +322,10 @@
             </div>
 
             <!-- Action bar -->
-            <div x-show="isMyTurn && validActions.length > 0" class="mt-4 vintage-card py-3" x-transition>
-                <p class="text-xs text-gold uppercase tracking-wider mb-3 font-venus-medium">Your Action</p>
-                <div class="flex flex-wrap gap-2">
+            <div x-show="tableStatus === 'active' && !gameOver && !showShowdown && myCards.length > 0" class="mt-4 vintage-card py-3" x-transition>
+                <p x-show="isMyTurn && validActions.length > 0" class="text-xs text-gold uppercase tracking-wider mb-3 font-venus-medium">Your Action</p>
+                <p x-show="!isMyTurn || validActions.length === 0" class="text-xs text-slate text-center py-1">Waiting for action...</p>
+                <div x-show="isMyTurn && validActions.length > 0" class="flex flex-wrap gap-2">
                     <template x-for="va in validActions" :key="va.action">
                         <div>
                             <button x-show="va.action === 'fold'"
@@ -322,6 +352,7 @@
                     </template>
                 </div>
                 <!-- Bet/Raise slider -->
+                <template x-if="isMyTurn">
                 <template x-for="va in validActions" :key="'slider-' + va.action">
                     <div x-show="va.action === 'bet' || va.action === 'raise'" class="mt-3 space-y-2">
                         <div class="flex items-center gap-3">
@@ -344,6 +375,7 @@
                             </button>
                         </div>
                     </div>
+                </template>
                 </template>
             </div>
 
@@ -436,8 +468,8 @@
             <div class="vintage-card py-3">
                 <p class="text-xs text-slate uppercase tracking-wide mb-2">Hand Log</p>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="hand-log">
-                    <template x-for="(entry, i) in handLog.slice(-20)" :key="i">
-                        <p class="text-[0.65rem] text-slate" x-text="entry"></p>
+                    <template x-for="entry in handLog.slice(-20)" :key="entry.id">
+                        <p class="text-[0.65rem] text-slate" x-text="entry.text"></p>
                     </template>
                     <p x-show="handLog.length === 0" class="text-xs text-slate">No actions yet.</p>
                 </div>

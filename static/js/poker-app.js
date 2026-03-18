@@ -35,6 +35,7 @@ function pokerApp() {
         showShowdown: false,
         showdownResults: [],
         handLog: [],
+        _logId: 0,
         canRebuy: false,
 
         // Vote state
@@ -358,7 +359,13 @@ function pokerApp() {
         handleCommunityCards(data) {
             if (data.cards) {
                 const newCards = data.cards.split(',').filter(c => c);
-                this.communityCards = this.communityCards.concat(newCards);
+                // Deduplicate: only add cards not already on the board
+                const existing = new Set(this.communityCards);
+                for (const card of newCards) {
+                    if (!existing.has(card)) {
+                        this.communityCards.push(card);
+                    }
+                }
             }
             this.pot = data.pot;
 
@@ -549,7 +556,7 @@ function pokerApp() {
         },
 
         addLog(msg) {
-            this.handLog.push(msg);
+            this.handLog.push({ id: ++this._logId, text: msg });
             this.$nextTick(() => {
                 const el = document.getElementById('hand-log');
                 if (el) el.scrollTop = el.scrollHeight;
