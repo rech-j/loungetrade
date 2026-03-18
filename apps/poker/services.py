@@ -612,10 +612,32 @@ def check_table_over(table_id):
 def calculate_payouts(table_id):
     """Calculate proportional payouts based on chip counts.
 
+    If a hand is in progress, refund pot contributions back to player stacks
+    first so that unfinished-hand bets don't skew the proportional split.
+
     Returns list of (user, amount) tuples.
     """
     table = PokerTable.objects.get(pk=table_id)
     players = list(PokerPlayer.objects.filter(table=table).exclude(status='invited'))
+
+    # Refund any in-progress hand's pot back to contributors
+    current_hand = PokerHand.objects.filter(
+        table=table,
+    ).exclude(status='completed').order_by('-hand_number').first()
+
+    if current_hand and current_hand.pot > 0:
+        from django.db.models import Sum
+        contributions = (
+            PokerAction.objects.filter(hand=current_hand)
+            .values('player__user_id')
+            .annotate(total=Sum('amount'))
+        )
+        contrib_map = {c['player__user_id']: c['total'] for c in contributions}
+        for p in players:
+            refund = contrib_map.get(p.user_id, 0)
+            if refund > 0:
+                p.chips += refund
+                p.save(update_fields=['chips'])
 
     total_coins = sum(p.coins_invested for p in players)
     total_chips = sum(p.chips for p in players)

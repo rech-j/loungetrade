@@ -216,6 +216,7 @@ function pokerApp() {
                         isBigBlind: false,
                         hasCards: false,
                         roundBet: 0,
+                        potContrib: 0,
                     });
                 } else {
                     this.seats.push({
@@ -223,7 +224,7 @@ function pokerApp() {
                         status: '', is_online: false, avatar_url: '',
                         coins_invested: 0,
                         lastAction: '', isSmallBlind: false, isBigBlind: false,
-                        hasCards: false, roundBet: 0,
+                        hasCards: false, roundBet: 0, potContrib: 0,
                     });
                 }
             }
@@ -273,6 +274,7 @@ function pokerApp() {
                         seat.isBigBlind = false;
                         seat.hasCards = p.status !== 'eliminated' && p.status !== 'spectating' && p.status !== 'left';
                         seat.roundBet = 0;
+                        seat.potContrib = 0;
                     }
                 }
             }
@@ -318,8 +320,14 @@ function pokerApp() {
             for (const s of this.seats) {
                 s.isSmallBlind = s.seat === sbSeat;
                 s.isBigBlind = s.seat === bbSeat;
-                if (s.seat === sbSeat) s.roundBet = smallBlind || 0;
-                if (s.seat === bbSeat) s.roundBet = bigBlind || 0;
+                if (s.seat === sbSeat) {
+                    s.roundBet = smallBlind || 0;
+                    s.potContrib = smallBlind || 0;
+                }
+                if (s.seat === bbSeat) {
+                    s.roundBet = bigBlind || 0;
+                    s.potContrib = bigBlind || 0;
+                }
             }
         },
 
@@ -370,9 +378,15 @@ function pokerApp() {
                     seat.hasCards = false;
                 }
                 if (data.poker_action === 'all_in') seat.status = 'all_in';
-                if (data.amount > 0) seat.roundBet = (seat.roundBet || 0) + data.amount;
+                if (data.amount > 0) {
+                    seat.roundBet = (seat.roundBet || 0) + data.amount;
+                    seat.potContrib = (seat.potContrib || 0) + data.amount;
+                }
+                // Update chip count from server
+                if (data.chips !== undefined) seat.chips = data.chips;
             }
             this.pot = data.pot;
+            this.updateMyChips();
 
             const amt = data.amount && data.amount > 0 ? ' ' + data.amount : '';
             this.addLog(data.username + ': ' + data.poker_action + amt);
@@ -531,6 +545,7 @@ function pokerApp() {
                     isBigBlind: false,
                     hasCards: false,
                     roundBet: 0,
+                    potContrib: 0,
                 };
             }
             this.addLog(data.username + ' joined the table');
@@ -544,7 +559,7 @@ function pokerApp() {
                     status: '', is_online: false, avatar_url: '',
                     coins_invested: 0,
                     lastAction: '', isSmallBlind: false, isBigBlind: false,
-                    hasCards: false, roundBet: 0,
+                    hasCards: false, roundBet: 0, potContrib: 0,
                 };
             }
             this.addLog(data.username + ' left the table');
@@ -582,8 +597,35 @@ function pokerApp() {
         },
 
         getMyProjectedPayout() {
-            if (this.totalChips === 0 || this.totalCoinsInvested === 0) return 0;
-            return Math.floor((this.myChips / this.totalChips) * this.totalCoinsInvested);
+            if (this.totalCoinsInvested === 0) return 0;
+
+            const activePlayers = this.seats.filter(s => s.username && s.status !== 'invited');
+
+            // Use effective chips (stack + pot contribution) to mirror server
+            // pot-refund logic: the server returns pot to stacks before payout
+            const effectiveChips = (s) => s.chips + (s.potContrib || 0);
+            const totalEffective = activePlayers.reduce((sum, s) => sum + effectiveChips(s), 0);
+            if (totalEffective === 0) return 0;
+
+            const mySeat = activePlayers.find(s => s.username === this.myUsername);
+            if (!mySeat || effectiveChips(mySeat) === 0) return 0;
+
+            // Mirror server logic: largest stack gets the rounding remainder
+            const myEffective = effectiveChips(mySeat);
+            const maxEffective = Math.max(...activePlayers.map(s => effectiveChips(s)));
+            const iAmLargest = myEffective === maxEffective;
+
+            if (iAmLargest) {
+                const othersSum = activePlayers
+                    .filter(s => s.username !== this.myUsername)
+                    .reduce((sum, s) => {
+                        const eff = effectiveChips(s);
+                        if (eff === 0) return sum;
+                        return sum + Math.floor((eff * this.totalCoinsInvested) / totalEffective);
+                    }, 0);
+                return this.totalCoinsInvested - othersSum;
+            }
+            return Math.floor((myEffective * this.totalCoinsInvested) / totalEffective);
         },
 
         getMyProjectedNet() {

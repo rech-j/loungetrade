@@ -175,6 +175,9 @@ class PokerConsumer(BaseGameConsumer):
         if self._action_timer and not self._action_timer.done():
             self._action_timer.cancel()
 
+        # Re-fetch player to get updated chip count after process_action
+        player = await self.get_player()
+
         # Broadcast the action
         await self.channel_layer.group_send(self.room_group_name, {
             'type': 'player_acted',
@@ -182,6 +185,7 @@ class PokerConsumer(BaseGameConsumer):
             'poker_action': action_taken,
             'amount': amount,
             'pot': hand.pot,
+            'chips': player.chips if player else 0,
         })
 
         if advance_info == 'winner':
@@ -481,12 +485,16 @@ class PokerConsumer(BaseGameConsumer):
 
             if action_taken:
                 username = await self.get_username(user_id)
+                fold_player = await database_sync_to_async(
+                    lambda: PokerPlayer.objects.get(table_id=self.table_id, user_id=user_id)
+                )()
                 await self.channel_layer.group_send(self.room_group_name, {
                     'type': 'player_acted',
                     'username': username,
                     'poker_action': 'fold',
                     'amount': 0,
                     'pot': hand.pot,
+                    'chips': fold_player.chips,
                 })
 
                 if advance_info == 'winner':
@@ -653,6 +661,7 @@ class PokerConsumer(BaseGameConsumer):
             'poker_action': event['poker_action'],
             'amount': event['amount'],
             'pot': event['pot'],
+            'chips': event.get('chips', 0),
         }))
 
     async def community_cards(self, event):
