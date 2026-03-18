@@ -189,6 +189,14 @@
 .community-area .poker-card:nth-child(3) { animation-delay: 0.16s; }
 .community-area .poker-card:nth-child(4) { animation-delay: 0.24s; }
 .community-area .poker-card:nth-child(5) { animation-delay: 0.32s; }
+
+/* Showdown modal — solid opaque background so felt doesn't bleed through */
+.showdown-modal {
+    background: #f4f0e8;
+}
+.dark .showdown-modal {
+    background: #1a1410;
+}
 </style>
 
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
@@ -452,6 +460,17 @@
 
             <!-- Vote to end -->
             <div x-show="tableStatus === 'active'" class="vintage-card py-3">
+                <!-- Projected payout indicator -->
+                <div class="mb-3 pb-2 border-b border-stone/20">
+                    <p class="text-[0.6rem] text-slate uppercase tracking-wide mb-1">Current Payout</p>
+                    <div class="flex items-baseline justify-between">
+                        <span class="text-sm font-venus-medium"
+                              :class="getMyProjectedNet() >= 0 ? 'text-patina' : 'text-burgundy'"
+                              x-text="(getMyProjectedNet() >= 0 ? '+' : '') + getMyProjectedNet() + ' LC'"></span>
+                        <span class="text-[0.6rem] text-slate"
+                              x-text="getMyProjectedPayout() + ' of ' + myCoinsInvested + ' invested'"></span>
+                    </div>
+                </div>
                 <button @click="sendVoteEnd(true)" x-show="!hasVotedEnd"
                         class="vintage-btn-outline w-full py-2 text-xs">Vote to End Game</button>
                 <p x-show="hasVotedEnd" class="text-xs text-slate text-center">You voted to end.</p>
@@ -478,14 +497,17 @@
     </div>
 
     <!-- Showdown overlay -->
-    <div x-show="showShowdown" x-transition class="fixed inset-0 bg-ink/60 flex items-center justify-center z-50" @click.self="showShowdown = false">
-        <div class="vintage-card max-w-md w-full mx-4 py-5">
+    <div x-show="showShowdown" x-transition class="fixed inset-0 bg-ink/80 flex items-center justify-center z-50">
+        <div class="showdown-modal max-w-md w-full mx-4 py-5 px-6 rounded-lg border border-stone border-t-3 border-t-gold shadow-xl">
             <h3 class="font-serif text-lg font-bold text-gold text-center mb-4">Showdown</h3>
             <div class="space-y-3">
                 <template x-for="r in showdownResults" :key="r.username">
                     <div class="flex items-center justify-between gap-2 px-2 py-1.5 rounded" :class="r.winnings > 0 ? 'bg-gold/10' : ''">
                         <div>
-                            <p class="text-sm font-medium" x-text="r.username"></p>
+                            <div class="flex items-center gap-1.5">
+                                <p class="text-sm font-medium" x-text="r.username"></p>
+                                <span x-show="showdownReady[r.username] === true" class="text-[0.55rem] text-patina uppercase">Ready</span>
+                            </div>
                             <p class="text-xs text-slate" x-text="r.hand_name"></p>
                             <div class="flex gap-1 mt-1" x-show="r.cards">
                                 <template x-for="card in (r.cards || '').split(',')" :key="card">
@@ -498,7 +520,18 @@
                     </div>
                 </template>
             </div>
-            <button @click="showShowdown = false" class="vintage-btn w-full mt-4 py-2 text-xs">Continue</button>
+            <!-- Ready status & button -->
+            <div class="mt-4">
+                <p class="text-xs text-slate text-center mb-2"
+                   x-text="showdownReadyCount + '/' + showdownExpectedCount + ' players ready'"></p>
+                <button x-show="!iWasFolded && !showdownReady[myUsername]"
+                        @click="sendShowdownReady()"
+                        class="vintage-btn w-full py-2 text-xs">Ready</button>
+                <p x-show="!iWasFolded && showdownReady[myUsername]"
+                   class="text-xs text-patina text-center font-venus-medium">You are ready — waiting for others...</p>
+                <p x-show="iWasFolded"
+                   class="text-xs text-slate text-center">Waiting for showdown players to ready up...</p>
+            </div>
         </div>
     </div>
 </div>

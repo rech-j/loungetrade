@@ -97,11 +97,18 @@ def start_hand(table_id):
         if len(active_players) < 2:
             return None, {}
 
-        # Reset folded players to active for new hand
+        # Reset folded players to active for new hand (only those with chips)
         PokerPlayer.objects.filter(
-            table=table, status='folded'
+            table=table, status='folded', chips__gt=0,
         ).update(status='active')
         active_players = _get_active_seats(table)
+
+        # Players with 0 chips sit out until they rebuy
+        for p in active_players:
+            if p.chips == 0:
+                p.status = 'folded'
+                p.save(update_fields=['status'])
+        active_players = [p for p in active_players if p.chips > 0]
 
         # Rotate dealer
         seat_numbers = [p.seat for p in active_players]
@@ -176,6 +183,7 @@ def start_hand(table_id):
         hand.round_bets = {
             str(sb_player.user_id): sb_amount,
             str(bb_player.user_id): bb_amount,
+            '_acted': [],  # Blind posting does NOT count as acting
         }
         hand.save(update_fields=['pot', 'round_bets'])
 
@@ -340,6 +348,13 @@ def process_action(hand_id, player_id, action, amount=0):
                 hand.current_bet = new_total
             hand.pot += actual_amount
 
+        # Mark this player as having explicitly acted (distinct from blind posting)
+        acted = round_bets.get('_acted', [])
+        player_key = str(player.user_id)
+        if player_key not in acted:
+            acted.append(player_key)
+        round_bets['_acted'] = acted
+
         hand.round_bets = round_bets
         hand.save(update_fields=['pot', 'current_bet', 'last_raise', 'round_bets'])
 
@@ -373,13 +388,15 @@ def process_action(hand_id, player_id, action, amount=0):
         )
 
         # Check if the round is complete by seeing whether the next player
-        # has already acted and matched the current bet.  When a bet/raise
-        # increases current_bet, previously-acting players' recorded amounts
-        # fall below it, so they'll need to act again — handled naturally.
+        # has already explicitly acted (not just posted a blind) and matched
+        # the current bet.  When a bet/raise increases current_bet,
+        # previously-acting players' recorded amounts fall below it, so
+        # they'll need to act again — handled naturally.
+        acted_set = set(round_bets.get('_acted', []))
         next_player = next((p for p in players_who_can_act if p.seat == next_s), None)
         if next_player:
             np_key = str(next_player.user_id)
-            np_has_acted = np_key in round_bets
+            np_has_acted = np_key in acted_set
             np_bet = round_bets.get(np_key, 0)
 
             if np_has_acted and np_bet >= hand.current_bet:

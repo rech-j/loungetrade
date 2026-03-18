@@ -671,29 +671,58 @@ function chessApp() {
             }
         },
 
-        // Move animation
+        // Move animation — uses a fixed ghost so Alpine's DOM patches don't interfere
         animateMove(from, to, callback) {
             if (this._animating) { callback(); return; }
-            var fromEl = document.querySelector('[data-sq="' + from + '"] .chess-piece');
-            var toCell = document.querySelector('[data-sq="' + to + '"]');
-            if (!fromEl || !toCell) { callback(); return; }
 
-            var fromRect = fromEl.getBoundingClientRect();
-            var toRect = toCell.getBoundingClientRect();
-            var dx = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
-            var dy = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+            var fromCell = document.querySelector('[data-sq="' + from + '"]');
+            var toCell   = document.querySelector('[data-sq="' + to   + '"]');
+            if (!fromCell || !toCell) { callback(); return; }
 
+            var pieceImg = fromCell.querySelector('.chess-piece');
+            if (!pieceImg || !pieceImg.src || getComputedStyle(pieceImg).display === 'none') {
+                callback(); return;
+            }
+
+            var fromRect = fromCell.getBoundingClientRect();
+            var toRect   = toCell.getBoundingClientRect();
+            var dx = toRect.left + toRect.width  / 2 - (fromRect.left + fromRect.width  / 2);
+            var dy = toRect.top  + toRect.height / 2 - (fromRect.top  + fromRect.height / 2);
+
+            // Create a detached ghost that floats above everything
+            var size  = fromRect.width * 0.8;
+            var ghost = document.createElement('img');
+            ghost.src = pieceImg.src;
+            ghost.style.cssText = [
+                'position:fixed',
+                'pointer-events:none',
+                'z-index:1000',
+                'width:'  + size + 'px',
+                'height:' + size + 'px',
+                'left:'   + (fromRect.left + fromRect.width  * 0.1) + 'px',
+                'top:'    + (fromRect.top  + fromRect.height * 0.1) + 'px',
+                'transition:transform 160ms ease',
+                'will-change:transform',
+            ].join(';');
+
+            // Hide the real piece and any piece already at the destination
+            pieceImg.style.visibility = 'hidden';
+            var destImg = toCell.querySelector('.chess-piece');
+            if (destImg) destImg.style.visibility = 'hidden';
+            document.body.appendChild(ghost);
             this._animating = true;
-            fromEl.classList.add('animating');
-            void fromEl.offsetWidth; // force reflow so transition is active before setting target transform
-            fromEl.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+
+            // Trigger the transition on the next frame
+            void ghost.offsetWidth;
+            ghost.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
 
             setTimeout(() => {
-                fromEl.classList.remove('animating');
-                fromEl.style.transform = '';
+                if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+                pieceImg.style.visibility = '';
+                if (destImg) destImg.style.visibility = '';
                 this._animating = false;
                 callback();
-            }, 150);
+            }, 170); // slightly longer than the transition so it always finishes
         },
 
         // Draw offers

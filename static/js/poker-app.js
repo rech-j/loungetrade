@@ -37,6 +37,16 @@ function pokerApp() {
         handLog: [],
         _logId: 0,
         canRebuy: false,
+        showdownReady: {},       // { username: true/false } ready status per player
+        showdownReadyCount: 0,
+        showdownExpectedCount: 0,
+        iWasFolded: false,       // whether I was folded this hand (auto-ready)
+
+        // Payout projection
+        myCoinsInvested: 0,
+        totalCoinsInvested: 0,
+        totalChips: 0,
+        stake: 0,
 
         // Vote state
         endVoteActive: false,
@@ -156,6 +166,9 @@ function pokerApp() {
                 case 'player_eliminated':
                     this.addLog(data.username + ' eliminated');
                     break;
+                case 'showdown_ready_update':
+                    this.handleShowdownReadyUpdate(data);
+                    break;
                 case 'player_rebuyed':
                     this.handlePlayerRebuyed(data);
                     break;
@@ -176,6 +189,7 @@ function pokerApp() {
             this.isCreator = data.is_creator;
             this.minPlayers = data.min_players || 3;
             this.maxPlayers = data.max_players || 8;
+            this.stake = data.stake || 0;
 
             // Build seats array (8 max seats)
             this.seats = [];
@@ -190,6 +204,7 @@ function pokerApp() {
                         status: player.status,
                         is_online: player.is_online,
                         avatar_url: player.avatar_url || '',
+                        coins_invested: player.coins_invested || 0,
                         lastAction: '',
                         isSmallBlind: false,
                         isBigBlind: false,
@@ -200,15 +215,17 @@ function pokerApp() {
                     this.seats.push({
                         seat: i, username: '', display_name: '', chips: 0,
                         status: '', is_online: false, avatar_url: '',
+                        coins_invested: 0,
                         lastAction: '', isSmallBlind: false, isBigBlind: false,
                         hasCards: false, roundBet: 0,
                     });
                 }
             }
 
-            // Update my chip count
+            // Update my chip count and payout projection data
             const mySeatData = this.seats.find(s => s.username === this.myUsername);
             if (mySeatData) this.myChips = mySeatData.chips;
+            this.updatePayoutProjection();
 
             if (data.my_cards) {
                 this.myCards = data.my_cards.split(',').filter(c => c);
@@ -232,6 +249,10 @@ function pokerApp() {
             this.communityCards = [];
             this.showShowdown = false;
             this.showdownResults = [];
+            this.showdownReady = {};
+            this.showdownReadyCount = 0;
+            this.showdownExpectedCount = 0;
+            this.iWasFolded = false;
             this.tableStatus = 'active';
 
             // Update player chips and statuses
@@ -407,6 +428,29 @@ function pokerApp() {
                 }
             }
             this.updateMyChips();
+
+            // Ready-up tracking
+            const needsReady = data.needs_ready || [];
+            this.showdownReady = {};
+            for (const u of needsReady) {
+                this.showdownReady[u] = false;
+            }
+            this.showdownExpectedCount = needsReady.length;
+            this.showdownReadyCount = 0;
+
+            // Check if I was folded (auto-ready, no button needed)
+            this.iWasFolded = !needsReady.includes(this.myUsername);
+        },
+
+        handleShowdownReadyUpdate(data) {
+            if (this.showdownReady.hasOwnProperty(data.username)) {
+                this.showdownReady[data.username] = true;
+            }
+            this.showdownReadyCount = Object.values(this.showdownReady).filter(v => v).length;
+        },
+
+        sendShowdownReady() {
+            this.send({ action: 'showdown_ready' });
         },
 
         handleHandComplete(data) {
@@ -443,6 +487,7 @@ function pokerApp() {
             if (seat) {
                 seat.chips = data.chips;
                 seat.status = 'active';
+                if (data.coins_invested) seat.coins_invested = data.coins_invested;
             }
             this.addLog(data.username + ' rebuyed');
             this.updateMyChips();
@@ -474,6 +519,7 @@ function pokerApp() {
                     status: 'active',
                     is_online: false,
                     avatar_url: data.avatar_url || '',
+                    coins_invested: data.coins_invested || 0,
                     lastAction: '',
                     isSmallBlind: false,
                     isBigBlind: false,
@@ -482,6 +528,7 @@ function pokerApp() {
                 };
             }
             this.addLog(data.username + ' joined the table');
+            this.updatePayoutProjection();
         },
 
         handlePlayerLeft(data) {
@@ -489,6 +536,7 @@ function pokerApp() {
                 this.seats[data.seat] = {
                     seat: data.seat, username: '', display_name: '', chips: 0,
                     status: '', is_online: false, avatar_url: '',
+                    coins_invested: 0,
                     lastAction: '', isSmallBlind: false, isBigBlind: false,
                     hasCards: false, roundBet: 0,
                 };
@@ -516,6 +564,24 @@ function pokerApp() {
         updateMyChips() {
             const mySeat = this.seats.find(s => s.username === this.myUsername);
             if (mySeat) this.myChips = mySeat.chips;
+            this.updatePayoutProjection();
+        },
+
+        updatePayoutProjection() {
+            const activePlayers = this.seats.filter(s => s.username && s.status !== 'invited');
+            this.totalCoinsInvested = activePlayers.reduce((sum, s) => sum + (s.coins_invested || 0), 0);
+            this.totalChips = activePlayers.reduce((sum, s) => sum + s.chips, 0);
+            const mySeat = this.seats.find(s => s.username === this.myUsername);
+            this.myCoinsInvested = mySeat ? (mySeat.coins_invested || 0) : 0;
+        },
+
+        getMyProjectedPayout() {
+            if (this.totalChips === 0 || this.totalCoinsInvested === 0) return 0;
+            return Math.floor((this.myChips / this.totalChips) * this.totalCoinsInvested);
+        },
+
+        getMyProjectedNet() {
+            return this.getMyProjectedPayout() - this.myCoinsInvested;
         },
 
         // Actions
