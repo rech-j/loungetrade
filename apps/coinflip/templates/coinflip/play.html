@@ -1,13 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Coin Flip - LC{% endblock %}
 
-{% block extra_head %}
+{% block content %}
 <style>
     .coin {
         width: clamp(140px, 40vw, 180px);
         height: clamp(140px, 40vw, 180px);
         perspective: 800px;
-        margin: 0 auto;
+        margin-left: auto;
+        margin-right: auto;
     }
     .coin-inner {
         width: 100%;
@@ -81,9 +82,6 @@
     .coin-inner.result-heads { transform: rotateY(1800deg); }
     .coin-inner.result-tails { transform: rotateY(1980deg); }
 </style>
-{% endblock %}
-
-{% block content %}
 <div class="max-w-md mx-auto text-center"
      x-data="{
          status: '{{ challenge.status }}',
@@ -159,7 +157,7 @@
         </p>
     </div>
 
-    <div class="coin mb-8" aria-hidden="true">
+    <div class="coin mb-12" aria-hidden="true">
         <div class="coin-inner {% if challenge.status == 'completed' %}result-{{ challenge.flip_result }}{% endif %}">
             <div class="coin-face coin-heads">
                 <span class="coin-glyph">H</span>
@@ -210,7 +208,7 @@
                 </div>
             </div>
             {% else %}
-            <p class="text-sm text-slate" x-show="connected">
+            <p class="text-sm text-slate mt-3" x-show="connected">
                 Waiting for {{ challenge.opponent.profile.get_display_name }} to respond...
             </p>
             {% endif %}

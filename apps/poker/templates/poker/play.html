@@ -7,10 +7,11 @@
 /* Poker table wrapper — seats live in the padding around the felt */
 .poker-table-area {
     position: relative;
-    padding: 80px 30px 70px;
+    padding: 100px 60px 80px;
+    margin-bottom: 90px; /* seats overflow ~50% of their height below the div; this prevents collision with content below */
 }
 @media (min-width: 640px) {
-    .poker-table-area { padding: 90px 50px 80px; }
+    .poker-table-area { padding: 110px 90px 90px; }
 }
 
 /* Poker table felt — visual surface for pot & community cards only */
@@ -30,7 +31,27 @@
     flex-direction: column;
     align-items: center;
     z-index: 2;
-    width: 5.5rem;
+    width: 6rem;
+}
+
+/* Dealer token overlaid on avatar */
+.dealer-overlay {
+    position: absolute;
+    bottom: -6px;
+    left: -6px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #c9a84c;
+    color: #1a1410;
+    font-size: 0.5rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #a88a3c;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+    z-index: 3;
 }
 /* Bottom center (hero) */
 .seat-0 { bottom: 0; left: 50%; transform: translate(-50%, 50%); }
@@ -94,21 +115,6 @@
     z-index: 1;
 }
 
-/* Dealer button */
-.dealer-btn {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #c9a84c;
-    color: #1a1410;
-    font-size: 0.55rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 1px solid #a88a3c;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-}
 
 /* Action badges */
 .action-badge {
@@ -230,7 +236,7 @@
                             <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
                             <div class="poker-card face-down" style="width:22px; height:30px; margin:0;"></div>
                         </div>
-                        <!-- Avatar + online indicator -->
+                        <!-- Avatar + online indicator + dealer overlay -->
                         <div class="relative">
                             <div class="w-9 h-9 rounded-full border-2 overflow-hidden flex items-center justify-center flex-shrink-0"
                                  :class="seat.status === 'folded' ? 'border-stone/50 opacity-50' : (seat.status === 'eliminated' ? 'border-burgundy/50 opacity-30' : 'border-gold/60 bg-parchment dark:bg-walnut')">
@@ -240,14 +246,15 @@
                             </div>
                             <span class="w-1.5 h-1.5 rounded-full absolute -top-0.5 -right-0.5"
                                   :class="seat.is_online ? 'bg-patina' : 'bg-stone'"></span>
+                            <!-- Dealer token: overlaid bottom-left of avatar to keep badge row compact -->
+                            <div x-show="seat.seat === dealerSeat" class="dealer-overlay">D</div>
                         </div>
                         <!-- Name & chips -->
                         <p class="text-[0.6rem] text-cream font-medium leading-tight truncate w-full text-center mt-0.5"
                            :class="seat.status === 'folded' ? 'opacity-50' : ''" x-text="seat.display_name || seat.username"></p>
                         <p class="text-[0.55rem] text-gold/80 text-center" x-text="seat.chips + ' chips'"></p>
-                        <!-- Markers row: dealer, blinds, round bet, action — all inline -->
+                        <!-- Markers row: blinds, round bet, action — all inline -->
                         <div class="flex flex-wrap items-center justify-center gap-0.5 mt-0.5">
-                            <div x-show="seat.seat === dealerSeat" class="dealer-btn">D</div>
                             <span x-show="seat.isSmallBlind" class="action-badge bg-blue-800/80 text-blue-200">SB</span>
                             <span x-show="seat.isBigBlind" class="action-badge bg-purple-800/80 text-purple-200">BB</span>
                             <span x-show="seat.roundBet > 0" class="text-[0.55rem] text-cream/90 bg-ink/50 px-1 py-0.5 rounded leading-none" x-text="seat.roundBet"></span>

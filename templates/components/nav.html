@@ -19,11 +19,10 @@
             </div>
 
             <div class="hidden md:flex items-center gap-3">
-                <span class="vintage-badge bg-gold/10 dark:bg-gold/[0.08] gap-1"
+                <span class="vintage-badge bg-gold/10 dark:bg-gold/[0.08]"
                       hx-get="{% url 'balance_check' %}"
                       hx-trigger="every 15s"
                       hx-swap="innerHTML">
-                    <svg class="w-2 h-2 opacity-70" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
                     {{ request.user.profile.balance }} LC
                 </span>
 
@@ -36,7 +35,8 @@
                         <svg aria-hidden="true" class="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
-                        <span hx-get="{% url 'notifications_unread_count' %}"
+                        <span id="notif-badge-display"
+                              hx-get="{% url 'notifications_unread_count' %}"
                               hx-trigger="load"
                               hx-swap="innerHTML"
                               hx-on::after-settle="updateBellActivity(this)">
@@ -45,7 +45,7 @@
                               hx-get="{% url 'notifications_unread_count' %}"
                               hx-trigger="every 10s"
                               hx-swap="innerHTML"
-                              hx-target="previous span"
+                              hx-target="#notif-badge-display"
                               disabled
                               class="hidden">
                         </span>
@@ -59,7 +59,7 @@
                             <span class="text-[10px] font-venus-medium uppercase tracking-widest text-slate">Notifications</span>
                         </div>
                         <div hx-get="{% url 'notifications_unread' %}"
-                             hx-trigger="load"
+                             hx-trigger="load, click from:#notif-bell-btn"
                              hx-swap="innerHTML">
                             <div class="p-4 text-sm text-slate">Loading...</div>
                         </div>
