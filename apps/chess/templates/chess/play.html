@@ -64,7 +64,7 @@
      data-opponent-username="{{ game.opponent.username }}"
      data-opponent-avatar="{% if game.opponent.profile.avatar %}{{ game.opponent.profile.avatar.url }}{% endif %}"
      data-opponent-initial="{{ game.opponent.profile.get_display_name|first|upper }}"
-     x-init="myUsername = $el.dataset.username; init()">
+>
 
     <div class="flex items-center justify-between mb-4">
         <div>

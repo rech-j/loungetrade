@@ -72,6 +72,12 @@ function pokerApp() {
         },
 
         connect() {
+            // Close any existing WebSocket to prevent duplicate connections
+            if (this.ws) {
+                this.ws.onclose = null;  // prevent reconnect loop
+                this.ws.close();
+            }
+
             const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
             const url = proto + '//' + location.host + '/ws/poker/' + this.tableId + '/';
 

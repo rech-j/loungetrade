@@ -140,6 +140,7 @@ function chessApp() {
         // Init
         init() {
             var el = this.$el;
+            this.myUsername = el.dataset.username;
             this.playerAvatars[el.dataset.creatorUsername] = {
                 avatar: el.dataset.creatorAvatar || '',
                 initial: el.dataset.creatorInitial || '?',
@@ -154,6 +155,11 @@ function chessApp() {
         },
 
         connectWS() {
+            if (this.ws) {
+                this.ws.onclose = null;
+                this.ws.close();
+            }
+
             var proto = location.protocol === 'https:' ? 'wss' : 'ws';
             this.ws = new WebSocket(proto + '://' + location.host + '/ws/chess/' + this.$el.dataset.gameId + '/');
             this.ws.onopen = () => {
