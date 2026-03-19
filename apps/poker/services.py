@@ -99,7 +99,7 @@ def start_hand(table_id):
 
         # Reset folded players to active for new hand (only those with chips)
         PokerPlayer.objects.filter(
-            table=table, status='folded', chips__gt=0,
+            table=table, status__in=['folded', 'all_in'], chips__gt=0,
         ).update(status='active')
         active_players = _get_active_seats(table)
 
