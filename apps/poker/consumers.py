@@ -354,7 +354,7 @@ class PokerConsumer(BaseGameConsumer):
         })
 
     async def showdown_ready_signal(self, event):
-        """Channel layer handler — only the owner consumer tracks state."""
+        """Channel layer handler - only the owner consumer tracks state."""
         user_id = event['user_id']
         username = event['username']
 
@@ -609,7 +609,7 @@ class PokerConsumer(BaseGameConsumer):
 
     async def hand_started(self, event):
         """Send hand_started to client, with their private hole cards."""
-        # New hand — cancel any lingering timer from the previous hand
+        # New hand - cancel any lingering timer from the previous hand
         if self._action_timer and not self._action_timer.done():
             self._action_timer.cancel()
             self._action_timer = None
@@ -631,7 +631,7 @@ class PokerConsumer(BaseGameConsumer):
         }))
 
     async def action_required(self, event):
-        # Cancel any stale timer on THIS consumer — a new turn has started,
+        # Cancel any stale timer on THIS consumer - a new turn has started,
         # so any timer we were running for the previous turn is obsolete.
         if self._action_timer and not self._action_timer.done():
             self._action_timer.cancel()

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Live Chess - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl lg:max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="font-venus-medium text-2xl">Live Games</h1>
+            <p class="text-slate text-sm mt-1">Watch chess games in progress.</p>
+        </div>
+        <a href="{% url 'chess_lobby' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Back to Lobby</a>
+    </div>
+
+    {% if games %}
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        {% for g in games %}
+        <a href="{% url 'chess_play' g.pk %}" class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gold/5 transition-colors block">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="flex-shrink-0 w-2.5 h-2.5 rounded-full bg-patina animate-pulse"></span>
+                <div class="min-w-0">
+                    <p class="text-sm truncate">
+                        {{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}
+                    </p>
+                    <p class="text-xs text-slate">
+                        {{ g.stake }} LC &middot; Started {{ g.started_at|timesince }} ago
+                    </p>
+                </div>
+            </div>
+            <span class="text-xs text-gold flex-shrink-0">Spectate &rarr;</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="vintage-empty-state">No live games right now. Check back later.</div>
+    {% endif %}
+</div>
+{% endblock %}

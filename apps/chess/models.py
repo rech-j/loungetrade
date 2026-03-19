@@ -3,7 +3,16 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
-TIME_CONTROL = 600  # 10 minutes in seconds
+TIME_CONTROL = 600  # 10 minutes in seconds (legacy default)
+
+TIME_CONTROL_CHOICES = [
+    (60, '1 min - Bullet'),
+    (180, '3 min - Blitz'),
+    (300, '5 min - Blitz'),
+    (600, '10 min - Rapid'),
+    (1800, '30 min - Classical'),
+]
+TIME_CONTROL_VALUES = {t[0] for t in TIME_CONTROL_CHOICES}
 
 
 class ChessGame(models.Model):
@@ -17,6 +26,11 @@ class ChessGame(models.Model):
         ('checkmate', 'Checkmate'),
         ('stalemate', 'Stalemate'),
         ('draw', 'Draw agreed'),
+        ('threefold', 'Threefold repetition'),
+        ('fivefold', 'Fivefold repetition'),
+        ('fifty_move', 'Fifty-move rule'),
+        ('seventy_five', 'Seventy-five-move rule'),
+        ('insufficient', 'Insufficient material'),
         ('resign', 'Resignation'),
         ('timeout', 'Timeout'),
         ('cancelled', 'Cancelled'),
@@ -56,6 +70,9 @@ class ChessGame(models.Model):
     creator_side = models.CharField(max_length=6, choices=SIDE_CHOICES, default='random')
 
     stake = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    time_control = models.PositiveIntegerField(
+        choices=TIME_CONTROL_CHOICES, default=TIME_CONTROL,
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     winner = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -26,7 +26,7 @@ TEST_CHANNEL_LAYERS = {
     }
 }
 
-# FEN after 1.e4 — it is black's turn, meaning white just moved.
+# FEN after 1.e4 - it is black's turn, meaning white just moved.
 # Used in tests that need a game state where white can report game-over.
 FEN_AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1'
 STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
@@ -81,12 +81,12 @@ class ChessConsumerConnectionTest(TransactionTestCase):
             creator_comm = self._comm(self.alice)
             opponent_comm = self._comm(self.bob)
 
-            # Creator connects to pending game — receives game_state(pending)
+            # Creator connects to pending game - receives game_state(pending)
             connected, _ = await creator_comm.connect()
             self.assertTrue(connected)
             creator_msgs.append(await creator_comm.receive_json_from())
 
-            # Opponent connects — triggers activation via group_send(game_activated)
+            # Opponent connects - triggers activation via group_send(game_activated)
             # Both creator and opponent receive game_state(active)
             connected, _ = await opponent_comm.connect()
             self.assertTrue(connected)
@@ -125,7 +125,7 @@ class ChessConsumerConnectionTest(TransactionTestCase):
 
 @override_settings(CHANNEL_LAYERS=TEST_CHANNEL_LAYERS)
 class ChessConsumerMoveTest(TransactionTestCase):
-    """Tests for handle_move — requires an already-active game."""
+    """Tests for handle_move - requires an already-active game."""
 
     def setUp(self):
         channel_layers.backends = {}
@@ -336,7 +336,7 @@ class ChessConsumerTimeoutTest(TransactionTestCase):
         await comm.receive_json_from()  # player_connected (self)
 
     def test_self_reported_timeout_ends_game(self):
-        """White reports their own timeout — white loses, black wins."""
+        """White reports their own timeout - white loses, black wins."""
         captured = []
 
         async def run():
@@ -382,7 +382,7 @@ class ChessConsumerTimeoutTest(TransactionTestCase):
             await self._connect_active(black_comm)
             await white_comm.receive_json_from()  # player_connected(bob)
 
-            # Black reports timeout — server derives black as the loser
+            # Black reports timeout - server derives black as the loser
             await black_comm.send_json_to({'action': 'timeout'})
 
             captured.append(await black_comm.receive_json_from())
@@ -527,7 +527,7 @@ class ChessConsumerGameOverTest(TransactionTestCase):
         self.assertEqual(game.status, 'completed')
         self.assertIsNone(game.winner)
 
-        # Balances must be unchanged — no coin transfer for draws
+        # Balances must be unchanged - no coin transfer for draws
         self.alice.profile.refresh_from_db()
         self.bob.profile.refresh_from_db()
         self.assertEqual(self.alice.profile.balance, 200)
@@ -571,7 +571,7 @@ class ChessConsumerDrawTest(TransactionTestCase):
         await comm.receive_json_from()  # player_connected (self)
 
     def test_draw_offer_broadcasts_to_both(self):
-        """White offers draw — both players receive draw_offered."""
+        """White offers draw - both players receive draw_offered."""
         captured = []
 
         async def run():
@@ -602,7 +602,7 @@ class ChessConsumerDrawTest(TransactionTestCase):
         self.assertEqual(self.game.status, 'active')
 
     def test_draw_accepted_ends_game_no_transfer(self):
-        """White offers draw, black accepts — game ends as draw, no coins transferred."""
+        """White offers draw, black accepts - game ends as draw, no coins transferred."""
         captured = []
 
         async def run():
@@ -640,14 +640,14 @@ class ChessConsumerDrawTest(TransactionTestCase):
         self.assertEqual(self.game.end_reason, 'draw')
         self.assertIsNone(self.game.winner)
 
-        # Balances unchanged — no coin transfer for draws
+        # Balances unchanged - no coin transfer for draws
         self.alice.profile.refresh_from_db()
         self.bob.profile.refresh_from_db()
         self.assertEqual(self.alice.profile.balance, 200)
         self.assertEqual(self.bob.profile.balance, 200)
 
     def test_draw_declined_broadcasts_to_both(self):
-        """White offers draw, black declines — both get draw_declined, game continues."""
+        """White offers draw, black declines - both get draw_declined, game continues."""
         captured = []
 
         async def run():
@@ -683,7 +683,7 @@ class ChessConsumerDrawTest(TransactionTestCase):
         self.assertEqual(self.game.status, 'active')
 
     def test_draw_offer_rejected_when_not_your_turn(self):
-        """Black tries to offer draw on white's turn — rejected silently."""
+        """Black tries to offer draw on white's turn - rejected silently."""
         async def run():
             black_comm = self._comm(self.bob)
             await self._connect_active(black_comm)

@@ -14,6 +14,7 @@ class UserProfile(models.Model):
     is_admin_user = models.BooleanField(default=False)
     name_changed_at = models.DateTimeField(null=True, blank=True)
     dark_mode = models.BooleanField(default=False)
+    sound_enabled = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

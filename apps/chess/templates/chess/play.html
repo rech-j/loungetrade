@@ -65,6 +65,20 @@
 .move-cell { cursor: pointer; padding: 1px 3px; border-radius: 2px; transition: background 100ms; }
 .move-cell:hover { background: rgba(201,168,76,0.15); }
 
+/*  Move list scrollbar  */
+#move-list { overflow-x: hidden; }
+#move-list::-webkit-scrollbar { width: 4px; }
+#move-list::-webkit-scrollbar-track { background: transparent; }
+#move-list::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.3); border-radius: 2px; }
+#move-list::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.5); }
+#move-list { scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.3) transparent; }
+
+/*  Move notation styling  */
+.move-check { color: #c9a84c; font-weight: 600; }
+.move-checkmate { color: #c9a84c; font-weight: 800; text-shadow: 0 0 4px rgba(201,168,76,0.3); }
+.move-capture { font-weight: 600; }
+.move-castle { font-style: italic; }
+
 </style>
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
      x-data="chessApp()"
@@ -86,6 +100,8 @@
      data-black-player="{% if game.black_player %}{{ game.black_player.username }}{% endif %}"
      data-white-time="{{ game.white_time }}"
      data-black-time="{{ game.black_time }}"
+     data-sound-enabled="{% if request.user.profile.sound_enabled %}true{% else %}false{% endif %}"
+     {% if is_spectator %}data-spectator="true"{% endif %}
 >
 
     <div class="flex items-center justify-between mb-4">
@@ -93,7 +109,16 @@
             <p class="text-xs tracking-widest uppercase text-slate">Chess Match</p>
             <h1 class="font-serif text-xl font-bold">{{ game.creator.profile.get_display_name }} vs {{ game.opponent.profile.get_display_name }}</h1>
         </div>
-        <div class="vintage-badge">{{ game.stake }} LC</div>
+        <div class="flex items-center gap-2">
+            {% if is_spectator %}
+            <span class="text-xs tracking-wide uppercase px-2 py-1 border border-slate text-slate">Spectating</span>
+            {% endif %}
+            <button @click="toggleSound()" class="p-1.5 border border-stone dark:border-slate rounded transition-colors hover:border-gold" :title="soundEnabled ? 'Mute sounds' : 'Enable sounds'">
+                <svg x-show="soundEnabled" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-gold"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <svg x-show="!soundEnabled" x-cloak xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            </button>
+            <div class="vintage-badge">{{ game.stake }} LC &middot; {{ game.get_time_control_display }}</div>
+        </div>
     </div>
 
     <div x-show="statusMsg" class="mb-4 px-4 py-2 text-sm border-l-3 border-gold bg-gold/10 font-medium" x-text="statusMsg"></div>
@@ -206,6 +231,7 @@
 
             <!-- Mobile move list (hidden on md+) -->
             <div class="md:hidden mt-3" x-show="gameActive || gameOver">
+                <p x-show="openingName" class="text-xs text-gold font-medium italic mb-1 truncate px-1" x-text="openingName"></p>
                 <button @click="showMobileMoves = !showMobileMoves"
                         class="w-full flex items-center justify-between px-3 py-2 text-xs border border-stone dark:border-slate rounded relative">
                     <span>Moves (<span x-text="sanMoves.length"></span>)</span>
@@ -225,16 +251,16 @@
                             <span @click="navigateToMove(i * 2 + 1)"
                                   x-text="pair[0]"
                                   class="font-mono move-cell"
-                                  :class="{
-                                      'bg-gold/20 text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 1,
-                                  }"></span>
+                                  :class="[
+                                      isViewingHistory && viewIndex === i * 2 + 1 ? 'bg-gold/20 text-gold font-bold' : moveClass(pair[0]),
+                                  ]"></span>
                             <span x-show="pair[1]"
                                   @click="navigateToMove(i * 2 + 2)"
                                   x-text="pair[1]"
                                   class="font-mono text-slate move-cell"
-                                  :class="{
-                                      'bg-gold/20 !text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 2,
-                                  }"></span>
+                                  :class="[
+                                      isViewingHistory && viewIndex === i * 2 + 2 ? 'bg-gold/20 !text-gold font-bold' : moveClass(pair[1]),
+                                  ]"></span>
                         </div>
                     </template>
                     <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
@@ -300,7 +326,16 @@
                  x-transition:enter-end="opacity-100 translate-y-0">
                 <p class="font-serif text-lg font-bold" :class="gameOverTitleClass" x-text="gameOverTitle"></p>
                 <p class="text-sm text-slate mt-1" x-text="gameOverMsg"></p>
-                <a href="{% url 'chess_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
+                <div class="flex gap-2 mt-3">
+                    <a href="{% url 'chess_lobby' %}" class="vintage-btn flex-1 py-2 text-xs text-center block">Lobby</a>
+                    {% if not is_spectator %}
+                    <form method="post" action="{% url 'chess_rematch' game.pk %}" class="flex-1">
+                        {% csrf_token %}
+                        <button type="submit" class="vintage-btn w-full py-2 text-xs">Rematch</button>
+                    </form>
+                    {% endif %}
+                </div>
+                <a href="{% url 'chess_pgn' game.pk %}" class="text-xs text-slate hover:text-gold mt-2 inline-block" download>Download PGN</a>
             </div>
         </div>
 
@@ -340,6 +375,7 @@
             </div>
 
             <div class="hidden md:block vintage-card py-3">
+                <p x-show="openingName" class="text-xs text-gold font-medium italic mb-2 truncate" x-text="openingName"></p>
                 <div class="flex items-center justify-between mb-2">
                     <p class="text-xs text-slate uppercase tracking-wide">Moves</p>
                     <!-- Keyboard shortcuts tooltip -->
@@ -365,16 +401,16 @@
                             <span @click="navigateToMove(i * 2 + 1)"
                                   x-text="pair[0]"
                                   class="font-mono move-cell"
-                                  :class="{
-                                      'bg-gold/20 text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 1,
-                                  }"></span>
+                                  :class="[
+                                      isViewingHistory && viewIndex === i * 2 + 1 ? 'bg-gold/20 text-gold font-bold' : moveClass(pair[0]),
+                                  ]"></span>
                             <span x-show="pair[1]"
                                   @click="navigateToMove(i * 2 + 2)"
                                   x-text="pair[1]"
                                   class="font-mono text-slate move-cell"
-                                  :class="{
-                                      'bg-gold/20 !text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 2,
-                                  }"></span>
+                                  :class="[
+                                      isViewingHistory && viewIndex === i * 2 + 2 ? 'bg-gold/20 !text-gold font-bold' : moveClass(pair[1]),
+                                  ]"></span>
                         </div>
                     </template>
                     <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
@@ -411,7 +447,14 @@
                  x-transition:enter-end="opacity-100 translate-y-0">
                 <p class="font-serif text-lg font-bold" :class="gameOverTitleClass" x-text="gameOverTitle"></p>
                 <p class="text-sm text-slate mt-1" x-text="gameOverMsg"></p>
-                <a href="{% url 'chess_lobby' %}" class="vintage-btn mt-3 py-2 px-5 text-xs w-full text-center block">Back to Lobby</a>
+                {% if not is_spectator %}
+                <form method="post" action="{% url 'chess_rematch' game.pk %}" class="mt-3">
+                    {% csrf_token %}
+                    <button type="submit" class="vintage-btn w-full py-2 text-xs">Rematch</button>
+                </form>
+                {% endif %}
+                <a href="{% url 'chess_lobby' %}" class="vintage-btn-outline w-full py-2 text-xs text-center block mt-2">Back to Lobby</a>
+                <a href="{% url 'chess_pgn' game.pk %}" class="text-xs text-slate hover:text-gold mt-2 inline-block" download>Download PGN</a>
             </div>
 
             <div x-show="!gameActive && !gameOver" class="vintage-card py-3 text-center">
@@ -422,5 +465,6 @@
     </div>
 </div>
 <script src="{% static 'js/chess.min.js' %}"></script>
+<script src="{% static 'js/chess-openings.js' %}"></script>
 <script src="{% static 'js/chess-app.js' %}"></script>
 {% endblock %}

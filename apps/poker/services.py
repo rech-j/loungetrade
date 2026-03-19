@@ -391,7 +391,7 @@ def process_action(hand_id, player_id, action, amount=0):
         # has already explicitly acted (not just posted a blind) and matched
         # the current bet.  When a bet/raise increases current_bet,
         # previously-acting players' recorded amounts fall below it, so
-        # they'll need to act again — handled naturally.
+        # they'll need to act again - handled naturally.
         acted_set = set(round_bets.get('_acted', []))
         next_player = next((p for p in players_who_can_act if p.seat == next_s), None)
         if next_player:
