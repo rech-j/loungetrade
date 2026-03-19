@@ -145,6 +145,28 @@ class UserManagementTest(AdminPanelTestCase):
         self.admin.refresh_from_db()
         self.assertTrue(self.admin.is_active)  # unchanged
 
+    def test_toggle_leaderboard_hidden(self):
+        self.client.login(username='admin', password='pass')
+        self.assertFalse(self.user.profile.leaderboard_hidden)
+        self.client.post(reverse('admin_toggle_leaderboard', kwargs={'user_id': self.user.pk}))
+        self.user.profile.refresh_from_db()
+        self.assertTrue(self.user.profile.leaderboard_hidden)
+
+    def test_toggle_leaderboard_restores(self):
+        self.client.login(username='admin', password='pass')
+        self.user.profile.leaderboard_hidden = True
+        self.user.profile.save()
+        self.client.post(reverse('admin_toggle_leaderboard', kwargs={'user_id': self.user.pk}))
+        self.user.profile.refresh_from_db()
+        self.assertFalse(self.user.profile.leaderboard_hidden)
+
+    def test_hidden_user_excluded_from_leaderboard(self):
+        self.user.profile.leaderboard_hidden = True
+        self.user.profile.save()
+        self.client.login(username='admin', password='pass')
+        resp = self.client.get(reverse('leaderboard'))
+        self.assertNotContains(resp, 'user1')
+
 
 class GameManagementTest(AdminPanelTestCase):
     def setUp(self):

@@ -11,7 +11,11 @@ from apps.economy.models import Transaction
 
 def leaderboard_view(request):
     size = getattr(settings, 'LEADERBOARD_SIZE', 50)
-    profiles = list(UserProfile.objects.select_related('user').order_by('-balance')[:size])
+    profiles = list(
+        UserProfile.objects.select_related('user')
+        .filter(leaderboard_hidden=False)
+        .order_by('-balance')[:size]
+    )
 
     last_24h = timezone.now() - timedelta(hours=24)
     user_ids = [p.user_id for p in profiles]
@@ -39,7 +43,9 @@ def leaderboard_view(request):
 
     if request.user.is_authenticated:
         user_balance = request.user.profile.balance
-        user_rank = UserProfile.objects.filter(balance__gt=user_balance).count() + 1
+        user_rank = UserProfile.objects.filter(
+            balance__gt=user_balance, leaderboard_hidden=False,
+        ).count() + 1
         user_in_list = any(p.user_id == request.user.id for p in profiles)
 
         if not user_in_list:
