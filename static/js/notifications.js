@@ -118,23 +118,48 @@
         var dropdown = document.querySelector('.notif-dropdown-list');
         if (dropdown) {
             var icon = ICON_MAP[notif.notif_type] || '\u2022';
-            var timeAgo = 'just now';
-            var linkStart = notif.link ? '<a href="' + notif.link + '" class="block">' : '<div>';
-            var linkEnd = notif.link ? '</a>' : '</div>';
-            var html = '<div class="notif-row px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate border-l-3 border-l-gold" data-notif-id="' + notif.id + '" role="menuitem">'
-                + linkStart
-                + '<p class="text-xs font-medium"><span class="notif-icon mr-1">' + icon + '</span>' + escapeHtml(notif.title) + '</p>'
-                + '<p class="text-xs text-slate mt-0.5">' + escapeHtml(notif.message).substring(0, 70) + '</p>'
-                + '<p class="text-xs text-slate mt-0.5">' + timeAgo + '</p>'
-                + linkEnd
-                + '</div>';
-            dropdown.insertAdjacentHTML('afterbegin', html);
+
+            var row = document.createElement('div');
+            row.className = 'notif-row px-4 py-3 hover:bg-gold/10 border-b border-stone dark:border-slate border-l-3 border-l-gold';
+            row.setAttribute('data-notif-id', String(notif.id));
+            row.setAttribute('role', 'menuitem');
+
+            var wrapper;
+            if (notif.link) {
+                wrapper = document.createElement('a');
+                wrapper.href = notif.link;
+                wrapper.className = 'block';
+            } else {
+                wrapper = document.createElement('div');
+            }
+
+            var titleP = document.createElement('p');
+            titleP.className = 'text-xs font-medium';
+            var iconSpan = document.createElement('span');
+            iconSpan.className = 'notif-icon mr-1';
+            iconSpan.textContent = icon;
+            titleP.appendChild(iconSpan);
+            titleP.appendChild(document.createTextNode(notif.title));
+
+            var messageP = document.createElement('p');
+            messageP.className = 'text-xs text-slate mt-0.5';
+            messageP.textContent = (notif.message || '').substring(0, 70);
+
+            var timeP = document.createElement('p');
+            timeP.className = 'text-xs text-slate mt-0.5';
+            timeP.textContent = 'just now';
+
+            wrapper.appendChild(titleP);
+            wrapper.appendChild(messageP);
+            wrapper.appendChild(timeP);
+            row.appendChild(wrapper);
+            dropdown.insertBefore(row, dropdown.firstChild);
         }
     }
 
     function onNotificationRead(id) {
         updateBadge(-1);
-        var row = document.querySelector('[data-notif-id="' + id + '"]');
+        var row = document.querySelector('[data-notif-id="' + CSS.escape(String(id)) + '"]');
         if (row) {
             row.classList.remove('border-l-gold', 'border-l-3');
             row.classList.add('opacity-60');
@@ -154,18 +179,12 @@
     }
 
     function onNotificationDeleted(id) {
-        var row = document.querySelector('[data-notif-id="' + id + '"]');
+        var row = document.querySelector('[data-notif-id="' + CSS.escape(String(id)) + '"]');
         if (row) {
             var wasUnread = row.classList.contains('border-l-gold');
             row.remove();
             if (wasUnread) updateBadge(-1);
         }
-    }
-
-    function escapeHtml(str) {
-        var div = document.createElement('div');
-        div.appendChild(document.createTextNode(str));
-        return div.innerHTML;
     }
 
     // Start WebSocket connection
