@@ -259,6 +259,20 @@ def toggle_active_view(request, user_id):
     return redirect('admin_user_detail', user_id=user_id)
 
 
+@admin_required
+@require_POST
+@rate_limit('admin_action', max_requests=30, window=60)
+def toggle_leaderboard_view(request, user_id):
+    target = get_object_or_404(User.objects.select_related('profile'), pk=user_id)
+
+    target.profile.leaderboard_hidden = not target.profile.leaderboard_hidden
+    target.profile.save(update_fields=['leaderboard_hidden'])
+
+    status = 'hidden from' if target.profile.leaderboard_hidden else 'restored to'
+    messages.success(request, f'{target.username} {status} the leaderboard.')
+    return redirect('admin_user_detail', user_id=user_id)
+
+
 # ---------------------------------------------------------------------------
 # Game Management
 # ---------------------------------------------------------------------------

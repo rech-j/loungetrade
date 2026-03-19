@@ -15,6 +15,7 @@ class UserProfile(models.Model):
     name_changed_at = models.DateTimeField(null=True, blank=True)
     dark_mode = models.BooleanField(default=False)
     sound_enabled = models.BooleanField(default=True)
+    leaderboard_hidden = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

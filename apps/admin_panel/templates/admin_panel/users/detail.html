@@ -35,6 +35,9 @@
                 {% if not target.is_active %}
                 <span class="vintage-badge bg-burgundy/20 text-burgundy text-[9px]">Inactive</span>
                 {% endif %}
+                {% if target.profile.leaderboard_hidden %}
+                <span class="vintage-badge bg-slate/20 text-slate text-[9px]">Unlisted</span>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -93,6 +96,12 @@
                 {% csrf_token %}
                 <button type="submit" class="vintage-btn-outline w-full text-xs py-2">
                     {% if target.profile.is_admin_user %}Revoke Admin{% else %}Grant Admin{% endif %}
+                </button>
+            </form>
+            <form method="post" action="{% url 'admin_toggle_leaderboard' user_id=target.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="vintage-btn-outline w-full text-xs py-2">
+                    {% if target.profile.leaderboard_hidden %}Show on Leaderboard{% else %}Hide from Leaderboard{% endif %}
                 </button>
             </form>
             <form method="post" action="{% url 'admin_toggle_active' user_id=target.pk %}"
