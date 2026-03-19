@@ -61,6 +61,13 @@ function chessApp() {
         // Animation state
         _animating: false,
 
+        // History navigation state
+        viewIndex: -1,              // -1 = live; 0 = start pos; 1..N = after move N
+        viewChess: null,            // second Chess() for rendering history positions
+        viewLastMove: null,         // {from, to} of the viewed move
+        newMovesWhileReviewing: 0,
+        _keydownHandler: null,
+
         // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
@@ -69,16 +76,21 @@ function chessApp() {
         },
         get myTimeLow() { return this.myTime <= 30; },
         get opponentTimeLow() { return this.opponentTime <= 30; },
+        get isViewingHistory() {
+            return this.viewIndex !== -1 && this.viewIndex < this.sanMoves.length;
+        },
 
         // Captured pieces
         get capturedPieces() {
-            // Reference this.fen so Alpine re-evaluates when the board changes
+            // Reference these so Alpine re-evaluates when the board changes
             var _fen = this.fen;
+            var _vi = this.viewIndex;
             if (!this.chess) return { white: [], black: [], whiteValue: 0, blackValue: 0 };
+            var source = this.isViewingHistory ? this.viewChess : this.chess;
             var startingPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
             var pieceValues = { p: 1, n: 3, b: 3, r: 5, q: 9 };
             var onBoard = { w: { p: 0, n: 0, b: 0, r: 0, q: 0 }, b: { p: 0, n: 0, b: 0, r: 0, q: 0 } };
-            var board = this.chess.board();
+            var board = source.board();
             for (var r = 0; r < 8; r++) {
                 for (var f = 0; f < 8; f++) {
                     var sq = board[r][f];
@@ -150,8 +162,99 @@ function chessApp() {
                 initial: el.dataset.opponentInitial || '?',
             };
             this.chess = new Chess();
+            this.viewChess = new Chess();
             this.renderBoard();
             this.connectWS();
+
+            // Keyboard shortcuts for history navigation
+            this._keydownHandler = (e) => {
+                if (!this.gameActive && !this.gameOver) return;
+                if (this.sanMoves.length === 0) return;
+                var tag = e.target.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+                switch (e.key) {
+                    case 'ArrowLeft':  e.preventDefault(); this.navPrev(); break;
+                    case 'ArrowRight': e.preventDefault(); this.navNext(); break;
+                    case 'ArrowUp':    e.preventDefault(); this.navFirst(); break;
+                    case 'ArrowDown':  e.preventDefault(); this.navLast(); break;
+                }
+            };
+            document.addEventListener('keydown', this._keydownHandler);
+        },
+
+        destroy() {
+            if (this._keydownHandler) {
+                document.removeEventListener('keydown', this._keydownHandler);
+                this._keydownHandler = null;
+            }
+        },
+
+        // History navigation
+        navigateToMove(index) {
+            var maxIndex = this.sanMoves.length;
+            index = Math.max(0, Math.min(index, maxIndex));
+
+            // If navigating to the latest move, return to live mode
+            if (index === maxIndex) {
+                this.viewIndex = -1;
+                this.viewLastMove = null;
+                this.newMovesWhileReviewing = 0;
+                this.renderBoard();
+                this.scrollMoveListToMove(maxIndex - 1);
+                return;
+            }
+
+            // Clear premoves/selection when entering history mode
+            if (!this.isViewingHistory) {
+                this.premove = null;
+                this.premoveHighlight = null;
+                this.selectedSq = null;
+                this.legalMoves = [];
+            }
+
+            // Replay moves on viewChess up to index
+            this.viewChess.reset();
+            this.viewLastMove = null;
+            for (var i = 0; i < index; i++) {
+                var result = this.viewChess.move(this.sanMoves[i]);
+                if (result && i === index - 1) {
+                    this.viewLastMove = { from: result.from, to: result.to };
+                }
+            }
+
+            this.viewIndex = index;
+            this.renderBoard();
+            this.scrollMoveListToMove(index - 1);
+        },
+
+        navFirst() { this.navigateToMove(0); },
+        navPrev() {
+            if (this.viewIndex === -1) {
+                this.navigateToMove(this.sanMoves.length - 1);
+            } else {
+                this.navigateToMove(this.viewIndex - 1);
+            }
+        },
+        navNext() {
+            if (this.viewIndex === -1) return;
+            this.navigateToMove(this.viewIndex + 1);
+        },
+        navLast() { this.navigateToMove(this.sanMoves.length); },
+
+        scrollMoveListToMove(moveIndex) {
+            if (moveIndex < 0) return;
+            var pairIdx = Math.floor(moveIndex / 2);
+            this.$nextTick(() => {
+                var containers = ['move-list', 'mobile-move-list'];
+                for (var c = 0; c < containers.length; c++) {
+                    var list = document.getElementById(containers[c]);
+                    if (!list) continue;
+                    var row = list.querySelector('[data-pair-idx="' + pairIdx + '"]');
+                    if (row) {
+                        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                    }
+                }
+            });
         },
 
         connectWS() {
@@ -223,6 +326,11 @@ function chessApp() {
         },
 
         applyGameState(data) {
+            // Reset to live mode on reconnect
+            this.viewIndex = -1;
+            this.viewLastMove = null;
+            this.newMovesWhileReviewing = 0;
+
             if (data.status === 'active') {
                 this.gameActive = true;
                 this.mySide = data.your_side;
@@ -269,18 +377,21 @@ function chessApp() {
             this.buildMovePairs();
         },
 
-        buildMovePairs() {
+        buildMovePairs(autoScroll) {
+            if (autoScroll === undefined) autoScroll = true;
             var pairs = [];
             for (var i = 0; i < this.sanMoves.length; i += 2) {
                 pairs.push([this.sanMoves[i], this.sanMoves[i+1] || '']);
             }
             this.movePairs = pairs;
-            this.$nextTick(() => {
-                var list = document.getElementById('move-list');
-                if (list) list.scrollTop = list.scrollHeight;
-                var mobileList = document.getElementById('mobile-move-list');
-                if (mobileList) mobileList.scrollTop = mobileList.scrollHeight;
-            });
+            if (autoScroll) {
+                this.$nextTick(() => {
+                    var list = document.getElementById('move-list');
+                    if (list) list.scrollTop = list.scrollHeight;
+                    var mobileList = document.getElementById('mobile-move-list');
+                    if (mobileList) mobileList.scrollTop = mobileList.scrollHeight;
+                });
+            }
         },
 
         applyOpponentMove(data) {
@@ -293,6 +404,30 @@ function chessApp() {
             this.drawOfferPending = false;
             this.drawOfferReceived = false;
 
+            // If viewing history, silently apply the move without animation/render
+            if (this.isViewingHistory) {
+                var result = this.chess.move({ from: from, to: to, promotion: promotion });
+                if (result) {
+                    this.fen = this.chess.fen();
+                    this.currentTurn = this.chess.turn();
+                    this.lastMove = { from: from, to: to };
+                    this.sanMoves.push(result.san);
+                    this.buildMovePairs(false);
+                    this.newMovesWhileReviewing++;
+                    // Update times
+                    if (data.white_time !== null) {
+                        if (this.mySide === 'white') this.myTime = data.white_time;
+                        else this.opponentTime = data.white_time;
+                    }
+                    if (data.black_time !== null) {
+                        if (this.mySide === 'black') this.myTime = data.black_time;
+                        else this.opponentTime = data.black_time;
+                    }
+                    this.checkGameEnd();
+                }
+                return;
+            }
+
             // Animate the opponent's piece sliding
             this.animateMove(from, to, () => {
                 var result = this.chess.move({ from: from, to: to, promotion: promotion });
@@ -303,7 +438,10 @@ function chessApp() {
                     this.lastMove = { from: from, to: to };
                     this.sanMoves.push(result.san);
                     this.buildMovePairs();
-                    this.renderBoard();
+                    // Skip renderBoard if user entered history mode during animation
+                    if (!this.isViewingHistory) {
+                        this.renderBoard();
+                    }
                     // Update times
                     if (data.white_time !== null) {
                         if (this.mySide === 'white') this.myTime = data.white_time;
@@ -384,7 +522,8 @@ function chessApp() {
 
         // Board rendering
         renderBoard() {
-            var board = this.chess.board();
+            var source = this.isViewingHistory ? this.viewChess : this.chess;
+            var board = source.board();
             var files = ['a','b','c','d','e','f','g','h'];
             var squares = [];
             var flipped = this.mySide === 'black';
@@ -414,12 +553,14 @@ function chessApp() {
         },
 
         squareClass(sq) {
+            var source = this.isViewingHistory ? this.viewChess : this.chess;
+            var activeLastMove = this.isViewingHistory ? this.viewLastMove : this.lastMove;
             var base = sq.isLight ? 'chess-sq light' : 'chess-sq dark-sq';
             var selected = this.selectedSq === sq.name ? ' selected' : '';
-            var isLegal = this.legalMoves.some(function(m) { return m.to === sq.name; }) && !this.chess.get(sq.name) ? ' legal-move' : '';
-            var isCapture = this.legalMoves.some(function(m) { return m.to === sq.name; }) && this.chess.get(sq.name) ? ' legal-capture' : '';
-            var isLast = this.lastMove && (sq.name === this.lastMove.from || sq.name === this.lastMove.to) ? ' last-move-sq' : '';
-            var inCheck = this.chess.in_check() && sq.piece && sq.piece[1] === 'K' && sq.piece[0] === this.chess.turn() ? ' in-check' : '';
+            var isLegal = this.legalMoves.some(function(m) { return m.to === sq.name; }) && !source.get(sq.name) ? ' legal-move' : '';
+            var isCapture = this.legalMoves.some(function(m) { return m.to === sq.name; }) && source.get(sq.name) ? ' legal-capture' : '';
+            var isLast = activeLastMove && (sq.name === activeLastMove.from || sq.name === activeLastMove.to) ? ' last-move-sq' : '';
+            var inCheck = source.in_check() && sq.piece && sq.piece[1] === 'K' && sq.piece[0] === source.turn() ? ' in-check' : '';
             var isPremove = this.premoveHighlight && (sq.name === this.premoveHighlight.from || sq.name === this.premoveHighlight.to) ? ' premove-sq' : '';
             return base + selected + isLegal + isCapture + isLast + inCheck + isPremove;
         },
@@ -447,6 +588,7 @@ function chessApp() {
         },
 
         canDragPiece(sq) {
+            if (this.isViewingHistory) return false;
             if (!this.gameActive || !this.mySide) return false;
             if (!sq.piece) return false;
             var color = sq.piece[0];
@@ -459,6 +601,7 @@ function chessApp() {
 
         // Interaction
         handleSquareClick(sq) {
+            if (this.isViewingHistory) return;
             if (!this.gameActive || !this.mySide) return;
 
             // Premove logic: when it's not my turn
@@ -546,6 +689,14 @@ function chessApp() {
         },
 
         executeMove(from, to, promotion) {
+            // Snap to live if viewing history
+            if (this.isViewingHistory) {
+                this.viewIndex = -1;
+                this.viewLastMove = null;
+                this.newMovesWhileReviewing = 0;
+                this.renderBoard();
+            }
+
             var result = this.chess.move({ from: from, to: to, promotion: promotion });
             if (!result) return false;
 

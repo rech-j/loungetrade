@@ -53,6 +53,18 @@
 
 /*  Move animation ghost - see animateMove() in chess-app.js  */
 
+/*  History navigation buttons  */
+.nav-btn { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 1.75rem; border: 1px solid #b8a878; background: transparent; cursor: pointer; transition: background 150ms, color 150ms; color: #6b5c3e; border-radius: 3px; }
+.nav-btn:hover { background: rgba(201,168,76,0.15); color: #c9a84c; }
+.nav-btn:disabled { opacity: 0.3; cursor: default; }
+.nav-btn:disabled:hover { background: transparent; color: #6b5c3e; }
+.dark .nav-btn { border-color: #5a4e3a; color: #a89878; }
+.dark .nav-btn:hover { background: rgba(201,168,76,0.15); color: #c9a84c; }
+
+/*  Move list clickable moves  */
+.move-cell { cursor: pointer; padding: 1px 3px; border-radius: 2px; transition: background 100ms; }
+.move-cell:hover { background: rgba(201,168,76,0.15); }
+
 </style>
 <div class="max-w-5xl lg:max-w-6xl mx-auto"
      x-data="chessApp()"
@@ -103,7 +115,7 @@
 
             <div class="relative">
             <div class="chess-board" role="grid" aria-label="Chess board"
-                 :class="{ 'your-turn-ring': isMyTurn && gameActive }"
+                 :class="{ 'your-turn-ring': isMyTurn && gameActive && !isViewingHistory }"
                  @dragover.prevent
                  @drop="handleDrop($event)"
                  @touchstart="handleTouchStart($event)"
@@ -145,7 +157,13 @@
             </div>
             </div>
 
-            <p x-show="gameActive && mySide" class="text-center text-xs mt-2 mb-1 font-medium tracking-wide"
+            <!-- History mode indicator -->
+            <p x-show="isViewingHistory && gameActive" class="text-center text-xs mt-2 mb-1 text-slate">
+                Viewing move <span x-text="viewIndex"></span> of <span x-text="sanMoves.length"></span>
+                &mdash; <a href="#" @click.prevent="navLast()" class="text-gold underline hover:text-gold/80">return to live</a>
+            </p>
+
+            <p x-show="(gameActive && mySide) && !isViewingHistory" class="text-center text-xs mt-2 mb-1 font-medium tracking-wide"
                :class="isMyTurn ? 'text-gold' : 'text-slate'"
                x-text="turnText"></p>
 
@@ -177,22 +195,63 @@
             </div>
 
             <!-- Mobile move list (hidden on md+) -->
-            <div class="md:hidden mt-3" x-show="gameActive">
+            <div class="md:hidden mt-3" x-show="gameActive || gameOver">
                 <button @click="showMobileMoves = !showMobileMoves"
-                        class="w-full flex items-center justify-between px-3 py-2 text-xs border border-stone dark:border-slate rounded">
+                        class="w-full flex items-center justify-between px-3 py-2 text-xs border border-stone dark:border-slate rounded relative">
                     <span>Moves (<span x-text="sanMoves.length"></span>)</span>
-                    <span x-text="showMobileMoves ? '\u25B2' : '\u25BC'" class="text-slate text-[0.6rem]"></span>
+                    <span class="flex items-center gap-1.5">
+                        <span x-show="newMovesWhileReviewing > 0" class="w-2 h-2 rounded-full bg-gold animate-pulse"></span>
+                        <span x-text="showMobileMoves ? '\u25B2' : '\u25BC'" class="text-slate text-[0.6rem]"></span>
+                    </span>
                 </button>
                 <div x-show="showMobileMoves" x-transition class="max-h-40 overflow-y-auto px-3 py-2 border border-stone dark:border-slate border-t-0 rounded-b" id="mobile-move-list">
                     <template x-for="(pair, i) in movePairs" :key="i">
                         <div class="flex gap-2 text-xs rounded px-1 -mx-1"
-                             :class="i === movePairs.length - 1 ? 'bg-gold/10' : ''">
+                             :data-pair-idx="i"
+                             :class="{
+                                 'bg-gold/10': !isViewingHistory && i === movePairs.length - 1,
+                             }">
                             <span class="text-slate w-5 flex-shrink-0" x-text="(i+1) + '.'"></span>
-                            <span x-text="pair[0]" class="font-mono"></span>
-                            <span x-text="pair[1] || ''" class="font-mono text-slate"></span>
+                            <span @click="navigateToMove(i * 2 + 1)"
+                                  x-text="pair[0]"
+                                  class="font-mono move-cell"
+                                  :class="{
+                                      'bg-gold/20 text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 1,
+                                  }"></span>
+                            <span x-show="pair[1]"
+                                  @click="navigateToMove(i * 2 + 2)"
+                                  x-text="pair[1]"
+                                  class="font-mono text-slate move-cell"
+                                  :class="{
+                                      'bg-gold/20 !text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 2,
+                                  }"></span>
                         </div>
                     </template>
                     <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
+
+                    <!-- Mobile navigation buttons -->
+                    <div x-show="sanMoves.length > 0" class="flex items-center justify-center gap-1 mt-2 pt-2 border-t border-stone/30 dark:border-slate/30">
+                        <button @click="navFirst()" class="nav-btn" :disabled="viewIndex === 0" title="First move">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"></polyline><line x1="7" y1="12" x2="18" y2="12"></line><line x1="6" y1="6" x2="6" y2="18"></line></svg>
+                        </button>
+                        <button @click="navPrev()" class="nav-btn" :disabled="viewIndex === 0" title="Previous move">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                        </button>
+                        <button @click="navNext()" class="nav-btn" :disabled="viewIndex === -1" title="Next move">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                        </button>
+                        <button @click="navLast()" class="nav-btn" :disabled="viewIndex === -1" title="Latest move">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"></polyline><line x1="6" y1="12" x2="17" y2="12"></line><line x1="18" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+
+                    <!-- Mobile new moves indicator -->
+                    <div x-show="newMovesWhileReviewing > 0" class="mt-2">
+                        <button @click="navLast()" class="w-full flex items-center justify-center gap-1.5 text-xs text-gold py-1">
+                            <span class="w-2 h-2 rounded-full bg-gold animate-pulse"></span>
+                            <span x-text="newMovesWhileReviewing + ' new move' + (newMovesWhileReviewing > 1 ? 's' : '')"></span>
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -271,17 +330,68 @@
             </div>
 
             <div class="hidden md:block vintage-card py-3">
-                <p class="text-xs text-slate uppercase tracking-wide mb-2">Moves</p>
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs text-slate uppercase tracking-wide">Moves</p>
+                    <!-- Keyboard shortcuts tooltip -->
+                    <div x-show="sanMoves.length > 0" class="relative group">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate/50 cursor-help"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><circle cx="12" cy="8" r="0.5" fill="currentColor"></circle></svg>
+                        <div class="hidden group-hover:block absolute right-0 top-5 z-20 w-40 p-2 text-[0.65rem] bg-parchment dark:bg-walnut border border-stone dark:border-slate rounded shadow-lg">
+                            <p class="font-medium mb-1">Keyboard shortcuts</p>
+                            <p><kbd class="px-1 py-0.5 bg-stone/20 rounded text-[0.6rem]">&larr;</kbd> Previous move</p>
+                            <p><kbd class="px-1 py-0.5 bg-stone/20 rounded text-[0.6rem]">&rarr;</kbd> Next move</p>
+                            <p><kbd class="px-1 py-0.5 bg-stone/20 rounded text-[0.6rem]">&uarr;</kbd> First move</p>
+                            <p><kbd class="px-1 py-0.5 bg-stone/20 rounded text-[0.6rem]">&darr;</kbd> Latest move</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="max-h-48 overflow-y-auto space-y-0.5" id="move-list">
                     <template x-for="(pair, i) in movePairs" :key="i">
                         <div class="flex gap-2 text-xs rounded px-1 -mx-1"
-                             :class="i === movePairs.length - 1 ? 'bg-gold/10' : ''">
+                             :data-pair-idx="i"
+                             :class="{
+                                 'bg-gold/10': !isViewingHistory && i === movePairs.length - 1,
+                             }">
                             <span class="text-slate w-5 flex-shrink-0" x-text="(i+1) + '.'"></span>
-                            <span x-text="pair[0]" class="font-mono"></span>
-                            <span x-text="pair[1] || ''" class="font-mono text-slate"></span>
+                            <span @click="navigateToMove(i * 2 + 1)"
+                                  x-text="pair[0]"
+                                  class="font-mono move-cell"
+                                  :class="{
+                                      'bg-gold/20 text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 1,
+                                  }"></span>
+                            <span x-show="pair[1]"
+                                  @click="navigateToMove(i * 2 + 2)"
+                                  x-text="pair[1]"
+                                  class="font-mono text-slate move-cell"
+                                  :class="{
+                                      'bg-gold/20 !text-gold font-bold': isViewingHistory && viewIndex === i * 2 + 2,
+                                  }"></span>
                         </div>
                     </template>
                     <p x-show="movePairs.length === 0" class="text-xs text-slate">No moves yet.</p>
+                </div>
+
+                <!-- Desktop navigation buttons -->
+                <div x-show="sanMoves.length > 0" class="flex items-center justify-center gap-1 mt-2 pt-2 border-t border-stone/30 dark:border-slate/30">
+                    <button @click="navFirst()" class="nav-btn" :disabled="viewIndex === 0" title="First move (Up)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="11 17 6 12 11 7"></polyline><line x1="7" y1="12" x2="18" y2="12"></line><line x1="6" y1="6" x2="6" y2="18"></line></svg>
+                    </button>
+                    <button @click="navPrev()" class="nav-btn" :disabled="viewIndex === 0" title="Previous move (Left)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    </button>
+                    <button @click="navNext()" class="nav-btn" :disabled="viewIndex === -1" title="Next move (Right)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                    </button>
+                    <button @click="navLast()" class="nav-btn" :disabled="viewIndex === -1" title="Latest move (Down)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="13 17 18 12 13 7"></polyline><line x1="6" y1="12" x2="17" y2="12"></line><line x1="18" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+
+                <!-- New moves indicator -->
+                <div x-show="newMovesWhileReviewing > 0" class="mt-2">
+                    <button @click="navLast()" class="w-full flex items-center justify-center gap-1.5 text-xs text-gold py-1 hover:underline">
+                        <span class="w-2 h-2 rounded-full bg-gold animate-pulse"></span>
+                        <span x-text="newMovesWhileReviewing + ' new move' + (newMovesWhileReviewing > 1 ? 's' : '')"></span>
+                    </button>
                 </div>
             </div>
 
