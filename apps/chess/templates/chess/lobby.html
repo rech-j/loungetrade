@@ -115,10 +115,13 @@
 
     {% if recent_games %}
     <div>
-        <h2 class="vintage-section-title">Recent Chess Results</h2>
+        <div class="flex items-center justify-between mb-1">
+            <h2 class="vintage-section-title mb-0">Recent Chess Results</h2>
+            <a href="{% url 'chess_archive' %}" class="text-xs text-gold hover:underline">View Archive &rarr;</a>
+        </div>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
-            <div class="flex items-center justify-between gap-3 px-4 py-3">
+            <a href="{% url 'chess_play' g.pk %}" class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gold/5 transition-colors block">
                 <div class="min-w-0">
                     <p class="text-sm truncate">{{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
                     <p class="text-xs text-slate">
@@ -128,10 +131,13 @@
                         &middot; {{ g.ended_at|timesince }} ago
                     </p>
                 </div>
-                <span class="text-sm font-bold font-serif {% if g.winner == request.user %}text-patina{% elif g.winner %}text-burgundy{% else %}text-slate{% endif %}">
-                    {% if g.winner == request.user %}+{{ g.stake }}{% elif g.winner %}-{{ g.stake }}{% else %}Draw{% endif %}
-                </span>
-            </div>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span class="text-sm font-bold font-serif {% if g.winner == request.user %}text-patina{% elif g.winner %}text-burgundy{% else %}text-slate{% endif %}">
+                        {% if g.winner == request.user %}+{{ g.stake }}{% elif g.winner %}-{{ g.stake }}{% else %}Draw{% endif %}
+                    </span>
+                    <span class="text-xs text-slate hidden sm:inline">Review</span>
+                </div>
+            </a>
             {% endfor %}
         </div>
     </div>

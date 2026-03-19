@@ -76,6 +76,16 @@
      data-opponent-username="{{ game.opponent.username }}"
      data-opponent-avatar="{% if game.opponent.profile.avatar %}{{ game.opponent.profile.avatar.url }}{% endif %}"
      data-opponent-initial="{{ game.opponent.profile.get_display_name|first|upper }}"
+     data-game-status="{{ game.status }}"
+     data-game-fen="{{ game.fen }}"
+     data-game-moves="{{ game.moves_uci }}"
+     data-game-winner="{% if game.winner %}{{ game.winner.username }}{% endif %}"
+     data-game-end-reason="{{ game.end_reason|default:'' }}"
+     data-game-stake="{{ game.stake }}"
+     data-white-player="{% if game.white_player %}{{ game.white_player.username }}{% endif %}"
+     data-black-player="{% if game.black_player %}{{ game.black_player.username }}{% endif %}"
+     data-white-time="{{ game.white_time }}"
+     data-black-time="{{ game.black_time }}"
 >
 
     <div class="flex items-center justify-between mb-4">

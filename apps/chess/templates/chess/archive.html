@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Chess Archive - LC{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl lg:max-w-3xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="font-venus-medium text-2xl">Chess Archive</h1>
+            <p class="text-slate text-sm mt-1">Review your past games.</p>
+        </div>
+        <a href="{% url 'chess_lobby' %}" class="vintage-btn-outline text-xs py-1.5 px-4">Back to Lobby</a>
+    </div>
+
+    <div class="flex gap-2 mb-6 flex-wrap">
+        <a href="?result=all{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if result_filter == 'all' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">All</a>
+        <a href="?result=wins{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if result_filter == 'wins' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Wins</a>
+        <a href="?result=losses{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if result_filter == 'losses' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Losses</a>
+        <a href="?result=draws{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if result_filter == 'draws' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Draws</a>
+    </div>
+
+    <form method="get" class="mb-6">
+        <input type="hidden" name="result" value="{{ result_filter }}">
+        <div class="flex gap-2">
+            <input type="text" name="opponent" value="{{ opponent_query }}"
+                   class="vintage-input flex-1" placeholder="Filter by opponent...">
+            <button type="submit" class="vintage-btn py-2 px-4 text-xs">Search</button>
+            {% if opponent_query %}
+            <a href="?result={{ result_filter }}" class="vintage-btn-outline py-2 px-3 text-xs">Clear</a>
+            {% endif %}
+        </div>
+    </form>
+
+    {% if page.paginator.count > 0 %}
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        {% for g in page %}
+        <a href="{% url 'chess_play' g.pk %}" class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gold/5 transition-colors block">
+            <div class="flex items-center gap-3 min-w-0">
+                <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full
+                    {% if g.winner == request.user %}bg-patina/10 text-patina
+                    {% elif g.winner %}bg-burgundy/10 text-burgundy
+                    {% else %}bg-stone/20 text-slate{% endif %}">
+                    {% if g.winner == request.user %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                    {% elif g.winner %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+                    {% else %}
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 12h14"/></svg>
+                    {% endif %}
+                </span>
+                <div class="min-w-0">
+                    <p class="text-sm truncate">
+                        vs
+                        {% if g.creator == request.user %}
+                        {{ g.opponent.profile.get_display_name }}
+                        {% else %}
+                        {{ g.creator.profile.get_display_name }}
+                        {% endif %}
+                    </p>
+                    <p class="text-xs text-slate">
+                        {{ g.stake }} LC &middot;
+                        {% if g.end_reason == 'checkmate' %}Checkmate
+                        {% elif g.end_reason == 'resign' %}Resignation
+                        {% elif g.end_reason == 'timeout' %}Timeout
+                        {% elif g.end_reason == 'stalemate' %}Stalemate
+                        {% elif g.end_reason == 'draw' %}Draw agreed
+                        {% else %}{{ g.end_reason }}{% endif %}
+                        &middot; {{ g.ended_at|date:"d M Y" }}
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3 flex-shrink-0">
+                <span class="text-sm font-bold font-serif
+                    {% if g.winner == request.user %}text-patina
+                    {% elif g.winner %}text-burgundy
+                    {% else %}text-slate{% endif %}">
+                    {% if g.winner == request.user %}+{{ g.stake }}
+                    {% elif g.winner %}-{{ g.stake }}
+                    {% else %}Draw{% endif %}
+                </span>
+                <span class="text-xs text-slate">Review &rarr;</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if page.paginator.num_pages > 1 %}
+    <div class="flex items-center justify-center gap-4 mt-8">
+        <div class="text-xs text-slate pr-1">
+            {{ page.paginator.count }} game{{ page.paginator.count|pluralize }}
+        </div>
+        {% if page.has_previous %}
+        <a href="?result={{ result_filter }}{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
+        {% else %}
+        <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Previous</span>
+        {% endif %}
+        <span class="text-xs text-slate">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+        {% if page.has_next %}
+        <a href="?result={{ result_filter }}{% if opponent_query %}&opponent={{ opponent_query }}{% endif %}&page={{ page.next_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Next</a>
+        {% else %}
+        <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Next</span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="vintage-empty-state">No chess games found.</div>
+    {% endif %}
+</div>
+{% endblock %}

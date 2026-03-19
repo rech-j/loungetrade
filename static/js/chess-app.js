@@ -164,7 +164,13 @@ function chessApp() {
             this.chess = new Chess();
             this.viewChess = new Chess();
             this.renderBoard();
-            this.connectWS();
+
+            // For completed games, load state directly from template data (no WebSocket needed)
+            if (el.dataset.gameStatus === 'completed') {
+                this.loadCompletedGame(el);
+            } else {
+                this.connectWS();
+            }
 
             // Keyboard shortcuts for history navigation
             this._keydownHandler = (e) => {
@@ -186,6 +192,74 @@ function chessApp() {
             if (this._keydownHandler) {
                 document.removeEventListener('keydown', this._keydownHandler);
                 this._keydownHandler = null;
+            }
+        },
+
+        loadCompletedGame(el) {
+            this.connected = true; // suppress reconnecting UI
+            this.gameActive = false;
+            this.gameOver = true;
+
+            var fen = el.dataset.gameFen;
+            var movesUci = el.dataset.gameMoves || '';
+            var winner = el.dataset.gameWinner;
+            var endReason = el.dataset.gameEndReason;
+            var stake = el.dataset.gameStake;
+            var whitePlayer = el.dataset.whitePlayer;
+            var blackPlayer = el.dataset.blackPlayer;
+
+            // Determine side
+            if (whitePlayer === this.myUsername) {
+                this.mySide = 'white';
+            } else if (blackPlayer === this.myUsername) {
+                this.mySide = 'black';
+            }
+
+            // Set player names and avatars
+            var myUser = this.mySide === 'white' ? whitePlayer : blackPlayer;
+            var oppUser = this.mySide === 'white' ? blackPlayer : whitePlayer;
+            this.myName = myUser || 'You';
+            this.opponentName = oppUser || 'Opponent';
+            var myInfo = this.playerAvatars[myUser] || {};
+            var oppInfo = this.playerAvatars[oppUser] || {};
+            this.myAvatar = myInfo.avatar || '';
+            this.myInitial = myInfo.initial || (myUser ? myUser.charAt(0).toUpperCase() : '?');
+            this.opponentAvatar = oppInfo.avatar || '';
+            this.opponentInitial = oppInfo.initial || (oppUser ? oppUser.charAt(0).toUpperCase() : '?');
+
+            // Set final clock values
+            var whiteTime = parseInt(el.dataset.whiteTime) || 0;
+            var blackTime = parseInt(el.dataset.blackTime) || 0;
+            this.myTime = this.mySide === 'white' ? whiteTime : blackTime;
+            this.opponentTime = this.mySide === 'white' ? blackTime : whiteTime;
+
+            // Load board and moves
+            this.chess.load(fen);
+            this.fen = fen;
+            this.currentTurn = this.chess.turn();
+            if (movesUci) {
+                this.rebuildMoveList(movesUci);
+                // Set lastMove highlight from final UCI move
+                var parts = movesUci.trim().split(' ');
+                var lastUci = parts[parts.length - 1];
+                if (lastUci) {
+                    this.lastMove = { from: lastUci.slice(0, 2), to: lastUci.slice(2, 4) };
+                }
+            }
+            this.renderBoard();
+
+            // Set game over display
+            if (!winner) {
+                this.gameOverTitle = 'Draw';
+                this.gameOverMsg = (endReason === 'stalemate' ? 'Stalemate' : 'Draw agreed') + '. No coins transferred.';
+            } else if (winner === this.myUsername) {
+                this.gameOverTitle = 'You Won!';
+                var reasonText = endReason === 'resign' ? 'Opponent resigned' : endReason === 'timeout' ? 'Opponent timed out' : 'Checkmate!';
+                this.gameOverMsg = reasonText + ' You won ' + stake + ' LC.';
+            } else {
+                this.gameOverTitle = 'You Lost';
+                var reasonText = endReason === 'resign' ? 'You resigned' : endReason === 'timeout' ? 'You timed out' : 'Checkmate.';
+                this.gameOverMsg = reasonText + ' You lost ' + stake + ' LC.';
             }
         },
 
@@ -357,6 +431,34 @@ function chessApp() {
             } else if (data.status === 'completed' || data.status === 'cancelled') {
                 this.gameActive = false;
                 this.gameOver = true;
+                // Load game data for review if available
+                if (data.your_side && data.fen) {
+                    this.mySide = data.your_side;
+                    this.chess.load(data.fen);
+                    this.fen = data.fen;
+                    this.currentTurn = this.chess.turn();
+                    var myUser = this.mySide === 'white' ? data.white_player : data.black_player;
+                    var oppUser = this.mySide === 'white' ? data.black_player : data.white_player;
+                    this.myName = myUser || 'You';
+                    this.opponentName = oppUser || 'Opponent';
+                    var myInfo = this.playerAvatars[myUser] || {};
+                    var oppInfo = this.playerAvatars[oppUser] || {};
+                    this.myAvatar = myInfo.avatar || '';
+                    this.myInitial = myInfo.initial || (myUser ? myUser.charAt(0).toUpperCase() : '?');
+                    this.opponentAvatar = oppInfo.avatar || '';
+                    this.opponentInitial = oppInfo.initial || (oppUser ? oppUser.charAt(0).toUpperCase() : '?');
+                    this.myTime = this.mySide === 'white' ? data.white_time : data.black_time;
+                    this.opponentTime = this.mySide === 'white' ? data.black_time : data.white_time;
+                    if (data.moves_uci) {
+                        this.rebuildMoveList(data.moves_uci);
+                        var parts = data.moves_uci.trim().split(' ');
+                        var lastUci = parts[parts.length - 1];
+                        if (lastUci) {
+                            this.lastMove = { from: lastUci.slice(0, 2), to: lastUci.slice(2, 4) };
+                        }
+                    }
+                    this.renderBoard();
+                }
                 this.gameOverTitle = 'Game Over';
                 this.gameOverMsg = 'This game has already ended.';
             }
