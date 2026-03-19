@@ -1,0 +1,25 @@
+{% extends "admin_panel/base.html" %}
+
+{% block admin_title %}Transactions{% endblock %}
+
+{% block admin_content %}
+<form method="get" class="flex flex-col sm:flex-row gap-3 mb-6">
+    <select name="type" class="vintage-select text-xs">
+        <option value="">All Types</option>
+        <option value="mint" {% if tx_type == 'mint' %}selected{% endif %}>Mint</option>
+        <option value="trade" {% if tx_type == 'trade' %}selected{% endif %}>Trade</option>
+        <option value="game" {% if tx_type == 'game' %}selected{% endif %}>Game</option>
+    </select>
+    <input type="text" name="user" value="{{ user_q }}" placeholder="Username..." class="vintage-input text-xs flex-1">
+    <input type="date" name="date_from" value="{{ date_from }}" class="vintage-input text-xs" placeholder="From">
+    <input type="date" name="date_to" value="{{ date_to }}" class="vintage-input text-xs" placeholder="To">
+    <button type="submit" class="vintage-btn text-xs px-4">Filter</button>
+    {% if tx_type or user_q or date_from or date_to %}
+    <a href="{% url 'admin_transactions' %}" class="vintage-btn-outline text-xs px-4 text-center">Clear</a>
+    {% endif %}
+</form>
+
+<div id="tx-list">
+    {% include "admin_panel/partials/transaction_rows.html" %}
+</div>
+{% endblock %}

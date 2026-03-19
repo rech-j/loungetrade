@@ -1,0 +1,44 @@
+{% load humanize %}
+{% if page %}
+<div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+    {% for user in page %}
+    <a href="{% url 'admin_user_detail' user_id=user.pk %}" class="vintage-table-row gap-3">
+        <div class="flex-1 min-w-0">
+            <p class="text-sm font-venus-medium">
+                {{ user.username }}
+                {% if user.profile.display_name %}<span class="text-slate text-xs">({{ user.profile.display_name }})</span>{% endif %}
+            </p>
+            <p class="text-xs text-slate">Joined {{ user.date_joined|date:"d M Y" }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            {% if user.profile.is_admin_user %}
+            <span class="vintage-badge bg-gold/20 text-gold text-[9px]">Admin</span>
+            {% endif %}
+            {% if not user.is_active %}
+            <span class="vintage-badge bg-burgundy/20 text-burgundy text-[9px]">Inactive</span>
+            {% endif %}
+            <span class="text-sm font-serif font-bold text-gold">{{ user.profile.balance|intcomma }} LC</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="flex items-center justify-center gap-4 mt-6">
+    {% if page.has_previous %}
+    <a href="?q={{ q }}&sort={{ sort }}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Previous</span>
+    {% endif %}
+    <span class="text-xs text-slate">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+    <a href="?q={{ q }}&sort={{ sort }}&page={{ page.next_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Next</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Next</span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="vintage-empty-state">No users found.</div>
+{% endif %}

@@ -1,0 +1,23 @@
+{% load humanize %}
+<div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+    <div class="vintage-card p-3 text-center">
+        <p class="text-lg font-serif font-bold text-gold">{{ active_coinflips }}</p>
+        <p class="text-[10px] text-slate uppercase tracking-wider">Pending Flips</p>
+    </div>
+    <div class="vintage-card p-3 text-center">
+        <p class="text-lg font-serif font-bold">{{ active_chess }}</p>
+        <p class="text-[10px] text-slate uppercase tracking-wider">Active Chess</p>
+    </div>
+    <div class="vintage-card p-3 text-center">
+        <p class="text-lg font-serif font-bold">{{ pending_chess }}</p>
+        <p class="text-[10px] text-slate uppercase tracking-wider">Pending Chess</p>
+    </div>
+    <div class="vintage-card p-3 text-center">
+        <p class="text-lg font-serif font-bold">{{ active_poker }}</p>
+        <p class="text-[10px] text-slate uppercase tracking-wider">Active Poker</p>
+    </div>
+    <div class="vintage-card p-3 text-center">
+        <p class="text-lg font-serif font-bold">{{ pending_poker }}</p>
+        <p class="text-[10px] text-slate uppercase tracking-wider">Pending Poker</p>
+    </div>
+</div>

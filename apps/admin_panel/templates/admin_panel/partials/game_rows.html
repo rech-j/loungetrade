@@ -1,0 +1,56 @@
+{% load humanize %}
+{% if page %}
+<div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+    {% for game in page %}
+    <a href="{% url 'admin_game_detail' game_type=game.type game_id=game.id %}" class="vintage-table-row gap-3">
+        <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full
+            {% if game.type == 'coinflip' %}bg-gold/10 text-gold
+            {% elif game.type == 'chess' %}bg-patina/10 text-patina
+            {% else %}bg-burgundy/10 text-burgundy{% endif %}">
+            {% if game.type == 'coinflip' %}
+            <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+            {% elif game.type == 'chess' %}
+            <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
+            {% else %}
+            <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><rect x="1" y="1" width="8" height="8" rx="1"/></svg>
+            {% endif %}
+        </span>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm">
+                <span class="font-venus-medium capitalize">{{ game.type }}</span>
+                <span class="text-slate">&mdash; {{ game.players }}</span>
+            </p>
+            <p class="text-xs text-slate">{{ game.created_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <span class="vintage-badge text-[9px]
+                {% if game.status == 'active' %}bg-patina/20 text-patina
+                {% elif game.status == 'pending' %}bg-gold/20 text-gold
+                {% elif game.status == 'completed' %}bg-slate/20 text-slate
+                {% elif game.status == 'cancelled' %}bg-burgundy/20 text-burgundy
+                {% else %}bg-slate/10 text-slate{% endif %}">{{ game.status|title }}</span>
+            <span class="text-sm font-serif font-bold text-gold">{{ game.stake|intcomma }} LC</span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="flex items-center justify-center gap-4 mt-6">
+    {% if page.has_previous %}
+    <a href="?type={{ game_type }}&status={{ status_filter }}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Previous</span>
+    {% endif %}
+    <span class="text-xs text-slate">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+    <a href="?type={{ game_type }}&status={{ status_filter }}&page={{ page.next_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Next</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Next</span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="vintage-empty-state">No games found.</div>
+{% endif %}

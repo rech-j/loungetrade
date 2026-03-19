@@ -1,0 +1,98 @@
+{% extends "admin_panel/base.html" %}
+{% load humanize admin_filters %}
+
+{% block admin_title %}Dashboard{% endblock %}
+
+{% block admin_content %}
+<!-- Real-time Monitoring -->
+<div hx-get="{% url 'admin_stats_partial' %}" hx-trigger="load, every 30s" hx-swap="innerHTML" class="mb-8">
+    <div class="text-sm text-slate">Loading live stats...</div>
+</div>
+
+<!-- User Stats -->
+<div class="vintage-card p-5 mb-6">
+    <h2 class="vintage-section-title mb-4">Users</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold text-gold">{{ total_users|intcomma }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">Total Users</p>
+        </div>
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold">{{ new_users_7d|intcomma }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">New (7d)</p>
+        </div>
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold">{{ new_users_30d|intcomma }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">New (30d)</p>
+        </div>
+    </div>
+    {% if top_balances %}
+    <h3 class="text-xs uppercase tracking-wider text-slate mb-2">Top Balances</h3>
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        {% for user in top_balances %}
+        <a href="{% url 'admin_user_detail' user_id=user.pk %}" class="vintage-table-row gap-3">
+            <span class="text-sm flex-1">{{ user.profile.get_display_name }}</span>
+            <span class="text-sm font-serif font-bold text-gold">{{ user.profile.balance|intcomma }} LC</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Game Stats -->
+<div class="grid sm:grid-cols-3 gap-4 mb-6">
+    <div class="vintage-card p-5 text-center">
+        <h3 class="text-xs uppercase tracking-wider text-slate mb-3">Coin Flip</h3>
+        <p class="text-2xl font-serif font-bold">{{ coinflip_stats.total|intcomma }}</p>
+        <p class="text-xs text-slate">total games</p>
+        <div class="mt-2 text-xs text-slate space-y-0.5">
+            <p>{{ coinflip_stats.pending|intcomma }} pending</p>
+            <p>{{ coinflip_stats.completed|intcomma }} completed</p>
+            <p>Avg stake: {{ coinflip_stats.avg_stake|floatformat:0|default:"0" }} LC</p>
+        </div>
+    </div>
+    <div class="vintage-card p-5 text-center">
+        <h3 class="text-xs uppercase tracking-wider text-slate mb-3">Chess</h3>
+        <p class="text-2xl font-serif font-bold">{{ chess_stats.total|intcomma }}</p>
+        <p class="text-xs text-slate">total games</p>
+        <div class="mt-2 text-xs text-slate space-y-0.5">
+            <p>{{ chess_stats.active|intcomma }} active / {{ chess_stats.pending|intcomma }} pending</p>
+            <p>{{ chess_stats.completed|intcomma }} completed</p>
+            <p>Avg stake: {{ chess_stats.avg_stake|floatformat:0|default:"0" }} LC</p>
+        </div>
+    </div>
+    <div class="vintage-card p-5 text-center">
+        <h3 class="text-xs uppercase tracking-wider text-slate mb-3">Poker</h3>
+        <p class="text-2xl font-serif font-bold">{{ poker_stats.total|intcomma }}</p>
+        <p class="text-xs text-slate">total tables</p>
+        <div class="mt-2 text-xs text-slate space-y-0.5">
+            <p>{{ poker_stats.active|intcomma }} active / {{ poker_stats.pending|intcomma }} pending</p>
+            <p>{{ poker_stats.completed|intcomma }} completed</p>
+            <p>Avg stake: {{ poker_stats.avg_stake|floatformat:0|default:"0" }} LC</p>
+        </div>
+    </div>
+</div>
+
+<!-- Economy Stats -->
+<div class="vintage-card p-5">
+    <h2 class="vintage-section-title mb-4">Economy</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold text-gold">{{ total_circulation|intcomma_short }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">In Circulation</p>
+        </div>
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold">{{ total_minted|intcomma_short }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">Total Minted</p>
+        </div>
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold">{{ total_traded|intcomma_short }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">Total Traded</p>
+        </div>
+        <div class="text-center">
+            <p class="text-2xl font-serif font-bold">{{ total_wagered|intcomma_short }}</p>
+            <p class="text-xs text-slate uppercase tracking-wide">Total Wagered</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

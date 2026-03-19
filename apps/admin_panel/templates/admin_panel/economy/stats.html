@@ -1,0 +1,70 @@
+{% extends "admin_panel/base.html" %}
+{% load humanize admin_filters %}
+
+{% block admin_title %}Economy Stats{% endblock %}
+
+{% block admin_content %}
+<!-- Summary Cards -->
+<div class="grid grid-cols-2 gap-4 mb-8">
+    <div class="vintage-card p-5 text-center">
+        <p class="text-3xl font-serif font-bold text-gold">{{ total_circulation|intcomma }}</p>
+        <p class="text-xs text-slate uppercase tracking-wide mt-1">Coins in Circulation</p>
+    </div>
+    <div class="vintage-card p-5 text-center">
+        <p class="text-3xl font-serif font-bold">{{ total_minted|intcomma }}</p>
+        <p class="text-xs text-slate uppercase tracking-wide mt-1">Total Minted (All Time)</p>
+    </div>
+</div>
+
+<!-- Top 10 Holders -->
+<div class="vintage-card p-5 mb-8">
+    <h2 class="vintage-section-title mb-4">Top 10 Holders</h2>
+    {% if top_holders %}
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        <div class="flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider text-slate bg-parchment/60 dark:bg-walnut">
+            <span class="w-8">#</span>
+            <span class="flex-1">User</span>
+            <span class="w-24 text-right">Balance</span>
+            <span class="w-16 text-right">% of Total</span>
+        </div>
+        {% for user in top_holders %}
+        <a href="{% url 'admin_user_detail' user_id=user.pk %}" class="vintage-table-row gap-3">
+            <span class="w-8 text-xs text-slate">{{ forloop.counter }}</span>
+            <span class="flex-1 text-sm">{{ user.profile.get_display_name }}</span>
+            <span class="w-24 text-right text-sm font-serif font-bold text-gold">{{ user.profile.balance|intcomma }}</span>
+            <span class="w-16 text-right text-xs text-slate">{{ user.profile.balance|percentage:total_circulation }}%</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="vintage-empty-state">No users yet.</div>
+    {% endif %}
+</div>
+
+<!-- Daily Volume (30 days) -->
+<div class="vintage-card p-5">
+    <h2 class="vintage-section-title mb-4">Daily Volume (Last 30 Days)</h2>
+    {% if daily_volume %}
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        <div class="flex items-center gap-3 px-3 py-2 text-[10px] uppercase tracking-wider text-slate bg-parchment/60 dark:bg-walnut">
+            <span class="flex-1">Date</span>
+            <span class="w-20 text-right">Minted</span>
+            <span class="w-20 text-right">Traded</span>
+            <span class="w-20 text-right">Games</span>
+            <span class="w-12 text-right">Txns</span>
+        </div>
+        {% for day in daily_volume %}
+        <div class="vintage-table-row gap-3">
+            <span class="flex-1 text-sm">{{ day.date|date:"d M Y" }}</span>
+            <span class="w-20 text-right text-sm text-gold">{{ day.mint_volume|default:"0"|intcomma }}</span>
+            <span class="w-20 text-right text-sm">{{ day.trade_volume|default:"0"|intcomma }}</span>
+            <span class="w-20 text-right text-sm text-patina">{{ day.game_volume|default:"0"|intcomma }}</span>
+            <span class="w-12 text-right text-xs text-slate">{{ day.tx_count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="vintage-empty-state">No transaction data for the last 30 days.</div>
+    {% endif %}
+</div>
+{% endblock %}

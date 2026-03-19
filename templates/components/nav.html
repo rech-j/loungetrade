@@ -14,7 +14,7 @@
                 <a href="{% url 'coinflip_lobby' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'coinflip_lobby' or un == 'coinflip_play' or un == 'chess_lobby' or un == 'chess_play' or un == 'poker_lobby' or un == 'poker_play' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Gamba</a>
                 <a href="{% url 'leaderboard' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'leaderboard' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Board</a>
                 {% if request.user.profile.is_admin_user %}
-                <a href="{% url 'mint' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if un == 'mint' %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Mint</a>
+                <a href="{% url 'admin_dashboard' %}" class="relative px-3 py-1.5 tracking-wide uppercase text-xs transition-colors {% if 'admin_' in un %}text-gold after:absolute after:bottom-0 after:left-3 after:right-3 after:h-px after:bg-gold{% else %}text-slate hover:text-gold{% endif %}">Admin</a>
                 {% endif %}
             </div>
 
@@ -124,7 +124,7 @@
                   class="block">
             </span>
             {% if request.user.profile.is_admin_user %}
-            <a href="{% url 'mint' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Mint</a>
+            <a href="{% url 'admin_dashboard' %}" class="block px-1 py-1.5 text-sm text-slate hover:text-gold">Admin</a>
             {% endif %}
             <div class="flex items-center gap-4 pt-2 border-t border-stone/50 dark:border-slate/50">
                 <button type="button"

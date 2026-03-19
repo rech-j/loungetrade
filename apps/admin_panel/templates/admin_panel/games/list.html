@@ -1,0 +1,58 @@
+{% extends "admin_panel/base.html" %}
+
+{% block admin_title %}Games{% endblock %}
+
+{% block admin_content %}
+<!-- Game type tabs -->
+<div class="flex gap-2 mb-4 flex-wrap">
+    <a href="?type=all&status={{ status_filter }}"
+       hx-get="{% url 'admin_games' %}?type=all&status={{ status_filter }}"
+       hx-target="#game-list"
+       hx-swap="innerHTML"
+       class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if game_type == 'all' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">All</a>
+    <a href="?type=coinflip&status={{ status_filter }}"
+       hx-get="{% url 'admin_games' %}?type=coinflip&status={{ status_filter }}"
+       hx-target="#game-list"
+       hx-swap="innerHTML"
+       class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if game_type == 'coinflip' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Coin Flip</a>
+    <a href="?type=chess&status={{ status_filter }}"
+       hx-get="{% url 'admin_games' %}?type=chess&status={{ status_filter }}"
+       hx-target="#game-list"
+       hx-swap="innerHTML"
+       class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if game_type == 'chess' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Chess</a>
+    <a href="?type=poker&status={{ status_filter }}"
+       hx-get="{% url 'admin_games' %}?type=poker&status={{ status_filter }}"
+       hx-target="#game-list"
+       hx-swap="innerHTML"
+       class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if game_type == 'poker' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Poker</a>
+</div>
+
+<!-- Status filter -->
+<div class="flex gap-2 mb-6 flex-wrap">
+    <span class="text-xs text-slate uppercase tracking-wide py-1.5">Status:</span>
+    <a href="?type={{ game_type }}&status=all"
+       hx-get="{% url 'admin_games' %}?type={{ game_type }}&status=all"
+       hx-target="#game-list" hx-swap="innerHTML"
+       class="text-xs px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if status_filter == 'all' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">All</a>
+    <a href="?type={{ game_type }}&status=pending"
+       hx-get="{% url 'admin_games' %}?type={{ game_type }}&status=pending"
+       hx-target="#game-list" hx-swap="innerHTML"
+       class="text-xs px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if status_filter == 'pending' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Pending</a>
+    <a href="?type={{ game_type }}&status=active"
+       hx-get="{% url 'admin_games' %}?type={{ game_type }}&status=active"
+       hx-target="#game-list" hx-swap="innerHTML"
+       class="text-xs px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if status_filter == 'active' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Active</a>
+    <a href="?type={{ game_type }}&status=completed"
+       hx-get="{% url 'admin_games' %}?type={{ game_type }}&status=completed"
+       hx-target="#game-list" hx-swap="innerHTML"
+       class="text-xs px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if status_filter == 'completed' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Completed</a>
+    <a href="?type={{ game_type }}&status=cancelled"
+       hx-get="{% url 'admin_games' %}?type={{ game_type }}&status=cancelled"
+       hx-target="#game-list" hx-swap="innerHTML"
+       class="text-xs px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if status_filter == 'cancelled' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Cancelled</a>
+</div>
+
+<div id="game-list">
+    {% include "admin_panel/partials/game_rows.html" %}
+</div>
+{% endblock %}

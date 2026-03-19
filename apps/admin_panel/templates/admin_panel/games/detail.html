@@ -1,0 +1,202 @@
+{% extends "admin_panel/base.html" %}
+{% load humanize %}
+
+{% block admin_title %}{{ game_type|title }} #{{ game_id }}{% endblock %}
+
+{% block admin_content %}
+<div class="mb-4">
+    <a href="{% url 'admin_games' %}" class="text-xs text-slate hover:text-gold uppercase tracking-wide">&larr; Back to Games</a>
+</div>
+
+<div class="vintage-card p-5 mb-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="font-venus-medium text-lg capitalize">{{ game_type }} Game #{{ game_id }}</h2>
+        <span class="vintage-badge
+            {% if game.status == 'active' %}bg-patina/20 text-patina
+            {% elif game.status == 'pending' %}bg-gold/20 text-gold
+            {% elif game.status == 'completed' %}bg-slate/20 text-slate
+            {% elif game.status == 'cancelled' %}bg-burgundy/20 text-burgundy
+            {% else %}bg-slate/10 text-slate{% endif %}">{{ game.status|title }}</span>
+    </div>
+
+    {% if game_type == 'coinflip' %}
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Challenger</p>
+            <a href="{% url 'admin_user_detail' user_id=game.challenger.pk %}" class="text-gold hover:underline">{{ game.challenger.username }}</a>
+            <p class="text-xs text-slate">Choice: {{ game.challenger_choice|title }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Opponent</p>
+            <a href="{% url 'admin_user_detail' user_id=game.opponent.pk %}" class="text-gold hover:underline">{{ game.opponent.username }}</a>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Stake</p>
+            <p class="font-serif font-bold text-gold">{{ game.stake|intcomma }} LC</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Result</p>
+            {% if game.flip_result %}
+            <p>{{ game.flip_result|title }} &mdash; Winner: <a href="{% url 'admin_user_detail' user_id=game.winner.pk %}" class="text-gold hover:underline">{{ game.winner.username }}</a></p>
+            {% else %}
+            <p class="text-slate">Pending</p>
+            {% endif %}
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Created</p>
+            <p>{{ game.created_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        {% if game.resolved_at %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Resolved</p>
+            <p>{{ game.resolved_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% elif game_type == 'chess' %}
+    <div class="grid grid-cols-2 gap-4 text-sm">
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Creator</p>
+            <a href="{% url 'admin_user_detail' user_id=game.creator.pk %}" class="text-gold hover:underline">{{ game.creator.username }}</a>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Opponent</p>
+            <a href="{% url 'admin_user_detail' user_id=game.opponent.pk %}" class="text-gold hover:underline">{{ game.opponent.username }}</a>
+        </div>
+        {% if game.white_player %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">White</p>
+            <p>{{ game.white_player.username }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Black</p>
+            <p>{{ game.black_player.username }}</p>
+        </div>
+        {% endif %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Stake</p>
+            <p class="font-serif font-bold text-gold">{{ game.stake|intcomma }} LC</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Time Control</p>
+            <p>{{ game.time_control }}s</p>
+        </div>
+        {% if game.winner %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Winner</p>
+            <a href="{% url 'admin_user_detail' user_id=game.winner.pk %}" class="text-gold hover:underline">{{ game.winner.username }}</a>
+        </div>
+        {% endif %}
+        {% if game.end_reason %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">End Reason</p>
+            <p>{{ game.get_end_reason_display }}</p>
+        </div>
+        {% endif %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Created</p>
+            <p>{{ game.created_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        {% if game.ended_at %}
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Ended</p>
+            <p>{{ game.ended_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        {% endif %}
+    </div>
+
+    {% elif game_type == 'poker' %}
+    <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Creator</p>
+            <a href="{% url 'admin_user_detail' user_id=game.creator.pk %}" class="text-gold hover:underline">{{ game.creator.username }}</a>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Buy-in</p>
+            <p class="font-serif font-bold text-gold">{{ game.stake|intcomma }} LC</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Blinds</p>
+            <p>{{ game.small_blind }} / {{ game.big_blind }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Players</p>
+            <p>{{ game.min_players }}-{{ game.max_players }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Hands Played</p>
+            <p>{{ game.hand_number }}</p>
+        </div>
+        <div>
+            <p class="text-xs text-slate uppercase tracking-wide mb-1">Created</p>
+            <p>{{ game.created_at|date:"d M Y, g:i A" }}</p>
+        </div>
+    </div>
+
+    {% if players %}
+    <h3 class="text-xs uppercase tracking-wider text-slate mb-2 mt-4">Players</h3>
+    <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+        {% for p in players %}
+        <div class="vintage-table-row gap-3">
+            <span class="text-xs text-slate w-8">Seat {{ p.seat }}</span>
+            <a href="{% url 'admin_user_detail' user_id=p.user.pk %}" class="text-sm text-gold hover:underline flex-1">{{ p.user.username }}</a>
+            <span class="text-xs">{{ p.chips }} chips</span>
+            <span class="text-xs text-slate">{{ p.coins_invested|intcomma }} LC invested</span>
+            <span class="vintage-badge text-[9px]
+                {% if p.status == 'active' %}bg-patina/20 text-patina
+                {% elif p.status == 'eliminated' %}bg-burgundy/20 text-burgundy
+                {% else %}bg-slate/10 text-slate{% endif %}">{{ p.get_status_display }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endif %}
+</div>
+
+<!-- Actions -->
+{% if can_cancel or can_refund %}
+<div class="grid sm:grid-cols-2 gap-4">
+    {% if can_cancel %}
+    <div class="vintage-card p-5">
+        <h3 class="vintage-section-title mb-3">Cancel Game</h3>
+        <p class="text-xs text-slate mb-3">
+            {% if game_type == 'poker' %}This will refund all players' invested coins and cancel the table.{% else %}This will set the game status to cancelled.{% endif %}
+        </p>
+        <form method="post" action="{% url 'admin_cancel_game' game_type=game_type game_id=game_id %}"
+              x-data @submit.prevent="if(confirm('Cancel this {{ game_type }} game? This cannot be undone.')) $el.submit()">
+            {% csrf_token %}
+            <button type="submit" class="bg-burgundy hover:bg-burgundy/80 text-cream w-full text-xs py-2 px-4 uppercase tracking-wide transition-colors">
+                Cancel Game
+            </button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if can_refund %}
+    <div class="vintage-card p-5" x-data="{ submitting: false }">
+        <h3 class="vintage-section-title mb-3">Issue Refund</h3>
+        <form method="post" action="{% url 'admin_refund_game' game_type=game_type game_id=game_id %}" class="space-y-3" @submit="submitting = true">
+            {% csrf_token %}
+            <div>
+                <label class="block text-xs font-venus-medium mb-1 tracking-wide uppercase">User ID</label>
+                {{ refund_form.user_id }}
+            </div>
+            <div>
+                <label class="block text-xs font-venus-medium mb-1 tracking-wide uppercase">Amount</label>
+                {{ refund_form.amount }}
+            </div>
+            <div>
+                <label class="block text-xs font-venus-medium mb-1 tracking-wide uppercase">Note</label>
+                {{ refund_form.note }}
+            </div>
+            <button type="submit" :disabled="submitting" class="vintage-btn w-full text-xs py-2">
+                <span x-show="!submitting">Issue Refund</span>
+                <span x-show="submitting" x-cloak>Processing...</span>
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}
