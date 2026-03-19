@@ -2,6 +2,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -145,3 +146,38 @@ def cancel_game(request, game_id):
     game.save(update_fields=['status', 'end_reason'])
     messages.info(request, 'Chess challenge cancelled.')
     return redirect('chess_lobby')
+
+
+@login_required
+def archive_view(request):
+    games = ChessGame.objects.filter(
+        Q(creator=request.user) | Q(opponent=request.user),
+        status='completed',
+    ).select_related(
+        'creator', 'opponent', 'winner',
+        'creator__profile', 'opponent__profile',
+    )
+
+    result_filter = request.GET.get('result', 'all')
+    if result_filter == 'wins':
+        games = games.filter(winner=request.user)
+    elif result_filter == 'losses':
+        games = games.filter(winner__isnull=False).exclude(winner=request.user)
+    elif result_filter == 'draws':
+        games = games.filter(winner__isnull=True)
+
+    opponent_query = request.GET.get('opponent', '').strip()
+    if opponent_query:
+        games = games.filter(
+            Q(creator=request.user, opponent__username__icontains=opponent_query) |
+            Q(opponent=request.user, creator__username__icontains=opponent_query)
+        )
+
+    paginator = Paginator(games, 20)
+    page = paginator.get_page(request.GET.get('page'))
+
+    return render(request, 'chess/archive.html', {
+        'page': page,
+        'result_filter': result_filter,
+        'opponent_query': opponent_query,
+    })
