@@ -14,6 +14,19 @@
     var maxReconnectDelay = 30000;
     var pollEl = null;
 
+    function sanitizeUrl(url) {
+        if (typeof url !== 'string') return null;
+        // Allow only relative paths and http(s) URLs
+        if (url.startsWith('/') && !url.startsWith('//')) return url;
+        try {
+            var parsed = new URL(url, location.href);
+            if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+                return parsed.href;
+            }
+        } catch (_) {}
+        return null;
+    }
+
     function getWsUrl() {
         var protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         return protocol + '//' + location.host + '/ws/notifications/';
@@ -125,9 +138,10 @@
             row.setAttribute('role', 'menuitem');
 
             var wrapper;
-            if (notif.link) {
+            var safeLink = sanitizeUrl(notif.link);
+            if (safeLink) {
                 wrapper = document.createElement('a');
-                wrapper.href = notif.link;
+                wrapper.href = safeLink;
                 wrapper.className = 'block';
             } else {
                 wrapper = document.createElement('div');
