@@ -68,6 +68,12 @@ function chessApp() {
         newMovesWhileReviewing: 0,
         _keydownHandler: null,
 
+        // Spectator mode
+        isSpectator: false,
+
+        // Sound
+        soundEnabled: true,
+
         // Computed
         get isMyTurn() {
             if (!this.chess || !this.mySide) return false;
@@ -148,6 +154,10 @@ function chessApp() {
             if (!this.gameActive || !this.mySide) return '';
             return this.isMyTurn ? 'Your move' : (this.opponentName + "'s turn");
         },
+        get openingName() {
+            if (typeof detectOpening !== 'function') return '';
+            return detectOpening(this.sanMoves);
+        },
 
         // Init
         init() {
@@ -161,6 +171,8 @@ function chessApp() {
                 avatar: el.dataset.opponentAvatar || '',
                 initial: el.dataset.opponentInitial || '?',
             };
+            this.isSpectator = el.dataset.spectator === 'true';
+            this.soundEnabled = el.dataset.soundEnabled !== 'false';
             this.chess = new Chess();
             this.viewChess = new Chess();
             this.renderBoard();
@@ -251,7 +263,7 @@ function chessApp() {
             // Set game over display
             if (!winner) {
                 this.gameOverTitle = 'Draw';
-                this.gameOverMsg = (endReason === 'stalemate' ? 'Stalemate' : 'Draw agreed') + '. No coins transferred.';
+                this.gameOverMsg = this._drawReasonText(endReason) + '. No coins transferred.';
             } else if (winner === this.myUsername) {
                 this.gameOverTitle = 'You Won!';
                 var reasonText = endReason === 'resign' ? 'Opponent resigned' : endReason === 'timeout' ? 'Opponent timed out' : 'Checkmate!';
@@ -407,7 +419,9 @@ function chessApp() {
 
             if (data.status === 'active') {
                 this.gameActive = true;
-                this.mySide = data.your_side;
+                if (data.spectating) this.isSpectator = true;
+                // Spectators view from white's perspective
+                this.mySide = data.your_side || 'white';
                 this.chess.load(data.fen);
                 this.fen = data.fen;
                 this.currentTurn = this.chess.turn();
@@ -420,9 +434,9 @@ function chessApp() {
                 var myInfo = this.playerAvatars[myUser] || {};
                 var oppInfo = this.playerAvatars[oppUser] || {};
                 this.myAvatar = myInfo.avatar || '';
-                this.myInitial = myInfo.initial || myUser.charAt(0).toUpperCase();
+                this.myInitial = myInfo.initial || (myUser ? myUser.charAt(0).toUpperCase() : '?');
                 this.opponentAvatar = oppInfo.avatar || '';
-                this.opponentInitial = oppInfo.initial || oppUser.charAt(0).toUpperCase();
+                this.opponentInitial = oppInfo.initial || (oppUser ? oppUser.charAt(0).toUpperCase() : '?');
                 this.opponentOnline = true;
                 // Rebuild move list from UCI
                 if (data.moves_uci) this.rebuildMoveList(data.moves_uci);
@@ -497,7 +511,7 @@ function chessApp() {
         },
 
         applyOpponentMove(data) {
-            if (data.player === this.myUsername) return;
+            if (!this.isSpectator && data.player === this.myUsername) return;
             var from = data.move.slice(0, 2);
             var to = data.move.slice(2, 4);
             var promotion = data.move.length === 5 ? data.move[4] : undefined;
@@ -578,6 +592,19 @@ function chessApp() {
             });
         },
 
+        _drawReasonText(reason) {
+            var map = {
+                stalemate: 'Stalemate',
+                draw: 'Draw agreed',
+                threefold: 'Threefold repetition',
+                fivefold: 'Fivefold repetition',
+                fifty_move: 'Fifty-move rule',
+                seventy_five: 'Seventy-five-move rule',
+                insufficient: 'Insufficient material',
+            };
+            return map[reason] || 'Draw';
+        },
+
         handleGameOver(data) {
             this.gameActive = false;
             this.gameOver = true;
@@ -587,7 +614,7 @@ function chessApp() {
             this._playSound('gameover');
             if (data.winner === null) {
                 this.gameOverTitle = 'Draw';
-                this.gameOverMsg = (data.reason === 'stalemate' ? 'Stalemate' : 'Draw agreed') + '. No coins transferred.';
+                this.gameOverMsg = this._drawReasonText(data.reason) + '. No coins transferred.';
             } else if (data.winner === this.myUsername) {
                 this.gameOverTitle = 'You Win!';
                 this.gameOverMsg = (data.reason === 'resign' ? 'Opponent resigned' : data.reason === 'timeout' ? 'Opponent ran out of time' : 'Checkmate!') + ' You won ' + data.stake + ' LC.';
@@ -680,6 +707,15 @@ function chessApp() {
             return map[piece] || '';
         },
 
+        moveClass(san) {
+            if (!san) return '';
+            if (san.indexOf('#') >= 0) return 'move-checkmate';
+            if (san.indexOf('+') >= 0) return 'move-check';
+            if (san.indexOf('x') >= 0) return 'move-capture';
+            if (san === 'O-O' || san === 'O-O-O') return 'move-castle';
+            return '';
+        },
+
         squareAriaLabel(sq) {
             var pieceNames = {
                 wK: 'White king', wQ: 'White queen', wR: 'White rook', wB: 'White bishop', wN: 'White knight', wP: 'White pawn',
@@ -690,6 +726,7 @@ function chessApp() {
         },
 
         canDragPiece(sq) {
+            if (this.isSpectator) return false;
             if (this.isViewingHistory) return false;
             if (!this.gameActive || !this.mySide) return false;
             if (!sq.piece) return false;
@@ -703,6 +740,7 @@ function chessApp() {
 
         // Interaction
         handleSquareClick(sq) {
+            if (this.isSpectator) return;
             if (this.isViewingHistory) return;
             if (!this.gameActive || !this.mySide) return;
 
@@ -865,7 +903,20 @@ function chessApp() {
         },
 
         // Sound system
+        toggleSound() {
+            this.soundEnabled = !this.soundEnabled;
+            // Persist to server
+            fetch('/profile/toggle-sound/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                                   document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+                },
+            }).catch(function() {});
+        },
+
         _playSound(type) {
+            if (!this.soundEnabled) return;
             try {
                 var ctx = new (window.AudioContext || window.webkitAudioContext)();
                 var osc = ctx.createOscillator();

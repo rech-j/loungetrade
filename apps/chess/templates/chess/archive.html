@@ -61,12 +61,17 @@
                         {% endif %}
                     </p>
                     <p class="text-xs text-slate">
-                        {{ g.stake }} LC &middot;
+                        {{ g.stake }} LC &middot; {{ g.get_time_control_display }} &middot;
                         {% if g.end_reason == 'checkmate' %}Checkmate
                         {% elif g.end_reason == 'resign' %}Resignation
                         {% elif g.end_reason == 'timeout' %}Timeout
                         {% elif g.end_reason == 'stalemate' %}Stalemate
                         {% elif g.end_reason == 'draw' %}Draw agreed
+                        {% elif g.end_reason == 'threefold' %}Threefold repetition
+                        {% elif g.end_reason == 'fivefold' %}Fivefold repetition
+                        {% elif g.end_reason == 'fifty_move' %}Fifty-move rule
+                        {% elif g.end_reason == 'seventy_five' %}75-move rule
+                        {% elif g.end_reason == 'insufficient' %}Insufficient material
                         {% else %}{{ g.end_reason }}{% endif %}
                         &middot; {{ g.ended_at|date:"d M Y" }}
                     </p>

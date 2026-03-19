@@ -5,7 +5,7 @@
 <div class="max-w-2xl lg:max-w-3xl mx-auto">
     <div class="mb-8">
         <h1 class="font-venus-medium text-2xl">The Tables</h1>
-        <p class="text-slate text-sm mt-1">Chess for stakes, 10 minutes per player.</p>
+        <p class="text-slate text-sm mt-1">Chess for stakes. Choose your time control.</p>
     </div>
 
     <div class="flex gap-0 mb-8 border border-stone dark:border-slate">
@@ -50,11 +50,19 @@
                        hx-vals='js:{q: document.getElementById("opp").value}'>
                 <div id="chess-opponent-results"></div>
             </div>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <div>
                     <label for="chess-stake" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Stake (LC)</label>
                     <input id="chess-stake" type="number" name="stake" min="1" max="{{ max_stake }}" required
                            class="vintage-input" placeholder="Amount">
+                </div>
+                <div>
+                    <label for="chess-time" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Time</label>
+                    <select id="chess-time" name="time_control" class="vintage-select">
+                        {% for val, label in time_controls %}
+                        <option value="{{ val }}" {% if val == 600 %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div>
                     <label for="chess-side" class="block text-xs font-venus-medium mb-1.5 tracking-wide uppercase">Play as</label>
@@ -84,7 +92,7 @@
                         {% else %}<span class="font-venus-medium">{{ g.creator.profile.get_display_name }}</span> challenged you{% endif %}
                     </p>
                     <p class="text-xs text-slate flex items-center gap-1.5">
-                        {{ g.stake }} LC &middot;
+                        {{ g.stake }} LC &middot; {{ g.get_time_control_display }} &middot;
                         {% if g.status == 'active' %}
                         <span class="inline-flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-patina inline-block"></span><span class="text-patina font-medium">In Progress</span></span>
                         {% else %}
@@ -117,7 +125,10 @@
     <div>
         <div class="flex items-center justify-between mb-1">
             <h2 class="vintage-section-title mb-0">Recent Chess Results</h2>
-            <a href="{% url 'chess_archive' %}" class="text-xs text-gold hover:underline">View Archive &rarr;</a>
+            <div class="flex items-center gap-3">
+                <a href="{% url 'chess_live' %}" class="text-xs text-patina hover:underline">Live Games</a>
+                <a href="{% url 'chess_archive' %}" class="text-xs text-gold hover:underline">View Archive &rarr;</a>
+            </div>
         </div>
         <div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
             {% for g in recent_games %}
@@ -125,7 +136,7 @@
                 <div class="min-w-0">
                     <p class="text-sm truncate">{{ g.creator.profile.get_display_name }} vs {{ g.opponent.profile.get_display_name }}</p>
                     <p class="text-xs text-slate">
-                        {{ g.stake }} LC &middot;
+                        {{ g.stake }} LC &middot; {{ g.get_time_control_display }} &middot;
                         {% if g.winner == request.user %}Won{% elif g.winner %}Lost{% else %}Draw{% endif %}
                         {% if g.end_reason %}&middot; {{ g.end_reason }}{% endif %}
                         &middot; {{ g.ended_at|timesince }} ago

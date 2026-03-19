@@ -77,6 +77,20 @@ def toggle_dark_mode(request):
 
 
 @login_required
+def toggle_sound(request):
+    if request.method == 'POST':
+        profile = request.user.profile
+        profile.sound_enabled = not profile.sound_enabled
+        profile.save(update_fields=['sound_enabled'])
+    if request.headers.get('HX-Request'):
+        return HttpResponse(status=204)
+    referer = request.META.get('HTTP_REFERER', '/')
+    if not url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
+        referer = '/'
+    return redirect(referer)
+
+
+@login_required
 @rate_limit('user_search', max_requests=30, window=60)
 def user_search(request):
     q = request.GET.get('q', '').strip()

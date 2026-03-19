@@ -21,6 +21,7 @@ class ChessConsumer(BaseGameConsumer):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
         self.room_group_name = f'chess_{self.game_id}'
         self.user = self.scope['user']
+        self.is_spectator = False
 
         if self.user.is_anonymous:
             await self.close()
@@ -31,21 +32,26 @@ class ChessConsumer(BaseGameConsumer):
             await self.close()
             return
 
-        if self.user.pk not in (game.creator_id, game.opponent_id):
-            await self.close()
-            return
+        is_participant = self.user.pk in (game.creator_id, game.opponent_id)
+
+        # Non-participants can spectate active or completed games
+        if not is_participant:
+            if game.status not in ('active', 'completed'):
+                await self.close()
+                return
+            self.is_spectator = True
 
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
 
-        logger.info('Chess WS connected: user=%s game=%s', self.user.username, self.game_id)
+        logger.info('Chess WS connected: user=%s game=%s spectator=%s', self.user.username, self.game_id, self.is_spectator)
 
         just_activated = False
         # If game is still pending, check if we should activate it
-        if game.status == 'pending' and game.creator_id == self.user.pk:
+        if not self.is_spectator and game.status == 'pending' and game.creator_id == self.user.pk:
             # Creator connected - just notify the room
             pass
-        elif game.status == 'pending' and game.opponent_id == self.user.pk:
+        elif not self.is_spectator and game.status == 'pending' and game.opponent_id == self.user.pk:
             # Opponent connected - both players ready, start the game
             just_activated = await self.activate_game(game)
             if just_activated:
@@ -60,6 +66,9 @@ class ChessConsumer(BaseGameConsumer):
         else:
             # Send current game state only to the newly connected player
             white_time, black_time = self.get_adjusted_times(game)
+            your_side = None
+            if not self.is_spectator and game.white_player and game.black_player:
+                your_side = game.get_player_side(self.user)
             await self.send(text_data=json.dumps({
                 'type': 'game_state',
                 'status': game.status,
@@ -69,10 +78,11 @@ class ChessConsumer(BaseGameConsumer):
                 'black_player': game.black_player.username if game.black_player else None,
                 'white_time': white_time,
                 'black_time': black_time,
-                'your_side': game.get_player_side(self.user) if game.white_player and game.black_player else None,
+                'your_side': your_side,
+                'spectating': self.is_spectator,
             }))
 
-            if game.status == 'active':
+            if game.status == 'active' and not self.is_spectator:
                 await self.channel_layer.group_send(self.room_group_name, {
                     'type': 'player_connected',
                     'username': self.user.username,
@@ -80,7 +90,7 @@ class ChessConsumer(BaseGameConsumer):
 
     async def disconnect(self, close_code):
         logger.info('Chess WS disconnected: user=%s game=%s', getattr(self, 'user', None), self.game_id)
-        if hasattr(self, 'user') and not self.user.is_anonymous:
+        if hasattr(self, 'user') and not self.user.is_anonymous and not getattr(self, 'is_spectator', False):
             await self.channel_layer.group_send(self.room_group_name, {
                 'type': 'player_disconnected',
                 'username': self.user.username,
@@ -88,6 +98,10 @@ class ChessConsumer(BaseGameConsumer):
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
+        # Spectators cannot send any game actions
+        if self.is_spectator:
+            return
+
         try:
             data = json.loads(text_data)
         except json.JSONDecodeError:
@@ -350,9 +364,17 @@ class ChessConsumer(BaseGameConsumer):
                 'stake': game.stake,
             })
         else:
-            # Stalemate, insufficient material, 75-move rule, or 5-fold repetition
+            # Detect the specific draw reason
             if board.is_stalemate():
                 reason = 'stalemate'
+            elif board.is_insufficient_material():
+                reason = 'insufficient'
+            elif board.can_claim_fifty_moves():
+                reason = 'seventy_five' if board.is_seventyfive_moves() else 'fifty_move'
+            elif board.is_fivefold_repetition():
+                reason = 'fivefold'
+            elif board.can_claim_threefold_repetition():
+                reason = 'threefold'
             else:
                 reason = 'draw'
             finished = await self.finish_game(game.pk, None, reason)
@@ -537,6 +559,8 @@ class ChessConsumer(BaseGameConsumer):
             status='active',
             white_player_id=white_id,
             black_player_id=black_id,
+            white_time=game.time_control,
+            black_time=game.time_control,
             started_at=timezone.now(),
         )
         return updated > 0
