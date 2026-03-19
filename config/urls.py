@@ -24,6 +24,7 @@ urlpatterns = [
     path('poker/', include('apps.poker.urls')),
     path('notifications/', include('apps.notifications.urls')),
     path('leaderboard/', include('apps.leaderboard.urls')),
+    path('admin-panel/', include('apps.admin_panel.urls')),
     path('', landing_page, name='landing'),
     path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
 ]

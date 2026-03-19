@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'apps.poker',
     'apps.notifications',
     'apps.leaderboard',
+    'apps.admin_panel',
 ]
 
 MIDDLEWARE = [

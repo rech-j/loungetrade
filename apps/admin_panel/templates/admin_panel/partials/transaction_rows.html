@@ -1,0 +1,54 @@
+{% load humanize %}
+{% if page %}
+<div class="text-right text-xs text-slate mb-2">
+    {{ page.paginator.count|intcomma }} transactions
+</div>
+<div class="border border-stone dark:border-slate divide-y divide-stone dark:divide-slate">
+    {% for tx in page %}
+    <div class="vintage-table-row gap-3">
+        <span class="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full
+            {% if tx.tx_type == 'mint' %}bg-gold/10 text-gold
+            {% elif tx.tx_type == 'game' or tx.tx_type == 'game_win' or tx.tx_type == 'game_loss' %}bg-patina/10 text-patina
+            {% else %}bg-slate/10 text-slate{% endif %}">
+            {% if tx.tx_type == 'mint' %}
+            <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><path d="M5 0L10 5L5 10L0 5Z"/></svg>
+            {% elif tx.tx_type == 'game' or tx.tx_type == 'game_win' or tx.tx_type == 'game_loss' %}
+            <svg class="w-3 h-3" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+            {% else %}
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            {% endif %}
+        </span>
+        <div class="flex-1 min-w-0">
+            <p class="text-sm">
+                <span class="vintage-badge text-[9px] {% if tx.tx_type == 'mint' %}bg-gold/20 text-gold{% elif tx.tx_type == 'game' %}bg-patina/20 text-patina{% else %}bg-slate/10 text-slate{% endif %}">{{ tx.get_tx_type_display }}</span>
+                {% if tx.sender %}<a href="{% url 'admin_user_detail' user_id=tx.sender.pk %}" class="hover:text-gold">{{ tx.sender.username }}</a>{% else %}System{% endif %}
+                &rarr;
+                {% if tx.receiver %}<a href="{% url 'admin_user_detail' user_id=tx.receiver.pk %}" class="hover:text-gold">{{ tx.receiver.username }}</a>{% else %}System{% endif %}
+            </p>
+            {% if tx.note %}<p class="text-xs text-slate truncate">{{ tx.note }}</p>{% endif %}
+            <p class="text-xs text-slate">{{ tx.created_at|date:"d M Y, g:i A" }}</p>
+        </div>
+        <span class="text-sm font-bold font-serif text-gold flex-shrink-0">{{ tx.amount|intcomma }}</span>
+    </div>
+    {% endfor %}
+</div>
+
+{% if page.paginator.num_pages > 1 %}
+<div class="flex items-center justify-center gap-4 mt-6">
+    {% if page.has_previous %}
+    <a href="?type={{ tx_type }}&user={{ user_q }}&date_from={{ date_from }}&date_to={{ date_to }}&page={{ page.previous_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Previous</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Previous</span>
+    {% endif %}
+    <span class="text-xs text-slate">{{ page.number }} / {{ page.paginator.num_pages }}</span>
+    {% if page.has_next %}
+    <a href="?type={{ tx_type }}&user={{ user_q }}&date_from={{ date_from }}&date_to={{ date_to }}&page={{ page.next_page_number }}" class="vintage-btn-outline text-xs py-1.5 px-5">Next</a>
+    {% else %}
+    <span class="text-xs tracking-wide uppercase px-5 py-1.5 border border-stone dark:border-slate text-slate/50 cursor-not-allowed">Next</span>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="vintage-empty-state">No transactions found.</div>
+{% endif %}

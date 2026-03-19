@@ -1,0 +1,27 @@
+{% extends "admin_panel/base.html" %}
+{% load humanize %}
+
+{% block admin_title %}Users{% endblock %}
+
+{% block admin_content %}
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+    <form method="get" class="flex gap-2 flex-1 w-full sm:w-auto">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search users..." class="vintage-input flex-1">
+        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+        <button type="submit" class="vintage-btn text-xs px-4">Search</button>
+    </form>
+    <div class="flex gap-2 text-xs">
+        <span class="text-slate uppercase tracking-wide py-1.5">Sort:</span>
+        <a href="?q={{ q }}&sort=" class="px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if not sort %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Newest</a>
+        <a href="?q={{ q }}&sort=balance" class="px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if sort == 'balance' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Balance</a>
+        <a href="?q={{ q }}&sort=username" class="px-2 py-1.5 border border-stone dark:border-slate transition-colors {% if sort == 'username' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold{% endif %}">Username</a>
+    </div>
+</div>
+
+<div id="user-list"
+     hx-get="{% url 'admin_users' %}?q={{ q }}&sort={{ sort }}"
+     hx-trigger="none"
+     hx-swap="innerHTML">
+    {% include "admin_panel/partials/user_rows.html" %}
+</div>
+{% endblock %}

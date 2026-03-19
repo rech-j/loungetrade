@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Admin - LC{% endblock %}
+
+{% block content %}
+{% with un=request.resolver_match.url_name %}
+<div class="max-w-4xl lg:max-w-5xl mx-auto">
+    <div class="mb-6">
+        <p class="text-xs tracking-[0.3em] uppercase text-gold mb-2">Administration</p>
+        <h1 class="font-venus-medium text-2xl">{% block admin_title %}Admin Panel{% endblock %}</h1>
+    </div>
+
+    <div class="flex gap-2 mb-8 flex-wrap">
+        <a href="{% url 'admin_dashboard' %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if un == 'admin_dashboard' or un == 'admin_stats_partial' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Overview</a>
+        <a href="{% url 'admin_users' %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if un == 'admin_users' or un == 'admin_user_detail' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Users</a>
+        <a href="{% url 'admin_games' %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if un == 'admin_games' or un == 'admin_game_detail' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Games</a>
+        <a href="{% url 'admin_transactions' %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if un == 'admin_transactions' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Economy</a>
+        <a href="{% url 'admin_economy_stats' %}"
+           class="text-xs tracking-wide uppercase px-3 py-1.5 border border-stone dark:border-slate transition-colors {% if un == 'admin_economy_stats' %}border-t-2 border-t-gold text-gold{% else %}text-slate hover:text-gold hover:border-gold{% endif %}">Stats</a>
+    </div>
+
+    {% block admin_content %}{% endblock %}
+</div>
+{% endwith %}
+{% endblock %}
