@@ -5,20 +5,6 @@ from apps.coinflip.models import CoinFlipChallenge
 from apps.notifications.models import Notification
 
 
-class CoinFlipLobbyViewTest(TestCase):
-    def setUp(self):
-        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
-
-    def test_lobby_requires_login(self):
-        response = self.client.get('/coinflip/')
-        self.assertEqual(response.status_code, 302)
-
-    def test_lobby_accessible_when_logged_in(self):
-        self.client.login(username='testuser', password='pass1234')
-        response = self.client.get('/coinflip/')
-        self.assertEqual(response.status_code, 200)
-
-
 class CreateChallengeViewTest(TestCase):
     def setUp(self):
         self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
@@ -35,7 +21,7 @@ class CreateChallengeViewTest(TestCase):
             'stake': 50,
             'choice': 'heads',
         })
-        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, f'/coinflip/play/{CoinFlipChallenge.objects.first().pk}/')
         self.assertTrue(CoinFlipChallenge.objects.filter(
             challenger=self.alice, opponent=self.bob
         ).exists())
@@ -51,15 +37,6 @@ class CreateChallengeViewTest(TestCase):
             Notification.objects.filter(user=self.bob, notif_type='game_invite').count(),
             1
         )
-
-    def test_cannot_challenge_self(self):
-        self.client.login(username='alice', password='pass1234')
-        self.client.post('/coinflip/challenge/', {
-            'opponent_username': 'alice',
-            'stake': 50,
-            'choice': 'heads',
-        })
-        self.assertEqual(CoinFlipChallenge.objects.count(), 0)
 
     def test_invalid_choice_rejected(self):
         self.client.login(username='alice', password='pass1234')

@@ -20,6 +20,49 @@ class ChessLobbyViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
 
+class ChessLiveGamesViewTest(TestCase):
+    def setUp(self):
+        self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
+        self.bob = User.objects.create_user('bob', 'bob@test.com', 'pass1234')
+        self.alice.profile.balance = 100
+        self.alice.profile.save()
+        self.bob.profile.balance = 100
+        self.bob.profile.save()
+
+    def test_live_requires_login(self):
+        response = self.client.get('/chess/live/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_live_returns_200(self):
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/chess/live/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_live_shows_active_games(self):
+        game = ChessGame.objects.create(
+            creator=self.alice, opponent=self.bob, stake=50,
+            white_player=self.alice, black_player=self.bob,
+            status='active', started_at=timezone.now(),
+        )
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/chess/live/')
+        self.assertIn(game, response.context['games'])
+
+    def test_live_excludes_pending_and_completed(self):
+        ChessGame.objects.create(
+            creator=self.alice, opponent=self.bob, stake=50, status='pending',
+        )
+        ChessGame.objects.create(
+            creator=self.alice, opponent=self.bob, stake=50,
+            white_player=self.alice, black_player=self.bob,
+            status='completed', winner=self.alice, end_reason='checkmate',
+            ended_at=timezone.now(),
+        )
+        self.client.login(username='alice', password='pass1234')
+        response = self.client.get('/chess/live/')
+        self.assertEqual(len(response.context['games']), 0)
+
+
 class CreateChessGameTest(TestCase):
     def setUp(self):
         from django.core.cache import cache

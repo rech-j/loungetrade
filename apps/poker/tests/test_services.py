@@ -5,8 +5,10 @@ from apps.poker.models import PokerHand, PokerPlayer, PokerTable
 from apps.poker.services import (
     advance_round,
     calculate_payouts,
+    check_table_over,
     get_valid_actions,
     process_action,
+    process_rebuy,
     resolve_hand,
     start_hand,
 )
@@ -138,6 +140,77 @@ class GetValidActionsTest(TestCase):
         self.assertEqual(actions, [])
 
 
+class ProcessActionExtendedTest(TestCase):
+    """Additional process_action tests for raise, check, and all_in."""
+
+    def setUp(self):
+        self.users = []
+        for i in range(3):
+            u = User.objects.create_user(f'ext_action{i}', password='pass')
+            self.users.append(u)
+
+        self.table = PokerTable.objects.create(
+            creator=self.users[0], stake=100, starting_chips=1000,
+            small_blind=10, big_blind=20,
+        )
+        self.table.status = 'active'
+        self.table.save()
+
+        for i, u in enumerate(self.users):
+            PokerPlayer.objects.create(
+                table=self.table, user=u, seat=i, chips=1000, status='active',
+            )
+
+        self.hand, self.card_map = start_hand(self.table.pk)
+
+    def test_raise(self):
+        current_player = PokerPlayer.objects.get(table=self.table, seat=self.hand.current_seat)
+        hand, action, info = process_action(
+            self.hand.pk, current_player.user_id, 'raise', 60
+        )
+        self.assertEqual(action, 'raise')
+        current_player.refresh_from_db()
+        self.assertLess(current_player.chips, 1000)
+
+    def test_check_when_no_bet(self):
+        """After advancing to flop with bets settled, check should work."""
+        # Everyone calls preflop to get to flop
+        for _ in range(3):
+            hand = PokerHand.objects.get(pk=self.hand.pk)
+            current_player = PokerPlayer.objects.get(
+                table=self.table, seat=hand.current_seat,
+            )
+            hand, action, info = process_action(
+                hand.pk, current_player.user_id, 'call', 20,
+            )
+            if info == 'advance_round':
+                break
+
+        if info == 'advance_round':
+            hand, _ = advance_round(hand.pk)
+            hand = PokerHand.objects.get(pk=hand.pk)
+            current_player = PokerPlayer.objects.get(
+                table=self.table, seat=hand.current_seat,
+            )
+            hand, action, result_info = process_action(
+                hand.pk, current_player.user_id, 'check',
+            )
+            self.assertEqual(action, 'check')
+
+    def test_all_in(self):
+        # Give player minimal chips to force all-in
+        current_player = PokerPlayer.objects.get(table=self.table, seat=self.hand.current_seat)
+        current_player.chips = 15
+        current_player.save(update_fields=['chips'])
+        hand, action, info = process_action(
+            self.hand.pk, current_player.user_id, 'all_in', 15,
+        )
+        self.assertEqual(action, 'all_in')
+        current_player.refresh_from_db()
+        self.assertEqual(current_player.chips, 0)
+        self.assertEqual(current_player.status, 'all_in')
+
+
 class AdvanceRoundTest(TestCase):
     def setUp(self):
         self.users = []
@@ -171,6 +244,29 @@ class AdvanceRoundTest(TestCase):
         self.assertEqual(hand.status, 'turn')
         cards = new_cards.split(',')
         self.assertEqual(len(cards), 1)
+
+    def test_advance_turn_to_river(self):
+        advance_round(self.hand.pk)  # flop
+        advance_round(self.hand.pk)  # turn
+        hand, new_cards = advance_round(self.hand.pk)
+        self.assertEqual(hand.status, 'river')
+        cards = new_cards.split(',')
+        self.assertEqual(len(cards), 1)
+
+    def test_advance_river_to_showdown(self):
+        advance_round(self.hand.pk)  # flop
+        advance_round(self.hand.pk)  # turn
+        advance_round(self.hand.pk)  # river
+        hand, new_cards = advance_round(self.hand.pk)
+        self.assertEqual(hand.status, 'showdown')
+        self.assertIsNone(new_cards)
+
+    def test_community_cards_accumulate(self):
+        advance_round(self.hand.pk)  # flop: 3 cards
+        advance_round(self.hand.pk)  # turn: 4 cards
+        hand, _ = advance_round(self.hand.pk)  # river: 5 cards
+        community = hand.community_cards.split(',')
+        self.assertEqual(len(community), 5)
 
 
 class ResolveHandTest(TestCase):
@@ -354,3 +450,106 @@ class ActedTrackingTest(TestCase):
             self.hand.pk, current_player.user_id, 'call', 20,
         )
         self.assertIn(str(current_player.user_id), hand.round_bets['_acted'])
+
+
+class CheckTableOverTest(TestCase):
+    def setUp(self):
+        self.users = []
+        for i in range(3):
+            u = User.objects.create_user(f'table_over{i}', password='pass')
+            self.users.append(u)
+
+        self.table = PokerTable.objects.create(
+            creator=self.users[0], stake=100, starting_chips=1000,
+            small_blind=10, big_blind=20,
+        )
+        self.table.status = 'active'
+        self.table.save()
+
+    def test_table_not_over_with_multiple_players(self):
+        for i, u in enumerate(self.users):
+            PokerPlayer.objects.create(
+                table=self.table, user=u, seat=i, chips=1000, status='active',
+            )
+        is_over, winner = check_table_over(self.table.pk)
+        self.assertFalse(is_over)
+        self.assertIsNone(winner)
+
+    def test_table_over_with_one_player(self):
+        PokerPlayer.objects.create(
+            table=self.table, user=self.users[0], seat=0, chips=3000, status='active',
+        )
+        PokerPlayer.objects.create(
+            table=self.table, user=self.users[1], seat=1, chips=0, status='eliminated',
+        )
+        PokerPlayer.objects.create(
+            table=self.table, user=self.users[2], seat=2, chips=0, status='eliminated',
+        )
+        is_over, winner = check_table_over(self.table.pk)
+        self.assertTrue(is_over)
+        self.assertEqual(winner.user_id, self.users[0].pk)
+
+    def test_zero_chips_player_eliminated_when_no_rebuys(self):
+        PokerPlayer.objects.create(
+            table=self.table, user=self.users[0], seat=0, chips=1500, status='active',
+        )
+        PokerPlayer.objects.create(
+            table=self.table, user=self.users[1], seat=1, chips=0, status='active',
+        )
+        is_over, winner = check_table_over(self.table.pk)
+        self.assertTrue(is_over)
+        p1 = PokerPlayer.objects.get(table=self.table, user=self.users[1])
+        self.assertEqual(p1.status, 'eliminated')
+
+
+class ProcessRebuyTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('rebuy_user', password='pass')
+        self.user.profile.balance = 500
+        self.user.profile.save()
+        self.table = PokerTable.objects.create(
+            creator=self.user, stake=100, starting_chips=1000,
+            allow_rebuys=True, max_rebuys=2,
+        )
+        self.table.status = 'active'
+        self.table.save()
+        self.player = PokerPlayer.objects.create(
+            table=self.table, user=self.user, seat=0,
+            chips=0, status='eliminated', coins_invested=100,
+        )
+
+    def test_successful_rebuy(self):
+        result = process_rebuy(self.table.pk, self.user.pk)
+        self.assertTrue(result)
+        self.player.refresh_from_db()
+        self.assertEqual(self.player.chips, 1000)
+        self.assertEqual(self.player.rebuys_used, 1)
+        self.assertEqual(self.player.coins_invested, 200)
+        self.assertEqual(self.player.status, 'active')
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.balance, 400)
+
+    def test_rebuy_fails_when_not_allowed(self):
+        self.table.allow_rebuys = False
+        self.table.save()
+        result = process_rebuy(self.table.pk, self.user.pk)
+        self.assertFalse(result)
+
+    def test_rebuy_fails_when_max_reached(self):
+        self.player.rebuys_used = 2
+        self.player.save(update_fields=['rebuys_used'])
+        result = process_rebuy(self.table.pk, self.user.pk)
+        self.assertFalse(result)
+
+    def test_rebuy_fails_with_chips_remaining(self):
+        self.player.chips = 500
+        self.player.status = 'active'
+        self.player.save(update_fields=['chips', 'status'])
+        result = process_rebuy(self.table.pk, self.user.pk)
+        self.assertFalse(result)
+
+    def test_rebuy_fails_insufficient_balance(self):
+        self.user.profile.balance = 10
+        self.user.profile.save()
+        result = process_rebuy(self.table.pk, self.user.pk)
+        self.assertFalse(result)
