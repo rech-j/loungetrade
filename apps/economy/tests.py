@@ -148,19 +148,21 @@ class TradeViewTest(TestCase):
 
     def test_trade_nonexistent_user(self):
         self.client.login(username='alice', password='pass1234')
-        self.client.post('/economy/trade/', {
+        response = self.client.post('/economy/trade/', {
             'recipient_username': 'nobody',
             'amount': 10,
         })
+        self.assertEqual(response.status_code, 200)
         self.alice.profile.refresh_from_db()
         self.assertEqual(self.alice.profile.balance, 100)
 
     def test_trade_overdraft(self):
         self.client.login(username='alice', password='pass1234')
-        self.client.post('/economy/trade/', {
+        response = self.client.post('/economy/trade/', {
             'recipient_username': 'bob',
             'amount': 999,
         })
+        self.assertEqual(response.status_code, 200)
         self.alice.profile.refresh_from_db()
         self.assertEqual(self.alice.profile.balance, 100)
 

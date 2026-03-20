@@ -168,6 +168,92 @@ class NotificationViewTest(TestCase):
         self.assertEqual(len(response.context['page_obj'].object_list), 5)
 
 
+    def test_mark_all_read_htmx_returns_badge(self):
+        Notification.objects.create(
+            user=self.user, notif_type='game_invite',
+            title='Test2', message='msg',
+        )
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.post(
+            '/notifications/read-all/',
+            HTTP_HX_REQUEST='true',
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            Notification.objects.filter(user=self.user, is_read=False).count(),
+            0,
+        )
+
+    def test_notification_list_requires_login(self):
+        response = self.client.get('/notifications/')
+        self.assertEqual(response.status_code, 302)
+
+
+class UnreadPartialTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+        Notification.objects.create(
+            user=self.user, notif_type='coin_received',
+            title='Unread', message='msg',
+        )
+
+    def test_unread_partial_requires_login(self):
+        response = self.client.get('/notifications/unread/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_unread_partial_returns_200(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/notifications/unread/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_unread_partial_includes_notifications(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/notifications/unread/')
+        self.assertContains(response, 'Unread')
+
+
+class UnreadCountTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+
+    def test_unread_count_requires_login(self):
+        response = self.client.get('/notifications/unread-count/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_unread_count_returns_200(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/notifications/unread-count/')
+        self.assertEqual(response.status_code, 200)
+
+
+class GameActivityBadgeTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+
+    def test_game_activity_badge_requires_login(self):
+        response = self.client.get('/notifications/game-activity/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_game_activity_badge_returns_200(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/notifications/game-activity/')
+        self.assertEqual(response.status_code, 200)
+
+
+class GameActivityMobileTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+
+    def test_game_activity_mobile_requires_login(self):
+        response = self.client.get('/notifications/game-activity-mobile/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_game_activity_mobile_returns_200(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/notifications/game-activity-mobile/')
+        self.assertEqual(response.status_code, 200)
+
+
 class GameActivityTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')

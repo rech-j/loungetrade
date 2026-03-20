@@ -105,6 +105,69 @@ class DarkModeToggleTest(TestCase):
         self.assertFalse(self.user.profile.dark_mode)
 
 
+class SoundToggleTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+        self.client.login(username='testuser', password='pass1234')
+
+    def test_toggle_sound(self):
+        self.assertTrue(self.user.profile.sound_enabled)
+        self.client.post('/profile/toggle-sound/')
+        self.user.profile.refresh_from_db()
+        self.assertFalse(self.user.profile.sound_enabled)
+        self.client.post('/profile/toggle-sound/')
+        self.user.profile.refresh_from_db()
+        self.assertTrue(self.user.profile.sound_enabled)
+
+    def test_toggle_sound_htmx_returns_204(self):
+        response = self.client.post(
+            '/profile/toggle-sound/',
+            HTTP_HX_REQUEST='true',
+        )
+        self.assertEqual(response.status_code, 204)
+
+
+class ProfileEditViewTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+
+    def test_edit_requires_login(self):
+        response = self.client.get('/profile/edit/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_edit_renders_form(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/profile/edit/')
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'display_name')
+
+    def test_edit_post_updates_display_name(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.post('/profile/edit/', {
+            'display_name': 'NewDisplayName',
+        })
+        self.assertEqual(response.status_code, 302)
+        self.user.profile.refresh_from_db()
+        self.assertEqual(self.user.profile.display_name, 'NewDisplayName')
+
+
+class BalanceCheckTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('testuser', 'test@test.com', 'pass1234')
+        self.user.profile.balance = 42
+        self.user.profile.save()
+
+    def test_balance_check_requires_login(self):
+        response = self.client.get('/profile/balance/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_balance_check_returns_balance(self):
+        self.client.login(username='testuser', password='pass1234')
+        response = self.client.get('/profile/balance/')
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('42 LC', response.content.decode())
+
+
 class UserSearchTest(TestCase):
     def setUp(self):
         self.alice = User.objects.create_user('alice', 'alice@test.com', 'pass1234')
