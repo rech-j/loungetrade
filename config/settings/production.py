@@ -1,5 +1,6 @@
 import os
 
+import sentry_sdk
 from django.core.exceptions import ImproperlyConfigured
 
 from .base import *  # noqa: F401, F403
@@ -19,6 +20,16 @@ if _missing:
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'loungecoin.trade').split(',')
 ADMIN_URL = os.environ.get('DJANGO_ADMIN_URL', 'admin/')
+
+# Redis cache backend — shares the Redis instance with Channels but uses db 1
+# to avoid key collisions. Required for rate limiting to work across Gunicorn workers.
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_CACHE_URL',
+                                   os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/0').rstrip('/0') + '/1'),
+    },
+}
 
 DATABASES = {
     'default': {
@@ -133,3 +144,14 @@ LOGGING = {
         },
     },
 }
+
+# Sentry error monitoring — only initializes if SENTRY_DSN is set.
+_SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
+if _SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        environment=os.environ.get('SENTRY_ENVIRONMENT', 'production'),
+        # Capture 10% of transactions for performance monitoring.
+        traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        send_default_pii=False,
+    )

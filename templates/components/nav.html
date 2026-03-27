@@ -51,6 +51,7 @@
                         </span>
                     </button>
                     <div x-show="notifOpen"
+                         x-cloak
                          @click.outside="notifOpen = false"
                          x-transition
                          role="menu"
@@ -88,7 +89,7 @@
             <button @click="open = !open" :aria-expanded="open" aria-label="Toggle menu" class="md:hidden text-slate hover:text-gold">
                 <svg aria-hidden="true" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h16"/>
-                    <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
+                    <path x-show="open" x-cloak stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M6 18L18 6M6 6l12 12"/>
                 </svg>
             </button>
 
@@ -101,7 +102,7 @@
         </div>
 
         {% if request.user.is_authenticated %}
-        <div x-show="open" x-transition class="md:hidden border-t border-stone/50 dark:border-slate/50 py-3 space-y-1" hx-boost="true">
+        <div x-show="open" x-cloak x-transition class="md:hidden border-t border-stone/50 dark:border-slate/50 py-3 space-y-1" hx-boost="true">
             <div class="text-xs text-gold font-venus-medium px-1 pb-2 tracking-wider uppercase"
                  hx-get="{% url 'balance_check' %}"
                  hx-trigger="load, every 15s"
