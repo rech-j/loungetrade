@@ -132,12 +132,18 @@ def decline_challenge(request, challenge_id):
     """Decline a challenge without needing to open the WebSocket game page."""
     if request.method != 'POST':
         return redirect('coinflip_lobby')
-    challenge = get_object_or_404(
+    # Verify the challenge exists and belongs to this user (returns 404 otherwise).
+    get_object_or_404(
         CoinFlipChallenge, pk=challenge_id, opponent=request.user, status='pending',
     )
-    challenge.status = 'declined'
-    challenge.save(update_fields=['status'])
-    messages.info(request, 'Challenge declined.')
+    # Atomic conditional update to prevent overwriting a concurrent resolution.
+    updated = CoinFlipChallenge.objects.filter(
+        pk=challenge_id, status='pending',
+    ).update(status='declined')
+    if not updated:
+        messages.error(request, 'Challenge was already resolved.')
+    else:
+        messages.info(request, 'Challenge declined.')
     return redirect('coinflip_lobby')
 
 
@@ -145,10 +151,16 @@ def decline_challenge(request, challenge_id):
 def cancel_challenge(request, challenge_id):
     if request.method != 'POST':
         return redirect('coinflip_lobby')
-    challenge = get_object_or_404(
+    # Verify the challenge exists and belongs to this user (returns 404 otherwise).
+    get_object_or_404(
         CoinFlipChallenge, pk=challenge_id, challenger=request.user, status='pending',
     )
-    challenge.status = 'cancelled'
-    challenge.save(update_fields=['status'])
-    messages.info(request, 'Challenge cancelled.')
+    # Atomic conditional update to prevent overwriting a concurrent resolution.
+    updated = CoinFlipChallenge.objects.filter(
+        pk=challenge_id, status='pending',
+    ).update(status='cancelled')
+    if not updated:
+        messages.error(request, 'Challenge was already resolved.')
+    else:
+        messages.info(request, 'Challenge cancelled.')
     return redirect('coinflip_lobby')

@@ -1,12 +1,60 @@
 from datetime import timedelta
 
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Case, IntegerField, Q, Sum, Value, When
 from django.shortcuts import render
 from django.utils import timezone
 
 from apps.accounts.models import UserProfile
 from apps.economy.models import Transaction
+
+
+def _bulk_deltas(user_ids, since):
+    """Compute 24-hour balance deltas for a set of user IDs in a single query.
+
+    Uses conditional aggregation so the database does the work instead of Python.
+    Returns a dict mapping user_id → net delta.
+    """
+    if not user_ids:
+        return {}
+
+    qs = (
+        Transaction.objects
+        .filter(created_at__gte=since)
+        .filter(Q(sender_id__in=user_ids) | Q(receiver_id__in=user_ids))
+        .values('id')  # dummy grouping so we can annotate per-row
+    )
+
+    # It's cleaner to aggregate from the User side: for each user, sum
+    # received amounts minus sent amounts in a single pass.
+    from django.contrib.auth.models import User
+
+    deltas_qs = (
+        User.objects
+        .filter(pk__in=user_ids)
+        .annotate(
+            received=Sum(
+                Case(
+                    When(received_transactions__created_at__gte=since, then='received_transactions__amount'),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+            ),
+            sent=Sum(
+                Case(
+                    When(sent_transactions__created_at__gte=since, then='sent_transactions__amount'),
+                    default=Value(0),
+                    output_field=IntegerField(),
+                ),
+            ),
+        )
+        .values_list('pk', 'received', 'sent')
+    )
+
+    return {
+        uid: (received or 0) - (sent or 0)
+        for uid, received, sent in deltas_qs
+    }
 
 
 def leaderboard_view(request):
@@ -19,20 +67,8 @@ def leaderboard_view(request):
 
     last_24h = timezone.now() - timedelta(hours=24)
     user_ids = [p.user_id for p in profiles]
-    user_ids_set = set(user_ids)
 
-    txns = Transaction.objects.filter(
-        created_at__gte=last_24h
-    ).filter(
-        Q(sender_id__in=user_ids) | Q(receiver_id__in=user_ids)
-    ).values('sender_id', 'receiver_id', 'amount')
-
-    deltas = {}
-    for t in txns:
-        if t['receiver_id'] in user_ids_set:
-            deltas[t['receiver_id']] = deltas.get(t['receiver_id'], 0) + t['amount']
-        if t['sender_id'] in user_ids_set:
-            deltas[t['sender_id']] = deltas.get(t['sender_id'], 0) - t['amount']
+    deltas = _bulk_deltas(user_ids, last_24h)
 
     for p in profiles:
         p.delta_24h = deltas.get(p.user_id, 0)
@@ -51,18 +87,8 @@ def leaderboard_view(request):
         if not user_in_list:
             user_profile = request.user.profile
             uid = request.user.id
-            u_txns = Transaction.objects.filter(
-                created_at__gte=last_24h
-            ).filter(
-                Q(sender_id=uid) | Q(receiver_id=uid)
-            ).values('sender_id', 'receiver_id', 'amount')
-            u_delta = 0
-            for t in u_txns:
-                if t['receiver_id'] == uid:
-                    u_delta += t['amount']
-                if t['sender_id'] == uid:
-                    u_delta -= t['amount']
-            user_profile.delta_24h = u_delta
+            user_delta = _bulk_deltas([uid], last_24h)
+            user_profile.delta_24h = user_delta.get(uid, 0)
 
     return render(request, 'leaderboard/index.html', {
         'profiles': profiles,
