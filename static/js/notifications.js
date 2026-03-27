@@ -12,7 +12,6 @@
     var ws = null;
     var reconnectDelay = 1000;
     var maxReconnectDelay = 30000;
-    var pollEl = null;
 
     function sanitizeUrl(url) {
         if (typeof url !== 'string') return null;
@@ -37,7 +36,6 @@
 
         ws.onopen = function () {
             reconnectDelay = 1000;
-            disablePolling();
         };
 
         ws.onmessage = function (e) {
@@ -57,24 +55,12 @@
 
         ws.onclose = function () {
             ws = null;
-            enablePolling();
+            // Refresh badge via the initial-load HTMX element as a fallback
+            var badge = document.getElementById('notif-badge-display');
+            if (badge && window.htmx) htmx.trigger(badge, 'load');
             setTimeout(connect, reconnectDelay);
             reconnectDelay = Math.min(reconnectDelay * 2, maxReconnectDelay);
         };
-    }
-
-    function enablePolling() {
-        // Re-enable HTMX polling on the badge as fallback
-        pollEl = document.getElementById('notif-badge-poll');
-        if (pollEl) pollEl.removeAttribute('disabled');
-        // Trigger a fresh badge fetch
-        var badge = document.querySelector('[hx-get*="unread-count"]');
-        if (badge && window.htmx) htmx.trigger(badge, 'load');
-    }
-
-    function disablePolling() {
-        pollEl = document.getElementById('notif-badge-poll');
-        if (pollEl) pollEl.setAttribute('disabled', '');
     }
 
     function updateBadge(delta) {

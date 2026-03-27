@@ -147,7 +147,7 @@
                  class="relative flex-shrink-0 cursor-pointer">
                 <div class="w-9 h-9 border border-stone dark:border-slate flex items-center justify-center overflow-hidden">
                     {% if profile.avatar %}
-                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover" width="36" height="36" loading="lazy">
                     {% else %}
                     <span class="font-serif text-xs font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
                     {% endif %}
@@ -155,7 +155,7 @@
                 <div x-show="open" x-cloak
                      class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-20 h-20 border-2 border-gold shadow-lg bg-cream dark:bg-walnut overflow-hidden">
                     {% if profile.avatar %}
-                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover">
+                    <img src="{{ profile.avatar.url }}" alt="{{ profile.get_display_name }}" class="w-full h-full object-cover" width="80" height="80" loading="lazy">
                     {% else %}
                     <span class="flex items-center justify-center w-full h-full font-serif text-2xl font-bold text-gold">{{ profile.get_display_name|first|upper }}</span>
                     {% endif %}
@@ -199,7 +199,7 @@
                      class="relative flex-shrink-0 cursor-pointer">
                     <div class="w-9 h-9 border border-gold flex items-center justify-center overflow-hidden">
                         {% if user_profile.avatar %}
-                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover">
+                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover" width="36" height="36" loading="lazy">
                         {% else %}
                         <span class="font-serif text-xs font-bold text-gold">{{ user_profile.get_display_name|first|upper }}</span>
                         {% endif %}
@@ -207,7 +207,7 @@
                     <div x-show="open" x-cloak
                          class="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-20 h-20 border-2 border-gold shadow-lg bg-cream dark:bg-walnut overflow-hidden">
                         {% if user_profile.avatar %}
-                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover">
+                        <img src="{{ user_profile.avatar.url }}" alt="{{ user_profile.get_display_name }}" class="w-full h-full object-cover" width="80" height="80" loading="lazy">
                         {% else %}
                         <span class="flex items-center justify-center w-full h-full font-serif text-2xl font-bold text-gold">{{ user_profile.get_display_name|first|upper }}</span>
                         {% endif %}

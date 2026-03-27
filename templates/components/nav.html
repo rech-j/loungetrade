@@ -41,14 +41,6 @@
                               hx-swap="innerHTML"
                               hx-on::after-settle="updateBellActivity(this)">
                         </span>
-                        <span id="notif-badge-poll"
-                              hx-get="{% url 'notifications_unread_count' %}"
-                              hx-trigger="every 10s"
-                              hx-swap="innerHTML"
-                              hx-target="#notif-badge-display"
-                              disabled
-                              class="hidden">
-                        </span>
                     </button>
                     <div x-show="notifOpen"
                          x-cloak

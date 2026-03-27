@@ -153,5 +153,14 @@ if _SENTRY_DSN:
         environment=os.environ.get('SENTRY_ENVIRONMENT', 'production'),
         # Capture 10% of transactions for performance monitoring.
         traces_sample_rate=float(os.environ.get('SENTRY_TRACES_SAMPLE_RATE', '0.1')),
+        # Profile 10% of sampled transactions for code-level performance insights.
+        profiles_sample_rate=float(os.environ.get('SENTRY_PROFILES_SAMPLE_RATE', '0.1')),
         send_default_pii=False,
+        # Attach request data (URL, method, headers) but not cookies/bodies.
+        max_request_body_size='never',
+        # Filter out health-check noise and static file 404s.
+        before_send=lambda event, hint: (
+            None if event.get('request', {}).get('url', '').endswith('/healthz/')
+            else event
+        ),
     )
