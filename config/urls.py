@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
@@ -9,7 +10,12 @@ from apps.accounts.views import landing_page
 
 
 def health_check(request):
-    return JsonResponse({'status': 'ok'})
+    """Lightweight health check that verifies database connectivity."""
+    try:
+        connection.ensure_connection()
+        return JsonResponse({'status': 'ok'})
+    except Exception:
+        return JsonResponse({'status': 'error', 'detail': 'database unavailable'}, status=503)
 
 
 urlpatterns = [

@@ -23,9 +23,10 @@
 <body class="min-h-screen bg-cream text-ink dark:bg-ink dark:text-cream font-venus transition-colors duration-200"
       hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
       {% if request.user.is_authenticated %}data-authenticated{% endif %}>
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:vintage-btn focus:text-xs">Skip to content</a>
     {% include "components/nav.html" %}
 
-    <main class="max-w-4xl lg:max-w-5xl mx-auto px-4 py-10">
+    <main id="main-content" class="max-w-4xl lg:max-w-5xl mx-auto px-4 py-10">
         {% if messages %}
         <div class="mb-8 space-y-2">
             {% for message in messages %}
