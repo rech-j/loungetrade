@@ -145,7 +145,7 @@ LOGGING = {
     },
 }
 
-# Sentry error monitoring — only initializes if SENTRY_DSN is set.
+# Sentry error monitoring - only initializes if SENTRY_DSN is set.
 _SENTRY_DSN = os.environ.get('SENTRY_DSN', '')
 if _SENTRY_DSN:
     sentry_sdk.init(
@@ -163,4 +163,5 @@ if _SENTRY_DSN:
             None if event.get('request', {}).get('url', '').endswith('/healthz/')
             else event
         ),
+        release=os.environ.get('SENTRY_RELEASE'),
     )
