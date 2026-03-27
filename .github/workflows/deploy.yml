@@ -27,7 +27,7 @@ jobs:
       DB_PASSWORD: loungecoin
       DB_HOST: localhost
       DB_PORT: 5432
-      DJANGO_SETTINGS_MODULE: config.settings.development
+      DJANGO_SETTINGS_MODULE: config.settings.test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

@@ -10,7 +10,16 @@ logger = logging.getLogger(__name__)
 
 
 def send_notification(user, notif_type, title, message, link=''):
-    """Create a notification and push it via WebSocket."""
+    """Create a notification and push it via WebSocket.
+
+    The DB record is created immediately (safe inside an outer atomic block).
+    The WebSocket push and cache invalidation are deferred to
+    ``transaction.on_commit`` so they only fire after the enclosing
+    transaction has committed — preventing phantom notifications if the
+    transaction is rolled back.
+    """
+    from django.db import transaction as db_transaction
+
     notif = Notification.objects.create(
         user=user,
         notif_type=notif_type,
@@ -19,21 +28,25 @@ def send_notification(user, notif_type, title, message, link=''):
         link=link,
     )
 
-    # Invalidate cached unread count
+    # Cache invalidation is safe immediately (idempotent, no external effect).
     cache.delete(f'unread_notif_count:{user.pk}')
 
-    # Push to WebSocket group
-    _ws_send(user.pk, {
-        'type': 'new_notification',
-        'notification': {
-            'id': notif.pk,
-            'notif_type': notif.notif_type,
-            'title': notif.title,
-            'message': notif.message,
-            'link': notif.link,
-            'created_at': notif.created_at.isoformat(),
-        },
-    })
+    # Defer the WebSocket push until the enclosing transaction commits,
+    # so clients never receive a notification for a rolled-back transfer.
+    def _ws_push():
+        _ws_send(user.pk, {
+            'type': 'new_notification',
+            'notification': {
+                'id': notif.pk,
+                'notif_type': notif.notif_type,
+                'title': notif.title,
+                'message': notif.message,
+                'link': notif.link,
+                'created_at': notif.created_at.isoformat(),
+            },
+        })
+
+    db_transaction.on_commit(_ws_push)
 
     return notif
 
