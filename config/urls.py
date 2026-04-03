@@ -1,12 +1,18 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
 from django.views.generic import RedirectView, TemplateView
 
 from apps.accounts.views import landing_page
+from config.sitemaps import StaticViewSitemap
+
+sitemaps = {
+    'static': StaticViewSitemap,
+}
 
 
 def health_check(request):
@@ -19,6 +25,7 @@ def health_check(request):
 
 
 urlpatterns = [
+    path('robots.txt', TemplateView.as_view(template_name='robots.txt', content_type='text/plain'), name='robots_txt'),
     path('favicon.ico', RedirectView.as_view(url='/static/favicon/favicon.ico', permanent=True)),
     path('health/', health_check, name='health_check'),
     path(settings.ADMIN_URL, admin.site.urls),
@@ -33,6 +40,7 @@ urlpatterns = [
     path('admin-panel/', include('apps.admin_panel.urls')),
     path('', landing_page, name='landing'),
     path('privacy/', TemplateView.as_view(template_name='privacy.html'), name='privacy'),
+    path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
 ]
 
 if settings.DEBUG:
