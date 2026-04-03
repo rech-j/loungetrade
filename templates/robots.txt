@@ -1,0 +1,11 @@
+User-agent: *
+Disallow: /profile/
+Disallow: /economy/
+Disallow: /coinflip/
+Disallow: /chess/
+Disallow: /poker/
+Disallow: /notifications/
+Disallow: /admin-panel/
+Disallow: /health/
+
+Sitemap: https://loungecoin.trade/sitemap.xml
